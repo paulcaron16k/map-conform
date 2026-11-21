@@ -1,0 +1,38 @@
+{
+  "boards": [
+    {
+      "name": "Sprint board",
+      "type": "scrum"
+    },
+    {
+      "name": "Backlog",
+      "type": "backlog"
+    },
+    {
+      "name": "Roadmap",
+      "type": "roadmap"
+    }
+  ],
+  "keys": [
+    {
+      "key": "MAPC",
+      "name": "map-conform",
+      "repo": "paulcaron16k/map-conform"
+    }
+  ],
+  "project": {
+    "issue_title_prefix": "key",
+    "key": "MAPC",
+    "name": "map-conform",
+    "number": 36,
+    "owner": "paulcaron16k"
+  },
+  "sprint": {
+    "ahead": 2,
+    "autocreate": true,
+    "cadence_days": 14,
+    "name_template": "{n:04d} W{iso_week}-{year}",
+    "start_day": "monday",
+    "template": "2-week"
+  }
+}
