@@ -1,0 +1,39 @@
+---
+type: decision_log
+title: "Decision 0005 — Emit SDK _sdc_* exactly; document target requirement"
+description: "Emit the seven _sdc_* columns with SDK names and values; SDK targets must set add_record_metadata: true."
+resource: creating-a-better-mapper-guidance.md
+tags: [architecture, decision, active]
+timestamp: 2026-11-21T00:00:00Z
+sources:
+  - path: creating-a-better-mapper-guidance.md
+---
+
+# Decision 0005 — Emit SDK _sdc_* exactly; document target requirement
+
+Parent: [Wiki Index](../index.md) · Related: [Architecture overview](../architecture/overview.md)
+
+Status: **Accepted** (2026-11-21, planning quiz)
+
+## Context
+- These columns should be added once, upstream, and also for BATCH.
+- The SDK source was checked (`sinks/core.py` `_remove_sdc_metadata_from_schema`,
+  `target_base.py`). With `add_record_metadata: false`, the default, an SDK target **removes**
+  all seven columns from both schema and records. With `true`, it overwrites them.
+
+## Decision
+- Emit `_sdc_extracted_at`, `_sdc_received_at`, `_sdc_batched_at`, `_sdc_deleted_at`,
+  `_sdc_sequence`, `_sdc_table_version` and `_sdc_sync_started_at`, with SDK-exact semantics,
+  declared in SCHEMA.
+- **Document only**: SDK targets must set `add_record_metadata: true`, and the values they
+  then overwrite are approximately the same.
+- No rename escape hatch and no target patches.
+- **No SDK change will be proposed.** The Singer specification and the SDK own their `_sdc_*`
+  behaviour (decided 2026-11-21, Q5).
+- `_sdc_batched_at`: for BATCH it is the **input file's last-modified time**; for RECORD it is
+  the **mapper start time**, so the whole run is one batch (decided 2026-11-21, Q2).
+
+## Consequences
+- `map-conform doctor` warns when a downstream SDK target lacks the flag.
+- BATCH files carry the columns too. The SDK target BATCH path neither strips nor adds them,
+  but the SCHEMA it holds will have them removed unless the flag is set.
