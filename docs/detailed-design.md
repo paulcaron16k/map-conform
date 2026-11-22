@@ -265,6 +265,20 @@ macros:
 - Several non-null types: json, with a warning.
 - No type: json.
 
+Defaults pinned by the implementation (`map_conform/types/from_jsonschema.py`):
+
+- `x-singer.decimal` with neither precision nor scale is `decimal(38,9)`. With a precision
+  only, it is `decimal(p,0)`.
+- `string(n)` and `string` branches in one `anyOf` give `string`.
+- An object without `properties`, or an array without `items`, stays json even with
+  `nested: keep`.
+- Hints may use SQL multi-word names: `double precision`, `timestamp with time zone`,
+  `timestamp without time zone`, `character varying(n)`. An unrecognised hint is ignored,
+  with a warning.
+
+The contract schema reads back exactly: `from_jsonschema(to_jsonschema(t)) == t` for every
+CType, with no warnings.
+
 ## 5. Name conformer
 
 The pipeline is pure and deterministic, and each step can be configured:
@@ -344,6 +358,26 @@ Each builtin is a `Transform`:
 
 `ctx` carries the column, the stream, the row index and the defaults. Vectorisable builtins
 are marked ✓.
+
+**Chain compilation** (`map_conform/plan/chain.py`, registry in
+`map_conform/transforms/registry.py`):
+
+- **Stages.** The value's type is tracked through the chain as a *stage*: raw before the
+  cast, then a CType. Each step lists the stages it accepts, so a step that cannot take the
+  current stage is an error at its path.
+- **Arguments.** A scalar step argument fills the builtin's positional kwarg
+  (`{strip_chars: "$, "}` → `chars`). Kwargs are validated by the spec's strict parser.
+- **Implicit cast.** A chain with no `cast` gets one. Its options layer, lowest to highest:
+  stream defaults, column overrides (`trim`, `null_tokens`, …), the column's `parse`, then
+  the step's own kwargs. `{cast: decimal}` on a `decimal(18,2)` column means that column's
+  type. The chain must end as the column's declared type.
+- **Macros** expand in place with their parameters, and cycles are detected. Errors inside
+  a macro point at its definition (`macros.money.steps[0]`).
+- **Not yet supported.** `expr`, `case` and step-level `when` are refused with a clear
+  message until the expression language exists (WBS 6.x).
+- **Run time.** Nulls skip steps that are not null-safe. A step that fails raises with its
+  rule; the executor adds the stream, column, row and value, and applies `on_error`
+  (`map_conform/errors.py`).
 
 ### 6.1 Text (pre-cast)
 
