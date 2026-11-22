@@ -1,10 +1,10 @@
 ---
 type: plan
 title: "Roadmap and WBS"
-description: "Phases P0-P6, epics E1-E11 and how they map to gh agile issues."
+description: "Phases P0-P6, epics E1-E12 and how they map to gh agile issues."
 resource: docs/plan-wbs.md
 tags: [management, planning, active]
-timestamp: 2026-11-21T00:00:00Z
+timestamp: 2026-11-22T05:00:00Z
 sources:
   - path: docs/plan-wbs.md
   - path: bin/create-agile-issues.py
@@ -18,15 +18,15 @@ The authoritative plan is [docs/plan-wbs.md](../../docs/plan-wbs.md) (path:docs/
 Issues are filed by [bin/create-agile-issues.py](../../bin/create-agile-issues.py) with key
 `MAPC`.
 
-| Phase | Epics | Points |
-|---|---|---|
-| P0 Foundations | E1 | 13 |
-| P1 Spec & names | E2, E3 | 32 |
-| P2 RECORD engine | E4, E5, E7 | 62 |
-| P3 Expressions, UDFs & stream-map parity | E6, E12 | 51 |
-| P4 BATCH engine | E8 | 35 |
-| P5 Bridges, docs & release | E9, E10 | 21 |
-| P6 Adoption | E11 | 6 |
+| Phase | Epics | Points | Status |
+|---|---|---|---|
+| P0 Foundations | E1 | 13 | Done 2026-11-22 (PRs #80, #81, #83–#85) |
+| P1 Spec & names | E2, E3 | 32 | Next |
+| P2 RECORD engine | E4, E5, E7 | 62 | |
+| P3 Expressions, UDFs & stream-map parity | E6, E12 | 51 | |
+| P4 BATCH engine | E8 | 35 | |
+| P5 Bridges, docs & release | E9, E10 | 21 | |
+| P6 Adoption | E11 | 6 | |
 
 Each phase ends with verification and an explicit approval from the owner.
 

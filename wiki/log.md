@@ -41,3 +41,7 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-21T12:00:00Z | UPDATED | concepts/existing-systems-survey | Stream-map and masking features to keep |
 | 2026-11-21T12:00:00Z | UPDATED | plans/roadmap | E12; open questions resolved |
 | 2026-11-21T12:00:00Z | UPDATED | index | ADRs 0010-0011 |
+| 2026-11-22T05:00:00Z | UPDATED | runbooks/dev-environment | P0 built: real commands, hooks, fixtures; draft → active |
+| 2026-11-22T05:00:00Z | UPDATED | ci-cd/pipeline | P0 built: workflows as merged, publish gating; draft → active |
+| 2026-11-22T05:00:00Z | UPDATED | qa/test-strategy | Fixtures, wiki claim tests and gates as built |
+| 2026-11-22T05:00:00Z | UPDATED | plans/roadmap | P0 done; description says E1-E12 |
