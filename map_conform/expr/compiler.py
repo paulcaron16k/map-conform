@@ -134,6 +134,21 @@ class Expression:
         return dict(result) if isinstance(result, MappingProxyType) else result
 
 
+def parse_expression(text: str) -> ast.Expression:
+    r"""Parse expression text.
+
+    ``"\d"`` in a non-raw string stays a backslash and a d, as in Python, without a warning
+    (a SyntaxWarning from Python 3.12, a DeprecationWarning before).
+
+    Raises:
+        SyntaxError: for text that is not an expression.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SyntaxWarning)
+        warnings.simplefilter("ignore", DeprecationWarning)
+        return ast.parse(text.strip(), mode="eval")
+
+
 def compile_expr(text: str, names: Names | None = None) -> Expression:
     """Compile an expression.
 
@@ -142,12 +157,7 @@ def compile_expr(text: str, names: Names | None = None) -> Expression:
     """
     names = names or Names()
     try:
-        with warnings.catch_warnings():
-            # "\d" in a non-raw string stays a backslash and a d, as in Python; no warning
-            # (a SyntaxWarning from Python 3.12, a DeprecationWarning before).
-            warnings.simplefilter("ignore", SyntaxWarning)
-            warnings.simplefilter("ignore", DeprecationWarning)
-            tree = ast.parse(text.strip(), mode="eval")
+        tree = parse_expression(text)
     except SyntaxError as exc:
         raise ExprError(f"syntax error: {exc.msg} (at column {exc.offset or 0})") from None
     except (ValueError, RecursionError, MemoryError) as exc:
