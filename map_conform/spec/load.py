@@ -241,6 +241,8 @@ def load_spec(
         document = deep_merge(document, thaw(inline))
     issues = Issues()
     document = substitute(document, spec_vars or {}, os.environ if env is None else env, issues)
+    base_dir = Path(path).parent if path is not None else Path.cwd()
+    document = _read_shapes(document, base_dir, issues)
     source = str(path) if path is not None else "the inline spec"
     if base is not None:
         document = deep_merge(thaw(base), document)
@@ -248,6 +250,28 @@ def load_spec(
     if issues:
         raise SpecError(issues.items, source)
     return parse_spec(document, source)
+
+
+def _read_shapes(document: object, base_dir: Path, issues: Issues) -> object:
+    """Replace each column ``shape`` given as a file path with the JSON Schema it holds."""
+    streams = document.get("streams") if isinstance(document, dict) else None
+    if not isinstance(streams, dict):
+        return document
+    for key, rules in streams.items():
+        columns = rules.get("columns") if isinstance(rules, dict) else None
+        for name, column in (columns or {}).items() if isinstance(columns, dict) else ():
+            shape = column.get("shape") if isinstance(column, dict) else None
+            if not isinstance(shape, str):
+                continue
+            where = child(child(child(child("streams", key), "columns"), name), "shape")
+            file = base_dir / shape
+            try:
+                column["shape"] = json.loads(file.read_text(encoding="utf-8"))
+            except OSError as exc:
+                issues.add(where, f"cannot read {str(file)!r}: {exc.strerror}")
+            except json.JSONDecodeError as exc:
+                issues.add(where, f"{str(file)!r} is not JSON: {exc.msg} at line {exc.lineno}")
+    return document
 
 
 # --- Resolving streams --------------------------------------------------------------------------

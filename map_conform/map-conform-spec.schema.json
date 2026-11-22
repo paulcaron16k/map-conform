@@ -240,6 +240,23 @@
           "description": "Transforms on nested members of struct and json columns, by dotted path.",
           "default": null
         },
+        "shape": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {},
+          "description": "JSON Schema of the column's object or array value, inline or as a path to a .json file (relative to the spec file). It alone decides the column's type, or its flattened columns; members it does not declare are dropped, counted and logged; a member's default (null, {}, []) is used when it is missing or empty.",
+          "default": null
+        },
+        "flatten": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Flatten this column into parent__child columns (from its shape when it has one). Unset: follow nested: flatten.",
+          "default": null
+        },
         "infer_type": {
           "enum": [
             "sdk",

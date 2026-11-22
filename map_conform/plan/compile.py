@@ -14,6 +14,7 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa
@@ -23,13 +24,15 @@ from map_conform.expr.compiler import ExprError, Expression, Names, compile_expr
 from map_conform.naming.conform import NameConformer, NamingError
 from map_conform.naming.flatten import Flattener, FlattenError
 from map_conform.naming.nested import MemberNames, conform_ctype
+from map_conform.naming.shape import Shape
 from map_conform.naming.streams import stream_name
 from map_conform.plan.chain import ChainCompiler
 from map_conform.plan.ops import CompiledChain, StepError
-from map_conform.spec._struct import Issues, child, freeze_mapping, thaw
+from map_conform.spec._struct import Issues, child, freeze, freeze_mapping, thaw, thaw_mapping
 from map_conform.spec.check import Finding, OutputColumn, output_columns
 from map_conform.spec.errors import SpecError
 from map_conform.spec.load import ResolvedStream
+from map_conform.spec.model import ColumnSpec
 from map_conform.spec.stream_maps import sdk_type
 from map_conform.transforms.fake import FakeData
 from map_conform.transforms.registry import Context
@@ -40,7 +43,7 @@ from map_conform.types.to_jsonschema import to_jsonschema
 from map_conform.types.wire import to_wire
 
 if TYPE_CHECKING:
-    from map_conform.spec.model import ColumnSpec, Spec
+    from map_conform.spec.model import Spec
     from map_conform.transforms.registry import Registry
 
 _KEEP_KINDS = frozenset({"string", "json"})
@@ -103,6 +106,8 @@ class StreamPlan:
     """For ``nested: flatten``: flattens each record as the SCHEMA was."""
     flat_properties: Mapping[str, Any] = field(default_factory=dict)
     """The flattened tap SCHEMA properties the records are flattened against."""
+    shaped: tuple[ShapedFlattening, ...] = ()
+    """Columns flattened from their declared shapes."""
 
 
 def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spec context
@@ -134,6 +139,7 @@ def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spe
         named = None
     notes.extend(f"stream name: {n}" for n in (named.notes if named else ()))
     properties: Mapping[str, Any] = tap_schema.get("properties") or {}
+    resolved, properties, shaped = _flatten_shapes(resolved, properties, issues, path)
     flattener = _flattener(resolved) if resolved.settings.nested == "flatten" else None
     if flattener is not None:
         try:
@@ -183,7 +189,83 @@ def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spe
         fake=fake,
         flattener=flattener,
         flat_properties=dict(properties) if flattener is not None else {},
+        shaped=tuple(shaped),
     )
+
+
+@dataclass(frozen=True)
+class ShapedFlattening:
+    """A column flattened from its declared shape: the executor conforms and flattens it."""
+
+    key: str
+    """The spec's column key, for counts and logs."""
+    source: str
+    shape: Shape
+    flattener: Flattener
+    leaves: Mapping[str, Any]
+
+
+def _flatten_shapes(
+    resolved: ResolvedStream, properties: Mapping[str, Any], issues: Issues, path: str
+) -> tuple[ResolvedStream, Mapping[str, Any], list[ShapedFlattening]]:
+    """Replace each flattened shaped column by its leaf columns, typed from the shape."""
+    settings = resolved.settings
+    columns: dict[str, ColumnSpec] = {}
+    props = dict(properties)
+    shaped: list[ShapedFlattening] = []
+    declared = resolved.spec.columns
+    for key, spec in declared.items():
+        flatten = spec.flatten if spec.flatten is not None else settings.nested == "flatten"
+        if spec.shape is None or not flatten or spec.drop:
+            columns.setdefault(key, spec)
+            continue
+        col_path = child(child(path, "columns"), key)
+        if spec.source is not None and not isinstance(spec.source, str):
+            issues.add(child(col_path, "source"), "a flattened shape reads one source")
+            continue
+        source = spec.source or key
+        options = settings.flatten
+        flattener = Flattener(options.separator, options.max_depth, options.max_key_length,
+                              frozenset(), typed_leaves=True)  # fmt: skip
+        schema = thaw_mapping(spec.shape)
+        try:
+            leaves = flattener.properties({source: schema})
+        except FlattenError as exc:
+            issues.add(child(col_path, "shape"), str(exc))
+            continue
+        for leaf, leaf_schema in leaves.items():
+            columns[leaf] = _leaf_spec(declared.get(leaf), leaf_schema)
+        props = _replace(props, source, leaves)
+        shaped.append(ShapedFlattening(key, source, Shape.of(schema), flattener, leaves))
+    if not shaped:
+        return resolved, properties, []
+    stream = dataclasses.replace(resolved.spec, columns=MappingProxyType(columns))
+    return dataclasses.replace(resolved, spec=stream), props, shaped
+
+
+def _leaf_spec(own: ColumnSpec | None, schema: Mapping[str, Any]) -> ColumnSpec:
+    """A leaf column: the type and default from the shape, the rest from a spec of its own."""
+    inferred = from_jsonschema(schema, "keep")
+    base = own or ColumnSpec()
+    changes: dict[str, Any] = {}
+    if base.type is None:  # nullable stays: a member may be missing from any record
+        changes["type"] = str(inferred.ctype)
+    if base.default is None and "default" in schema:
+        changes["default"] = freeze(schema["default"])
+    return dataclasses.replace(base, **changes)
+
+
+def _replace(properties: dict[str, Any], name: str, leaves: Mapping[str, Any]) -> dict[str, Any]:
+    """Properties with ``name`` replaced, in place, by the leaf properties."""
+    out: dict[str, Any] = {}
+    for key, value in properties.items():
+        if key == name:
+            out.update(leaves)
+        elif key not in leaves:
+            out[key] = value
+    for key, value in leaves.items():
+        out.setdefault(key, value)
+    return out
 
 
 def _flattener(resolved: ResolvedStream) -> Flattener:
@@ -299,6 +381,8 @@ class _ColumnBuilder:
                 return None, True
         if spec is not None and spec.infer_type == "sdk" and spec.expr is not None:
             return self._sdk_type(column, spec.expr, notes)
+        if spec is not None and spec.shape is not None:  # the declared shape, never the tap's
+            return from_jsonschema(thaw_mapping(spec.shape), "keep").ctype, True
         if column.tap_schema is None:
             self.issues.add(
                 col_path, "declare its type: the tap SCHEMA has no single source property for it"

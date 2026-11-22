@@ -11,6 +11,7 @@ row. Last, the stream's ``filter`` decides whether the row is emitted at all.
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
@@ -25,6 +26,8 @@ from map_conform.plan.ops import StepError
 from map_conform.spec.model import Defaults
 from map_conform.transforms.registry import Context
 from map_conform.types.wire import to_wire
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -45,6 +48,7 @@ class RowExecutor:
     def __post_init__(self) -> None:
         """Build each column's context once."""
         self._nulled = False
+        self._logged: set[tuple[str, str]] = set()
         self._contexts = [
             Context(
                 self.plan.tap_stream, column.name, self.settings, column.ctype, fake=self.plan.fake
@@ -68,7 +72,11 @@ class RowExecutor:
         self._nulled = False
         state = Row.of(record, row)
         plan = self.plan
-        sources = plan.flattener.record(record, plan.flat_properties) if plan.flattener else record
+        sources: Mapping[str, Any] = record
+        if plan.shaped:
+            sources = self._flatten_shapes(record, state)
+        if plan.flattener:
+            sources = plan.flattener.record(sources, plan.flat_properties)
         wired: dict[str, Any] = {}
         columns = plan.columns
         for i in plan.order or range(len(columns)):
@@ -77,6 +85,7 @@ class RowExecutor:
             state.values[column.name] = typed
         if self._nulled:
             self.metrics.rows_nulled += 1
+        self._count_dropped(state)
         if self.plan.filter is not None and not self._keep(self.plan.filter, state, row):
             self.metrics.rows_filtered += 1
             return None
@@ -91,6 +100,34 @@ class RowExecutor:
                 )
                 out["_sdc_deleted_at"] = apply_policy(self.settings.on_error, error, deleted_at)
         return out
+
+    def _flatten_shapes(self, record: Mapping[str, Any], state: Row) -> dict[str, Any]:
+        """Conform each shaped column to its shape, then flatten it into its leaves."""
+        out = dict(record)
+        for item in self.plan.shaped:
+            value = out.pop(item.source, None)
+
+            def report(member: str, key: str = item.key) -> None:
+                state.dropped.append((key, member))
+
+            conformed = item.shape.conform(value, "", report)
+            if conformed is not None:
+                out.update(item.flattener.record({item.source: conformed}, item.leaves))
+        return out
+
+    def _count_dropped(self, state: Row) -> None:
+        """Count members a shape dropped; log each (column, member) once per stream."""
+        for column, member in state.dropped:
+            self.metrics.members_dropped[(column, member)] += 1
+            if (column, member) not in self._logged:
+                self._logged.add((column, member))
+                logger.warning(
+                    "Stream %r, column %r: member %r is not in the declared shape; dropped "
+                    "(counted in members_dropped, logged once).",
+                    self.plan.tap_stream,
+                    column,
+                    member,
+                )
 
     def _keep(self, row_filter: Expression, state: Row, row: int) -> bool:
         """Whether the filter keeps the row.

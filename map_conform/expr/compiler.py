@@ -71,11 +71,13 @@ class Row:
     """Conformed values of the columns computed so far, by output name."""
     number: int = 0
     """The row's ordinal within its tap stream."""
+    dropped: list[tuple[str, str]] = field(default_factory=list)
+    """(column, member path) for each member a declared shape dropped in this row."""
 
     @classmethod
     def of(cls, record: Mapping[str, Any], number: int = 0) -> Row:
         """A row over a source record, which expressions cannot change."""
-        return cls(MappingProxyType(dict(record)), {}, number)
+        return cls(MappingProxyType(dict(record)), {}, number, [])
 
 
 @dataclass(slots=True)

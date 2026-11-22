@@ -64,6 +64,9 @@ class Flattener:
     max_key_length: int
     keep: frozenset[str]
     """Top-level properties the spec names; they are left as they are."""
+    typed_leaves: bool = False
+    """For a declared shape: arrays and objects below the depth keep their declared types
+    (list, struct, json) instead of becoming JSON text as the SDK makes them."""
 
     def properties(self, properties: Mapping[str, Any]) -> dict[str, Any]:
         """The flattened SCHEMA properties, in the SDK's order.
@@ -95,6 +98,8 @@ class Flattener:
                 types = _types(schema)
                 if "object" in types and "properties" in schema and level < self.max_depth:
                     items.extend(self._schema(schema["properties"], [*parents, name], level + 1))
+                elif self.typed_leaves:
+                    items.append((key, schema))
                 elif "array" in types or ("object" in types and self.max_depth > 0):
                     items.append(
                         (key, {"type": ["string", "null"] if "null" in types else "string"})
