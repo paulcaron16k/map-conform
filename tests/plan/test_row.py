@@ -25,7 +25,7 @@ def executor(columns: dict[str, Any], **defaults: Any) -> RowExecutor:
     spec = parse_spec(
         {
             "version": 1,
-            "defaults": {"metadata": "none", **defaults},
+            "defaults": {**defaults},
             "streams": {"s": {"columns": columns}},
         }
     )

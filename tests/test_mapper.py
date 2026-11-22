@@ -48,7 +48,7 @@ ACTIVATE_VERSION: dict[str, Any] = {
 }
 SPEC: dict[str, Any] = {
     "version": 1,
-    "defaults": {"stream": {"prefix": "raw_"}},
+    "defaults": {"stream": {"prefix": "raw_"}, "add_record_metadata": True},
     "streams": {
         "Customer Orders": {
             "columns": {
@@ -160,14 +160,32 @@ def test_new_schema_recompiles(capsys: pytest.CaptureFixture[str]) -> None:
     assert out[3]["record"]["note"] == "x"
 
 
-def test_metadata_none_and_record_before_schema(capsys: pytest.CaptureFixture[str]) -> None:
-    """metadata: none emits no _sdc_* columns; a RECORD before its SCHEMA is an error."""
-    spec = {**SPEC, "defaults": {**SPEC["defaults"], "metadata": "none"}}
+def test_no_metadata_and_record_before_schema(capsys: pytest.CaptureFixture[str]) -> None:
+    """Without add_record_metadata (the default) no _sdc_* columns, even from the tap."""
+    spec = {**SPEC, "defaults": {"stream": {"prefix": "raw_"}}}
+    tap_sdc = {**SCHEMA, "schema": {"properties": {**SCHEMA["schema"]["properties"],
+               "_sdc_deleted_at": {"type": ["string", "null"]}}}}  # fmt: skip
+    schema, record = run_mapper([tap_sdc, RECORD], capsys, spec)
     schema, record = run_mapper([SCHEMA, RECORD], capsys, spec)
     assert not [p for p in schema["schema"]["properties"] if p.startswith("_sdc_")]
     assert not [p for p in record["record"] if p.startswith("_sdc_")]
     with pytest.raises(ValueError, match="before its SCHEMA"):
         run_mapper([RECORD], capsys)
+
+
+def test_add_record_metadata_setting(capsys: pytest.CaptureFixture[str]) -> None:
+    """The plugin setting turns the columns on; a stream's own value wins over it."""
+    spec = {**SPEC, "defaults": {"stream": {"prefix": "raw_"}}}
+    schema, _ = run_mapper([SCHEMA, RECORD], capsys, spec, add_record_metadata=True)
+    assert "_sdc_batched_at" in schema["schema"]["properties"]
+    off = {**spec, "streams": {"Customer Orders": {**SPEC["streams"]["Customer Orders"],
+                                                   "add_record_metadata": False}}}  # fmt: skip
+    schema, _ = run_mapper([SCHEMA, RECORD], capsys, off, add_record_metadata=True)
+    assert "_sdc_batched_at" not in schema["schema"]["properties"]
+    (schema,) = run_mapper([SCHEMA], capsys, spec, stream_maps={})
+    assert "_sdc_batched_at" not in schema["schema"]["properties"]
+    (schema,) = run_mapper([SCHEMA], capsys, spec, stream_maps={}, add_record_metadata=True)
+    assert "_sdc_batched_at" in schema["schema"]["properties"]
 
 
 def test_batch_is_refused_until_p4(capsys: pytest.CaptureFixture[str]) -> None:
@@ -240,7 +258,7 @@ def test_derived_columns_and_filter(tmp_path: Path, capsys: pytest.CaptureFixtur
     """A derived column reads conformed values and spec_vars; filtered rows are counted."""
     spec = {
         "version": 1,
-        "defaults": {"metadata": "none"},
+        "defaults": {},
         "streams": {
             "Customer Orders": {
                 "filter": "amount >= 100",

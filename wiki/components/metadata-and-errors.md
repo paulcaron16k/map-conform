@@ -4,7 +4,7 @@ title: "Metadata, errors and metrics"
 description: "SDK-exact _sdc_* columns, ConformError and on_error policies, reject sink, rate thresholds, metrics."
 resource: map_conform/metadata.py
 tags: [engineering, observability, active]
-timestamp: 2026-11-22T18:00:00Z
+timestamp: 2026-11-22T19:00:00Z
 sources:
   - path: map_conform/metadata.py
   - path: map_conform/errors.py
@@ -32,8 +32,11 @@ Parent: [Wiki Index](../index.md) · Related: [Detailed design](../../docs/detai
 | table_version | message `version` |
 | sync_started_at | mapper start, epoch ms |
 
-- The tap's own `_sdc_*` properties feed these columns, not ordinary columns.
-- Downstream SDK targets need `add_record_metadata: true`.
+- The columns are added only with `add_record_metadata: true` (default false), to SCHEMA,
+  RECORD and, from P4, BATCH. A stream can override the plugin setting in the spec.
+- The tap's own `_sdc_*` properties are never ordinary columns: they feed these columns, or
+  are left out without the flag, as SDK targets leave them out.
+- Downstream SDK targets need `add_record_metadata: true` to keep them.
 
 ## Errors ([ADR-0006](../decisions/0006-error-policy.md))
 

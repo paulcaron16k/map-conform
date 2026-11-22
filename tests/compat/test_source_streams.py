@@ -55,7 +55,7 @@ def run(spec: dict[str, Any], capsys: pytest.CaptureFixture[str]) -> list[tuple[
 def test_copy_keeps_the_original_and_state_order(capsys: pytest.CaptureFixture[str]) -> None:
     """A masked copy beside the original; each STATE follows the rows before it."""
     spec = {
-        "defaults": {"metadata": "none"},
+        "defaults": {},
         "streams": {
             "orders_masked": {
                 "source": "orders",
@@ -76,7 +76,7 @@ def test_copy_keeps_the_original_and_state_order(capsys: pytest.CaptureFixture[s
 def test_split_by_filter(capsys: pytest.CaptureFixture[str]) -> None:
     """One tap stream split by region (read from the source: it is not an output column)."""
     spec = {
-        "defaults": {"metadata": "none", "undeclared": "drop"},
+        "defaults": {"undeclared": "drop"},
         "streams": {
             "orders": {"drop": True},
             "orders_eu": {"source": "orders", "filter": "record['region'] == 'eu'"},

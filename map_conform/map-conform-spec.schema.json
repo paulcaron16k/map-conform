@@ -357,13 +357,10 @@
           "description": "What a failed cast or transform does: raise, null, keep the raw value, or reject the row to the dead-letter sink.",
           "default": "raise"
         },
-        "metadata": {
-          "enum": [
-            "sdc",
-            "none"
-          ],
-          "description": "Add the seven Singer SDK _sdc_* columns.",
-          "default": "sdc"
+        "add_record_metadata": {
+          "type": "boolean",
+          "description": "Add the seven Singer SDK _sdc_* columns to SCHEMA, RECORD and BATCH output, as SDK targets do with their setting of the same name.",
+          "default": false
         },
         "undeclared": {
           "enum": [
@@ -715,7 +712,7 @@
               ]
             },
             "on_error": "raise",
-            "metadata": "sdc",
+            "add_record_metadata": false,
             "undeclared": "conform",
             "nested": "json",
             "flatten": {
@@ -966,12 +963,9 @@
           ],
           "description": "What a failed cast or transform does: raise, null, keep the raw value, or reject the row to the dead-letter sink."
         },
-        "metadata": {
-          "enum": [
-            "sdc",
-            "none"
-          ],
-          "description": "Add the seven Singer SDK _sdc_* columns."
+        "add_record_metadata": {
+          "type": "boolean",
+          "description": "Add the seven Singer SDK _sdc_* columns to SCHEMA, RECORD and BATCH output, as SDK targets do with their setting of the same name."
         },
         "undeclared": {
           "enum": [

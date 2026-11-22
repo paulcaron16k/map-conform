@@ -35,7 +35,7 @@ def plan_for(  # noqa: PLR0913 -- the spec's parts
     """Compile stream ``s`` with these columns over a tap SCHEMA of ``properties``."""
     spec = parse_spec({
         "version": 1,
-        "defaults": {"metadata": "none", **(defaults or {})},
+        "defaults": {**(defaults or {})},
         "macros": macros or {},
         "streams": {"s": {"columns": columns, **(stream or {})}},
     })  # fmt: skip
