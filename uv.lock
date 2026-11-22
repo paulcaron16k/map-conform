@@ -840,6 +840,7 @@ wheels = [
 name = "map-conform"
 source = { editable = "." }
 dependencies = [
+    { name = "pyyaml" },
     { name = "singer-sdk" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
@@ -886,6 +887,7 @@ typing = [
 
 [package.metadata]
 requires-dist = [
+    { name = "pyyaml", specifier = ">=6" },
     { name = "s3fs", marker = "extra == 's3'", specifier = ">=2026.1.0" },
     { name = "singer-sdk", specifier = "~=0.54.9" },
     { name = "singer-sdk", extras = ["faker"], marker = "extra == 'faker'" },
