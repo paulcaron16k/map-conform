@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING, Any
 import pyarrow as pa
 import pyarrow.compute as _compute
 
-from map_conform.plan.ops import CastArgs, CompiledStep
-from map_conform.transforms.vector import CASTS, TRANSFORMS, Vector
+from map_conform.plan.lower import chain_vector
+from map_conform.transforms.vector import Vector
 from map_conform.types.canonical import CType
 from map_conform.types.to_arrow import to_arrow
 
@@ -64,17 +64,8 @@ def vector_chain(column: ColumnPlan, read: frozenset[str]) -> VectorChain | None
     """The column's vector chain, or None when it must run row by row."""
     if column.enum is not None or column.member_names is not None or column.name in read:
         return None
-    steps: list[tuple[Vector, Any, CType]] = []
-    for op in column.chain.steps:
-        if not isinstance(op, CompiledStep):
-            return None
-        if isinstance(op.kwargs, CastArgs):
-            fn = CASTS.get(op.kwargs.target.kind)
-            ctype = op.kwargs.target
-        else:
-            fn = TRANSFORMS.get(op.transform.name)
-            ctype = column.ctype
-        if fn is None:
-            return None
-        steps.append((fn, op.kwargs, ctype))
-    return VectorChain(tuple(steps), column.ctype, column.nullable, column.default)
+    lowered = chain_vector(column.chain.steps, column.ctype)
+    if lowered is None:
+        return None
+    return VectorChain(((lowered, None, column.ctype),), column.ctype, column.nullable,
+                       column.default)  # fmt: skip

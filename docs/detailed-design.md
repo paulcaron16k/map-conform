@@ -869,7 +869,9 @@ As built (`map_conform/transforms/vector.py`, `map_conform/plan/vector.py`,
   through the scalar chain, row by row, and are spliced back. A vector op therefore never
   raises; errors, policies and messages always come from the scalar path. If a kernel
   refuses a whole batch, the column runs row by row for it.
+
 - **What is claimed:**
+
   - Text ops (`trim`, `strip_chars`, `lower`, `upper`, `left`, `right`, `null_tokens`)
     claim printable-ASCII rows.
   - Numeric casts claim plain numbers under the default grammar (no locale or separators
@@ -880,22 +882,41 @@ As built (`map_conform/transforms/vector.py`, `map_conform/plan/vector.py`,
     is UTC claim strict ISO text and Arrow timestamps; `min_year`/`max_year` violations go
     row-wise.
   - `set_null` claims everything.
+
 - **Which columns are vectorised:** those whose every step has a vector op, with no
   `enum`, no nested renames, no shape, and which no expression or filter reads
   (expressions see Python values). A `default` is filled in; a null in a
   `nullable: false` column goes row-wise, so the scalar path raises it.
+
 - **The rest of the row** (other columns, expressions, the filter, `_sdc_*`, `on_error`,
   rejects and metrics) runs through the row executor, which skips the vectorised columns of
   rows they computed. So the columnar result, the rejects, the first error raised and the
   metrics are exactly the RECORD path's.
+
 - **Where it runs:** parquet BATCH input with `mode: batch` and parquet output, when every
   output stream has a vectorised column and no flattening or shapes. Other BATCH input runs
   row by row.
+
 - **Parity suite** (`tests/parity/`): every corpus case, Hypothesis-generated text and
   integers through every vectorised cast and text op under every `on_error`, and a mixed
   plan (expressions, filter, rejects, defaults, a non-nullable column). Tables, rejects,
   errors and metrics must be equal.
-- **Not yet:** `case` lowering (WBS 8.6) and polars (8.7).
+
+- **`case` lowering** (`map_conform/plan/lower.py`, WBS 8.6). A `case`, or a column's
+  `when`, is vectorised when every branch is and every condition lowers to an Arrow mask:
+
+  - `is_null(value)`, and `is_blank(value)` on ASCII text;
+  - `value` compared (`==`, `!=`, `<` …) with, or tested for membership (`in`, `not in`) in,
+    string or number literals of the column's kind;
+  - `matches(pattern, value)` on text without line breaks, when the pattern compiles as RE2;
+  - `not`, `and` and `or` of those.
+
+  Each condition is a mask, each branch runs on the whole column, and the first branch
+  whose mask holds supplies the value, as `case_when` does. Null rows of an ordered
+  comparison are left to the scalar path, where Python raises. A condition that reads
+  another column, or uses anything else, keeps the case row-wise.
+
+- **Not yet:** polars (8.7).
 
 ### 10.3 BATCH message I/O
 
