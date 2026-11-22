@@ -64,7 +64,7 @@ def vector_chain(column: ColumnPlan, read: frozenset[str]) -> VectorChain | None
     """The column's vector chain, or None when it must run row by row."""
     if column.enum is not None or column.member_names is not None or column.name in read:
         return None
-    lowered = chain_vector(column.chain.steps, column.ctype)
+    lowered = chain_vector(column.chain.steps, column.ctype, column.engine)
     if lowered is None:
         return None
     return VectorChain(((lowered, None, column.ctype),), column.ctype, column.nullable,

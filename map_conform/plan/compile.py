@@ -36,6 +36,7 @@ from map_conform.spec.load import ResolvedStream
 from map_conform.spec.model import ColumnSpec
 from map_conform.spec.stream_maps import sdk_type
 from map_conform.transforms.fake import FakeData
+from map_conform.transforms.polars_vector import available as polars_available
 from map_conform.transforms.registry import Context
 from map_conform.types.canonical import CType, CTypeError, parse_ctype
 from map_conform.types.from_jsonschema import from_jsonschema
@@ -74,6 +75,8 @@ class ColumnPlan:
     sql_type: str | None = None
     vector: VectorChain | None = None
     """The chain as Arrow ops, for the columnar executor; None runs it row by row."""
+    engine: str = "arrow"
+    """The vectorised engine: arrow, or polars."""
 
     @property
     def steps(self) -> tuple[str, ...]:
@@ -372,6 +375,7 @@ class _ColumnBuilder:
             key=column.key,
             doc=spec.doc if spec else None,
             sql_type=spec.sql_type if spec else None,
+            engine=self._engine(spec, col_path),
         )
 
     def _ctype(
@@ -424,6 +428,18 @@ class _ColumnBuilder:
         if forced and not spec.nullable:
             self.issues.add(child(col_path, "nullable"), "set_null makes the column nullable")
         return spec.nullable or forced
+
+    def _engine(self, spec: ColumnSpec | None, col_path: str) -> str:
+        engine = spec.engine if spec and spec.engine else self.resolved.settings.engine
+        if engine == "polars" and not polars_available():
+            where = (
+                child(col_path, "engine") if spec and spec.engine else child(self.path, "engine")
+            )
+            self.issues.add(
+                where, "engine: polars needs the polars extra: pip install 'map-conform[polars]'"
+            )
+            return "arrow"
+        return engine
 
     def _on_error(self, spec: ColumnSpec | None, ctype: CType, col_path: str) -> OnError:
         policy = spec.on_error if spec and spec.on_error else self.resolved.settings.on_error

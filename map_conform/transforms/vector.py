@@ -50,6 +50,8 @@ _ZONED = r"(Z|z|[+-][0-9]{2}:[0-9]{2})$"
 # (tests/parity) checks this module against the scalar path instead.
 _pa: Any = pa
 pc: Any = _compute
+FALSE = _pa.scalar(value=False)
+"""The fill value for masks."""
 
 
 # --- masks --------------------------------------------------------------------------------------
@@ -64,7 +66,8 @@ def everything(column: pa.Array) -> pa.Array:
     return pc.is_valid(column)
 
 
-def _strings(column: pa.Array) -> bool:
+def is_text(column: pa.Array) -> bool:
+    """Whether the column holds text."""
     return pa.types.is_string(column.type) or pa.types.is_large_string(column.type)
 
 
@@ -84,7 +87,7 @@ def _text_op(
     fn: Callable[[pa.Array], pa.Array],
 ) -> Callable[[pa.Array], tuple[pa.Array, pa.Array]]:
     def run(column: pa.Array) -> tuple[pa.Array, pa.Array]:
-        if not _strings(column):
+        if not is_text(column):
             return _pa.nulls(len(column), pa.string()), everything(column)
         return fn(column), unsafe_text(column)
 
@@ -158,7 +161,7 @@ def _null_tokens(text: pa.Array, tokens: tuple[str, ...], *, case_sensitive: boo
 
 def null_tokens(column: pa.Array, k: Any, _t: CType) -> tuple[pa.Array, pa.Array]:
     """``null_tokens``: null for any token, the value otherwise."""
-    if not _strings(column) or not all(_ascii(t) for t in k.tokens):
+    if not is_text(column) or not all(_ascii(t) for t in k.tokens):
         return _pa.nulls(len(column), pa.string()), everything(column)
     hit = _null_tokens(column, k.tokens, case_sensitive=k.case_sensitive)
     return pc.if_else(hit, _pa.scalar(None, pa.string()), column), unsafe_text(column)
@@ -167,7 +170,7 @@ def null_tokens(column: pa.Array, k: Any, _t: CType) -> tuple[pa.Array, pa.Array
 # --- cleanup shared by casts ------------------------------------------------------------------
 
 
-def _clean(column: pa.Array, options: Any) -> tuple[pa.Array, pa.Array]:
+def clean(column: pa.Array, options: Any) -> tuple[pa.Array, pa.Array]:
     """Trim and null tokens, as ``casts.clean`` does; non-ASCII rows are todo."""
     text = pc.utf8_trim_whitespace(column) if options.trim else column
     if not all(_ascii(t) for t in options.null_tokens):
@@ -186,11 +189,11 @@ def _matches(column: pa.Array, pattern: str) -> pa.Array:
 def cast_string(column: pa.Array, args: Any, target: CType) -> tuple[pa.Array, pa.Array]:
     """Cast to string from text: cleanup, empty strings, length limits."""
     options = args.options
-    if not _strings(column):
+    if not is_text(column):
         return _pa.nulls(len(column), pa.string()), everything(column)
     trimmed = pc.utf8_trim_whitespace(column) if options.trim else column
     empty = _bool(pc.equal(trimmed, ""))
-    cleaned, todo = _clean(column, options)
+    cleaned, todo = clean(column, options)
     if options.empty_string_for_string == "keep":
         cleaned = pc.if_else(empty, _pa.scalar(""), cleaned)
     else:
@@ -204,7 +207,7 @@ def cast_string(column: pa.Array, args: Any, target: CType) -> tuple[pa.Array, p
 
 def _numeric_text(column: pa.Array, options: Any, pattern: str) -> tuple[pa.Array, pa.Array]:
     """Cleaned text that is a plain number under the default grammar; todo for the rest."""
-    cleaned, todo = _clean(column, options)
+    cleaned, todo = clean(column, options)
     default_grammar = (
         options.locale == "us" and options.thousands is None and options.decimal_point is None
     )
@@ -226,7 +229,7 @@ def cast_int(column: pa.Array, args: Any, target: CType) -> tuple[pa.Array, pa.A
     """Cast to int16/32/64 from integers and plain integer text."""
     if pa.types.is_integer(column.type):
         return _bounded_int(pc.cast(column, pa.int64()), target)
-    if not _strings(column):
+    if not is_text(column):
         return _pa.nulls(len(column), to_arrow(target)), everything(column)
     text, todo = _numeric_text(column, args.options, _INTEGER)
     values = pc.cast(pc.if_else(todo, _pa.scalar(None, pa.string()), text), pa.int64())
@@ -239,7 +242,7 @@ def cast_float(column: pa.Array, args: Any, target: CType) -> tuple[pa.Array, pa
     arrow_type = to_arrow(target)
     if pa.types.is_integer(column.type) or pa.types.is_floating(column.type):
         values = pc.cast(column, pa.float64())
-    elif _strings(column):
+    elif is_text(column):
         text, todo = _numeric_text(column, args.options, _FLOAT)
         values = pc.cast(pc.if_else(todo, _pa.scalar(None, pa.string()), text), pa.float64())
         finite = _bool(pc.is_finite(values), null=True)
@@ -265,7 +268,7 @@ def cast_decimal(column: pa.Array, args: Any, target: CType) -> tuple[pa.Array, 
             pc.cast(column, pa.decimal128(38, 18)),
             _pa.repeat(_pa.scalar(value=False), len(column)),
         )
-    elif _strings(column):
+    elif is_text(column):
         text, todo = _numeric_text(column, args.options, _DECIMAL)
         wide = pc.cast(pc.if_else(todo, _pa.scalar(None, pa.string()), text), pa.decimal128(38, 18))
     else:
@@ -283,9 +286,9 @@ def cast_boolean(column: pa.Array, args: Any, _target: CType) -> tuple[pa.Array,
     if pa.types.is_boolean(column.type):
         return column, _pa.repeat(_pa.scalar(False), len(column))  # noqa: FBT003
     tokens = (*options.true_values, *options.false_values)
-    if not _strings(column) or not all(_ascii(t) for t in tokens):
+    if not is_text(column) or not all(_ascii(t) for t in tokens):
         return _pa.nulls(len(column), pa.bool_()), everything(column)
-    text, todo = _clean(column, options)
+    text, todo = clean(column, options)
     if not options.case_sensitive:
         text = pc.ascii_lower(text)
     fold = (lambda t: t) if options.case_sensitive else str.lower
@@ -304,7 +307,8 @@ def _precision(values: pa.Array, precision: str) -> pa.Array:
     return values
 
 
-def _year_bounds(values: pa.Array, options: Any) -> pa.Array:
+def year_bounds(values: pa.Array, options: Any) -> pa.Array:
+    """Rows outside ``min_year``/``max_year``."""
     years = pc.year(values)
     outside = _pa.repeat(_pa.scalar(False), len(values))  # noqa: FBT003
     if options.min_year is not None:
@@ -339,8 +343,8 @@ def cast_temporal(column: pa.Array, args: Any, target: CType) -> tuple[pa.Array,
     if pa.types.is_timestamp(column.type):
         utc = pc.cast(column, pa.timestamp("us", tz="UTC"))  # naive values are UTC
         todo = _pa.repeat(_pa.scalar(False), len(column))  # noqa: FBT003
-    elif _strings(column):
-        text, todo = _clean(column, options)
+    elif is_text(column):
+        text, todo = clean(column, options)
         iso = pc.or_(pc.is_null(text), _matches(text, _ISO))
         todo = _or(todo, pc.invert(_bool(iso)))
         try:
@@ -349,7 +353,7 @@ def cast_temporal(column: pa.Array, args: Any, target: CType) -> tuple[pa.Array,
             return nothing, everything(column)  # e.g. a month 13: the scalar path reports it
     else:
         return nothing, everything(column)
-    todo = _or(todo, _year_bounds(utc, options))
+    todo = _or(todo, year_bounds(utc, options))
     if kind == "timestamptz":
         result = _precision(utc, options.output_precision)
     elif kind == "timestamp":  # the wall time in UTC

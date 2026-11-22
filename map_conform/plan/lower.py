@@ -26,6 +26,7 @@ import pyarrow.compute as _compute
 
 from map_conform.expr.compiler import parse_expression
 from map_conform.plan.ops import CaseOp, CastArgs, CompiledStep
+from map_conform.transforms import polars_vector
 from map_conform.transforms.vector import CASTS, TRANSFORMS, Vector, everything, unsafe_text
 
 if TYPE_CHECKING:
@@ -205,22 +206,30 @@ def lower_when(text: str) -> Mask | None:
     return lower_expression(tree.body)
 
 
-def chain_vector(steps: tuple[Op, ...], column_type: CType) -> Vector | None:
+def _op_vector(op: CompiledStep, column_type: CType, engine: str) -> tuple[Vector | None, CType]:
+    """The vector op for a step: polars' where it has one and the engine is polars."""
+    if isinstance(op.kwargs, CastArgs):
+        kind = op.kwargs.target.kind
+        fn = polars_vector.CASTS.get(kind) if engine == "polars" else None
+        return fn or CASTS.get(kind), op.kwargs.target
+    name = op.transform.name
+    fn = polars_vector.TRANSFORMS.get(name) if engine == "polars" else None
+    return fn or TRANSFORMS.get(name), column_type
+
+
+def chain_vector(steps: tuple[Op, ...], column_type: CType, engine: str = "arrow") -> Vector | None:
     """The ops of a chain as one vector op, or None when any op is not vectorisable."""
     parts: list[tuple[Vector, Any, CType]] = []
     for op in steps:
         if isinstance(op, CaseOp):
-            lowered = case_vector(op, column_type)
+            lowered = case_vector(op, column_type, engine)
             if lowered is None:
                 return None
             parts.append((lowered, None, column_type))
             continue
         if not isinstance(op, CompiledStep):
             return None
-        if isinstance(op.kwargs, CastArgs):
-            fn, ctype = CASTS.get(op.kwargs.target.kind), op.kwargs.target
-        else:
-            fn, ctype = TRANSFORMS.get(op.transform.name), column_type
+        fn, ctype = _op_vector(op, column_type, engine)
         if fn is None:
             return None
         parts.append((fn, op.kwargs, ctype))
@@ -236,20 +245,20 @@ def chain_vector(steps: tuple[Op, ...], column_type: CType) -> Vector | None:
     return run
 
 
-def case_vector(op: CaseOp, column_type: CType) -> Vector | None:
+def case_vector(op: CaseOp, column_type: CType, engine: str = "arrow") -> Vector | None:
     """A ``case`` (or a column's ``when``) as one vector op, or None when it does not lower."""
     if op.reads:
         return None
     whens: list[tuple[Mask, Vector]] = []
     for when, chain in op.branches:
         mask = lower_when(when.text)
-        branch = chain_vector(chain.steps, column_type)
+        branch = chain_vector(chain.steps, column_type, engine)
         if mask is None or branch is None:
             return None
         whens.append((mask, branch))
     otherwise: Vector | None = None
     if op.otherwise is not None:
-        otherwise = chain_vector(op.otherwise.steps, column_type)
+        otherwise = chain_vector(op.otherwise.steps, column_type, engine)
         if otherwise is None:
             return None
 
