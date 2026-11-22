@@ -1,0 +1,31 @@
+{
+  "stream": "Typed Source",
+  "nested_json": {
+    "small_int": "int16",
+    "medium_int": "int32",
+    "plain_int": "int64",
+    "plain_number": "float64",
+    "number_with_scale": "decimal(10,2)",
+    "singer_decimal": "decimal(12,4)",
+    "plain_string": "string",
+    "bounded_string": "string(40)",
+    "flag": "boolean",
+    "day": "date",
+    "clock": "time",
+    "instant": "timestamptz",
+    "ident": "uuid",
+    "blob": "binary",
+    "hinted": "int16",
+    "address": "json",
+    "tags": "json",
+    "nullable_any_of": "int64",
+    "same_any_of": "string",
+    "mixed_any_of": "json",
+    "multi_type": "json",
+    "untyped": "json"
+  },
+  "nested_keep_overrides": {
+    "address": "struct<street: string, zip: string>",
+    "tags": "list<string>"
+  }
+}

@@ -1,0 +1,10 @@
+case,type,input,kwargs,expected,note
+uuid_canonical,uuid,123e4567-e89b-12d3-a456-426614174000,,123e4567-e89b-12d3-a456-426614174000,
+uuid_upper_braces,uuid,{123E4567-E89B-12D3-A456-426614174000},,123e4567-e89b-12d3-a456-426614174000,
+uuid_no_dashes,uuid,123e4567e89b12d3a456426614174000,,123e4567-e89b-12d3-a456-426614174000,
+uuid_padded,uuid,  123e4567-e89b-12d3-a456-426614174000 ,,123e4567-e89b-12d3-a456-426614174000,
+uuid_short,uuid,123e4567-e89b-12d3-a456-42661417400,,!error,31 hex digits
+uuid_not_hex,uuid,123e4567-e89b-12d3-a456-42661417400g,,!error,
+uuid_version_match,uuid,f47ac10b-58cc-4372-a567-0e02b2c3d479,"{""version"": 4}",f47ac10b-58cc-4372-a567-0e02b2c3d479,
+uuid_version_mismatch,uuid,123e4567-e89b-12d3-a456-426614174000,"{""version"": 4}",!error,this one is version 1
+uuid_empty,uuid,,,!null,

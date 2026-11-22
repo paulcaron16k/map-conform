@@ -1,0 +1,50 @@
+case,type,input,kwargs,expected,note
+int_plain,int64,42,,42,
+int_padded,int64,  42  ,,42,trim is on by default
+int_plus,int64,+42,,42,
+int_minus,int64,-42,,-42,
+int_neg_zero,int64,-0,,0,
+int_leading_zeros,int64,007,,7,
+int_thousands,int64,"1,234,567",,1234567,
+int_bad_grouping,int64,"1,23,4",,!error,thousands separators must form groups of three
+int_whole_fraction,int64,12.0,,12,a zero fraction is always allowed
+int_fraction_default,int64,12.5,,!error,rounding defaults to error for int-from-fraction
+int_half_up,int64,12.5,"{""rounding"": ""half_up""}",13,
+int_half_up_negative,int64,-12.5,"{""rounding"": ""half_up""}",-13,half_up rounds away from zero
+int_half_even,int64,12.5,"{""rounding"": ""half_even""}",12,
+int_down,int64,12.7,"{""rounding"": ""down""}",12,
+int_exponent,int64,1e3,,1000,an integral exponent form is an integer
+int64_max,int64,9223372036854775807,,9223372036854775807,
+int64_overflow,int64,9223372036854775808,,!error,
+int16_max,int16,32767,,32767,
+int16_overflow,int16,32768,,!error,
+int32_min,int32,-2147483648,,-2147483648,
+int_words,int64,forty-two,,!error,
+int_space_thousands,int64,1 234,,!error,space grouping is not in the default grammar
+int_empty,int64,,,!null,""""" is a default null token"
+int_na,int64,N/A,,!null,default null token
+int_dash,int64,-,,!null,default null token
+float_plain,float64,1234.5,,1234.5,
+float_thousands,float64,"1,234.5",,1234.5,
+float_exponent,float64,1.5e3,,1500.0,
+float_nan_token,float64,NaN,,!null,default null token; floats are finite or null
+dec_currency_prefix,"decimal(10,2)","$1,234.50",,1234.50,
+dec_currency_pound,"decimal(10,2)", £12,,12.00,
+dec_iso_suffix,"decimal(10,2)",1234.5 USD,,1234.50,ISO-4217 code after
+dec_iso_prefix,"decimal(10,2)",USD 1234.5,,1234.50,ISO-4217 code before
+dec_two_currencies,"decimal(10,2)",$1234.50 USD,,!error,at most one currency marker
+dec_eu_locale,"decimal(10,2)","€1.234,50","{""locale"": ""eu""}",1234.50,
+dec_ch_locale,"decimal(10,2)",1'234.50,"{""locale"": ""ch""}",1234.50,
+dec_eu_without_locale,"decimal(10,2)","1.234,50",,!error,"us grammar: ',' after '.' is invalid"
+dec_parens_negative,"decimal(10,2)","(1,234.50)","{""parens_negative"": true}",-1234.50,
+dec_parens_default,"decimal(10,2)","(1,234.50)",,!error,parentheses need parens_negative
+dec_trailing_minus,"decimal(10,2)",1234.50-,"{""trailing_minus"": true}",-1234.50,
+dec_trailing_minus_default,"decimal(10,2)",1234.50-,,!error,
+dec_percent_divide,"decimal(6,4)",12.5%,"{""percent"": ""divide""}",0.1250,
+dec_percent_default,"decimal(6,4)",12.5%,,!error,'%' needs percent: divide
+dec_pad_scale,"decimal(10,2)",0.1,,0.10,exactly s fraction digits
+dec_exact_half_up,"decimal(10,2)",1.005,,1.01,"decimal arithmetic, not binary float (float gives 1.00)"
+dec_exponent,"decimal(10,2)",1.5e3,,1500.00,
+dec_at_precision,"decimal(10,2)",99999999.99,,99999999.99,
+dec_over_precision,"decimal(10,2)",123456789.12,,!error,11 digits > precision 10
+dec_null_token,"decimal(10,2)",#N/A,,!null,spreadsheet error value is a default null token
