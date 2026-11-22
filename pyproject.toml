@@ -110,6 +110,8 @@ unused-type-ignore-comment = "ignore"
 [tool.pytest]
 addopts = [
     "-ra",
+    "-m",
+    "not bench",
 ]
 filterwarnings = [
     "error",
@@ -122,6 +124,7 @@ testpaths = [
 ]
 markers = [
     "e2e: runs the real mapper into a real Singer target (needs uvx and network)",
+    "bench: throughput benchmarks and the regression gate (pytest -m bench tests/bench)",
 ]
 
 [tool.ruff]

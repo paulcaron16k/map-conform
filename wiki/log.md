@@ -76,3 +76,5 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-22T19:00:00Z | UPDATED | decisions/0010-stream-map-superset | Compatibility defaults no longer set metadata |
 | 2026-11-22T19:00:00Z | UPDATED | components/metadata-and-errors | _sdc_* columns follow add_record_metadata (default false) |
 | 2026-11-22T19:30:00Z | UPDATED | plans/roadmap | Added WBS 7.5 (done) and 8.10 (first in P4) |
+| 2026-11-22T20:00:00Z | CREATED | qa/benchmarks | Throughput baseline and the CI regression gate (WBS 8.9) |
+| 2026-11-22T20:00:00Z | UPDATED | qa/test-strategy | Parity and bench layers built; draft → active |

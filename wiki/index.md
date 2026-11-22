@@ -73,6 +73,7 @@ Decisions:
 | Page | Type | Covers |
 |---|---|---|
 | [Test strategy](qa/test-strategy.md) | playbook | Test layers and gates |
+| [Benchmarks](qa/benchmarks.md) | metric | Throughput baseline and the CI regression gate |
 | [Dev environment](runbooks/dev-environment.md) | runbook | Local setup |
 | [Wiki maintenance](runbooks/wiki-maintenance.md) | runbook | Wiki rules |
 

@@ -79,3 +79,23 @@ jobs:
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: uvx --with=tox-uv tox -e "$PYTHON_VERSION"
+
+  bench:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0  # hatch-vcs derives the version from tags
+          persist-credentials: false
+      - name: Setup uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.14"
+      - name: Throughput and regression gate
+        env:
+          BENCH_RESULTS: bench-results.json
+        run: uv run --locked pytest -m bench tests/bench -q -s
+      - name: Results
+        if: always()
+        run: cat bench-results.json >> "$GITHUB_STEP_SUMMARY" || true
