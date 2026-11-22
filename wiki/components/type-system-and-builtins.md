@@ -4,7 +4,7 @@ title: "Type system, builtins, expressions and UDFs"
 description: "Canonical CType vocabulary, builtin transform catalogue, expression language and UDF registry."
 resource: map_conform/types/
 tags: [engineering, types, draft]
-timestamp: 2026-11-21T00:00:00Z
+timestamp: 2026-11-22T12:00:00Z
 sources:
   - path: docs/detailed-design.md
 ---
@@ -13,7 +13,12 @@ sources:
 
 Parent: [Wiki Index](../index.md) · Related: [Detailed design](../../docs/detailed-design.md)
 
-> Status: **draft**. This describes the designed system. No code exists yet.
+> Status: **draft**.
+>
+> - **Built (P2):** the CType system (`map_conform/types/`), every builtin and cast
+>   (`map_conform/transforms/`), macros, and the chain compiler (`map_conform/plan/chain.py`).
+> - **Not yet:** `expr`, `case`, `when` and UDFs (P3), stream-map compatibility (P3), and
+>   `mask_number`, `mask_hidden`, `tokenize`, `fake` and nested `fields` (E12).
 
 ## Canonical types
 
@@ -28,7 +33,7 @@ The full table is in detailed design §4.
 | string(n) | string (+maxLength) | string |
 | date / time | string date / time | date32 / time64[us] |
 | timestamp / timestamptz | string date-time + `x-sql-datatype` | timestamp[us] / timestamp[us, UTC] |
-| uuid / binary / json | uuid / base64 / string json-text | string / binary / string |
+| uuid / binary / json | uuid / base64 / string json-text | arrow.uuid / binary / string |
 | struct<…> / list<T> | object / array | struct / list |
 
 ## Transform tiers ([ADR-0002](../decisions/0002-transform-authoring.md))

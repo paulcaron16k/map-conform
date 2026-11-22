@@ -4,7 +4,7 @@ title: Clean-Landing Contract
 description: "What a target may assume about SCHEMA, RECORD and BATCH output from map-conform, and the reviewer instruction for targets."
 resource: map_conform/types/to_jsonschema.py
 tags: [engineering, contract, draft]
-timestamp: 2026-11-21T00:00:00Z
+timestamp: 2026-11-22T12:00:00Z
 sources:
   - path: docs/detailed-design.md
   - path: creating-a-better-mapper-guidance.md
@@ -15,7 +15,8 @@ sources:
 Parent: [Wiki Index](../index.md) · Related: [Wire encoding ADR](../decisions/0007-wire-encoding.md) ·
 [Naming ADR](../decisions/0008-naming-defaults.md) · [_sdc_ ADR](../decisions/0005-sdc-metadata.md)
 
-> Status: **draft**. This describes the designed system. It becomes `active` when E5 and E8 ship.
+> Status: **draft**. The RECORD path delivers this contract as of P2 (types, values,
+> names, `_sdc_*`); BATCH delivers it from P4. Changing it needs an ADR.
 
 Every guarantee below has a contract test in `tests/contract/` (planned: WBS 4.3, 5.8, 8.2).
 

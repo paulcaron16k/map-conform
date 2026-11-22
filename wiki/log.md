@@ -58,3 +58,9 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-22T10:00:00Z | UPDATED | schemas/plugin-settings | P1 built: settings as merged; SDK-compatible settings planned (E12); draft → active |
 | 2026-11-22T10:00:00Z | UPDATED | schemas/conform-spec | P1 built: generated schema, YAML 1.2, step rule; draft → active |
 | 2026-11-22T10:00:00Z | UPDATED | plans/roadmap | P1 done; P3 is 53 points with WBS 12.10 |
+| 2026-11-22T12:00:00Z | UPDATED | components/metadata-and-errors | P2 built: _sdc_*, errors, rejects, thresholds, metrics; draft → active |
+| 2026-11-22T12:00:00Z | UPDATED | components/type-system-and-builtins | P2 status: types, builtins, macros built; expr/UDF/compat pending |
+| 2026-11-22T12:00:00Z | UPDATED | components/execution-engines | P2 status: plan compiler and row executor built; BATCH pending |
+| 2026-11-22T12:00:00Z | UPDATED | concepts/clean-landing-contract | Delivered by the RECORD path as of P2 |
+| 2026-11-22T12:00:00Z | UPDATED | qa/test-strategy | Layers built through P2 |
+| 2026-11-22T12:00:00Z | UPDATED | plans/roadmap | P2 done |
