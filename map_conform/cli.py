@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 import click
 import yaml
 
+from map_conform.doctor import check_project
 from map_conform.expr.functions import FUNCTIONS
 from map_conform.mapper import MapConformMapper
 from map_conform.plan.compile import compile_stream, plan_report
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
     from map_conform.spec.model import Spec
     from map_conform.transforms.registry import Registry, Transform
 
-TOOL_COMMANDS = frozenset({"spec", "functions"})
+TOOL_COMMANDS = frozenset({"spec", "functions", "doctor"})
 
 
 @click.group(name="map-conform")
@@ -360,6 +361,28 @@ def _render_explain(report: dict[str, Any]) -> str:
         lines.append("")
         lines.extend(f"problem: {f}" for f in report["findings"])
     return "\n".join(lines)
+
+
+@tools.command(name="doctor")
+@click.option(
+    "--meltano-yml",
+    "meltano_yml",
+    default="meltano.yml",
+    show_default=True,
+    type=click.Path(dir_okay=False),
+    help="The Meltano project file.",
+)
+@click.option("--strict", is_flag=True, help="Treat warnings as errors.")
+def doctor(meltano_yml: str, *, strict: bool) -> None:
+    """Check a Meltano project's use of map-conform: settings, spec, UDFs, targets' metadata."""
+    findings = check_project(meltano_yml)
+    for finding in findings:
+        click.echo(str(finding), err=finding.severity != "note")
+    failing = [f for f in findings if f.severity == "error" or (strict and f.severity == "warning")]
+    if failing:
+        click.echo(f"{meltano_yml}: {len(failing)} problem(s)", err=True)
+        sys.exit(1)
+    click.echo(f"{meltano_yml}: no problems found")
 
 
 @tools.command(name="functions")

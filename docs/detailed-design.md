@@ -47,7 +47,7 @@ map-conform spec schema                              # print the spec's JSON Sch
 map-conform spec import --catalog C [--zamboni TC] [--namespace NS] [-o OUT]  # draft a spec from a catalog (+ Zamboni columns)
 map-conform spec export SPEC --zamboni TC --catalog C [--namespace NS] [-o OUT]  # write canonical types into Zamboni `columns`
 map-conform spec import --stream-maps CONFIG.json [--catalog C] [-o OUT]  # SDK stream_maps (+ flattening) to a native spec
-map-conform doctor [--meltano-yml meltano.yml]       # check targets have add_record_metadata, etc.
+map-conform doctor [--meltano-yml meltano.yml] [--strict]  # check targets have add_record_metadata, etc.
 map-conform functions [--json]                       # list builtins, kwargs, vectorisable?
 ```
 
@@ -76,6 +76,19 @@ As built (`map_conform/spec/bridge.py`, `map_conform/spec/zamboni.py`, WBS 9.1â€
   `{output column: CType}`, with the `_sdc_*` columns when they are added. Everything else
   in the file is kept, a missing table is created, and `-o` writes elsewhere. With several
   namespaces, `--namespace` is required.
+
+**`doctor`** (`map_conform/doctor.py`, WBS 9.3) checks each map-conform mapping in
+`meltano.yml` (the mapping's config over the plugin's):
+
+- the settings are valid;
+- `spec_path` exists (relative to the project), and the spec, with any `stream_maps`, loads;
+- module-path `udfs` have `allow_python_udfs: true` (the setting alone is a note);
+- when the mapping adds `_sdc_*` (the setting, or `add_record_metadata` anywhere in the
+  spec), each loader after it in a job sets `add_record_metadata: true`, following
+  `inherit_from`. With no job using the mapping, every loader is checked.
+
+Errors exit 1, and `--strict` also fails on warnings. Config set only in the environment is
+invisible to it, which its messages say.
 
 Rules that match no catalog stream are warnings. An explicit `name:` is never renamed, so a
 conformed name that collides with it is an error, even under `on_collision: suffix`.
