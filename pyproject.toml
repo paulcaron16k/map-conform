@@ -165,6 +165,11 @@ allow-star-arg-any = true
 ]
 # Vector ops take each builtin's own kwargs dataclass, typed Any.
 "map_conform/transforms/vector.py" = ["ANN401"]
+"examples/*.py" = [
+  "INP001", # a script in a Meltano project, not a package
+  "S101",   # asserts are the check
+  "T201",   # it reports what it found
+]
 "tests/**/*.py" = [
   "S101", # assert is how pytest checks
 ]

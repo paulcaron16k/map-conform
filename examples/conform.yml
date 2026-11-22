@@ -1,0 +1,21 @@
+# The conform spec for the example project: a messy spreadsheet export, cleaned on the way in.
+# Every key is described in docs/spec-reference.md.
+version: 1
+defaults:
+  on_error: reject            # rows that cannot be cleaned go to .map-conform/rejects
+  add_record_metadata: true   # the target keeps them (add_record_metadata on the loader)
+streams:
+  orders:
+    key_properties: [order_id]
+    columns:
+      Order ID: {name: order_id, type: int64, nullable: false}
+      Order Date: {type: date, parse: {formats: ["%m/%d/%Y", iso, excel_serial]}}
+      Amount ($): {type: "decimal(12,2)", parse: {parens_negative: true, trailing_minus: true}}
+      Discount %: {type: "decimal(6,4)", parse: {percent: divide}}
+      Paid?: {type: boolean}
+      Ship Date: {type: date, parse: {formats: ["%m/%d/%Y", iso, excel_serial]}}
+      Qty.: {type: int32}
+      Unit Price (€): {type: "decimal(12,4)"}
+      Created At (UTC): {type: timestamptz}
+      Tracking UUID: {type: uuid}
+      Customer Name: {transform: [trim, {mask: {keep_first: 1}}]}

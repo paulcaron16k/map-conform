@@ -1,2 +1,3 @@
 # The spreadsheet-export fixture keeps its CRLF line endings and BOM byte-for-byte.
 tests/fixtures/sources/*.csv -text
+examples/data/*.csv -text

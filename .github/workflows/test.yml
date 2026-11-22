@@ -99,3 +99,27 @@ jobs:
       - name: Results
         if: always()
         run: cat bench-results.json >> "$GITHUB_STEP_SUMMARY" || true
+
+  example:
+    name: Example project (meltano run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0  # hatch-vcs derives the version from tags
+          persist-credentials: false
+      - name: Setup uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+      - name: meltano install
+        working-directory: examples
+        run: uvx --python 3.12 meltano==4.4.1 install
+      - name: meltano run
+        working-directory: examples
+        run: |
+          mkdir -p output  # the SQLite catalog's directory
+          uvx --python 3.12 meltano==4.4.1 run load
+      - name: Check the lake
+        working-directory: examples
+        run: uv run --no-project --with duckdb==1.5.2 python check_lake.py

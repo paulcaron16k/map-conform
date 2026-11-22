@@ -17,9 +17,9 @@ repos:
   - id: check-yaml
   # Fixture data is messy on purpose: CRLF, BOM, trailing spaces inside cells.
   - id: end-of-file-fixer
-    exclude: ^tests/fixtures/(sources|streams|batch)/
+    exclude: ^(tests/fixtures/(sources|streams|batch)|examples/data)/
   - id: trailing-whitespace
-    exclude: ^tests/fixtures/(sources|streams|batch)/
+    exclude: ^(tests/fixtures/(sources|streams|batch)|examples/data)/
 
 - repo: https://github.com/zizmorcore/zizmor-pre-commit
   rev: v1.30.1

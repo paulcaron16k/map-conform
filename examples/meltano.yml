@@ -1,0 +1,55 @@
+# A reference Meltano project: tap-csv -> map-conform -> target-ducklake (WBS 10.2).
+#   cd examples && meltano install && meltano run load
+# Then query the lake: see README.md.
+version: 1
+send_anonymous_usage_stats: false
+project_id: map-conform-example
+default_environment: dev
+environments:
+- name: dev
+plugins:
+  extractors:
+  - name: tap-csv
+    variant: meltanolabs
+    pip_url: git+https://github.com/MeltanoLabs/tap-csv.git@v1.3.2
+    config:
+      files:
+      - entity: orders
+        path: data/orders.csv
+        keys: [Order ID]
+  mappers:
+  - name: map-conform
+    namespace: map_conform
+    pip_url: ..                       # this checkout; use `map-conform` once it is on PyPI
+    executable: map-conform
+    settings:
+    - name: spec_path
+    - name: add_record_metadata
+      kind: boolean
+    mappings:
+    - name: conform
+      config:
+        spec_path: conform.yml
+  loaders:
+  - name: target-ducklake
+    namespace: target_ducklake
+    pip_url: git+https://github.com/paulcaron16k/target-ducklake-definite.git@e9dc3f3b866b2f7bc146759a7d11d2eed6d019bd
+    settings:
+    - name: catalog_url
+    - name: catalog_type
+    - name: data_path
+    - name: storage_type
+    - name: default_target_schema
+    - name: add_record_metadata
+      kind: boolean
+    config:
+      catalog_type: sqlite           # the target's duckdb catalog ignores catalog_url/data_path
+      catalog_url: output/catalog.sqlite
+      data_path: output/data/
+      storage_type: local
+      default_target_schema: raw
+      add_record_metadata: true
+jobs:
+- name: load
+  tasks:
+  - tap-csv conform target-ducklake
