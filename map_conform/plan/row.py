@@ -57,7 +57,12 @@ class RowExecutor:
         ]
 
     def run(
-        self, record: dict[str, Any], message: dict[str, Any], row: int
+        self,
+        record: dict[str, Any],
+        message: dict[str, Any],
+        row: int,
+        *,
+        batched_at: str | None = None,
     ) -> dict[str, Any] | None:
         """The conformed record, ``_sdc_*`` columns included when metadata is on.
 
@@ -93,7 +98,7 @@ class RowExecutor:
         if self.metadata is not None:
             deleted_at = record.get(f"{SDC_PREFIX}deleted_at")
             try:
-                self.metadata.add(out, message, deleted_at)
+                self.metadata.add(out, message, deleted_at, batched_at)
             except StepFailed as exc:
                 error = self._error(
                     row, "_sdc_deleted_at", deleted_at, "_sdc_deleted_at", exc.reason

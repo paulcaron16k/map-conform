@@ -25,7 +25,7 @@ declares the same settings, and a test keeps the two in step.
 | `batch_output.format` | `parquet` \| `jsonl` | `parquet` | Output encoding for BATCH. |
 | `batch_output.compression` | `zstd` \| `snappy` \| `gzip` \| `none` | `zstd` (parquet), `gzip` (jsonl) |  |
 | `batch_output.storage.root` | string | input file's directory | Where output files go: an fsspec URL (`file://`, `s3://`, …). |
-| `batch_output.storage.params` | object | `{}` | fsspec storage options. |
+| `batch_output.storage.params` | object | `{}` | fsspec storage options, used to read the manifest files and to write the output. |
 | `batch_output.delete_input` | boolean | false | Delete each input file after its output is written. |
 | `batch_output.row_group_size` | integer | 131072 | Rows per parquet row group, which is also the size of each processing chunk. |
 | `reject.storage` | string | `./.map-conform/rejects` | Where the dead-letter files go. |
@@ -838,8 +838,8 @@ As built (`map_conform/plan/row.py`, `map_conform/mapper.py`):
   - STATE passes through in order.
   - ACTIVATE_VERSION is emitted once per output stream, under the conformed name.
   - A new SCHEMA for a stream recompiles its plans.
-- **BATCH** is refused with a clear message until the columnar engine exists (phase P4).
-  Passing BATCH files through unconformed would contradict the conformed SCHEMA.
+- **BATCH** messages are conformed row by row by the same executors (§10.3); the columnar
+  engine (WBS 8.4–8.6) replaces this path for vectorisable plans.
 - **Not yet built.** The fast path that skips a cast and the orjson I/O are performance work
   for later.
 
@@ -871,6 +871,33 @@ As built (`map_conform/plan/row.py`, `map_conform/mapper.py`):
   without one, the time the file was opened). `_sdc_extracted_at` comes from the BATCH message
   `time_extracted` when present, otherwise null, which is SDK-equivalent.
 - `version` is passed through.
+
+As built (`map_conform/batch/`, WBS 8.1–8.3 and 8.8):
+
+- **Rows.** Every row of every manifest file is conformed by the stream's row executors,
+  exactly like a RECORD: the same plan, `on_error`, reject sink, filter, shapes and metrics.
+  Row numbers continue the RECORD count of the tap stream.
+- **Input** is opened with fsspec, using `batch_output.storage.params` for input and output
+  alike. JSONL (gzip or plain) is read line by line with exact decimals; parquet is read in
+  row groups of `row_group_size` rows. Other formats or compressions, and unreadable files,
+  stop the run with the URI.
+- **Output.** With `mode: batch`, map-conform writes one file per input file and output
+  stream, in the input's order, under `<root>/<stream>/<run id>-<n>`. `root` is
+  `storage.root`, or the input file's directory. Then it emits one BATCH message per output
+  stream, with `encoding`, the `manifest`, and the input's `version` and
+  `time_extracted`.
+  - Parquet uses the declared Arrow schema (`to_arrow` of each column, plus the `_sdc_*`
+    columns with `add_record_metadata`: timestamps as `timestamp[us, UTC]`, integers as
+    `int64`), built from the RECORD path's wire values, so both carry the same data.
+  - JSONL holds the wire values, compact.
+  - Compression defaults to zstd for parquet and gzip for JSONL.
+- **`mode: record`** emits RECORD messages instead, for targets that do not read BATCH.
+- **`_sdc_batched_at`** is each input file's last-modified time (`fs.modified`), or now when
+  the store does not report one. `_sdc_extracted_at` is the BATCH message's
+  `time_extracted`.
+- **`delete_input`** deletes each input file once every output written from it is closed.
+- **Not yet:** the vectorised path (8.4–8.6). Every column runs row-wise for now, which is
+  correct but not fast.
 
 ## 11. `_sdc_*` metadata (SDK-exact)
 

@@ -2,7 +2,8 @@
 
 At SCHEMA the mapper compiles a plan for each output stream of the tap stream; each RECORD is
 conformed by the row executor. STATE passes through in order; ACTIVATE_VERSION is renamed to
-the output streams. BATCH is conformed from phase P4 (WBS 8.x).
+the output streams. A BATCH message's files are conformed row by row and written out as new
+BATCH files or as RECORDs (:mod:`map_conform.batch`).
 """
 
 from __future__ import annotations
@@ -20,6 +21,8 @@ from singer_sdk.mapper_base import InlineMapper
 from singer_sdk.singerlib.encoding.base import SingerMessageType
 from singer_sdk.singerlib.encoding.simple import Message
 
+from map_conform.batch.engine import BatchEngine
+from map_conform.batch.files import BatchFileError
 from map_conform.errors import RowRejected, ThresholdExceeded
 from map_conform.metadata import Metadata, sdc_schema
 from map_conform.metrics import StreamMetrics, write_metrics
@@ -118,11 +121,14 @@ class MapConformMapper(InlineMapper):
         self._metrics: dict[str, StreamMetrics] = {}
         self._limits: dict[str, Defaults] = {}
         self._rejects: RejectSink | None = None
+        self._run_id = self._started.strftime("%Y%m%dT%H%M%S%fZ")
         try:
             self.settings: Settings = parse_settings(self.config)
             self.spec: Spec = self._load_spec(self.settings)
             udfs = load_udfs(self.spec.udfs, allow_python_udfs=self.settings.allow_python_udfs)
             self.registry = registry_with(builtin_registry(), udfs)
+            self._batches = BatchEngine(self.settings.batch_output, self._run_id, self._reject,
+                                        self._rows)  # fmt: skip
         except SpecError as exc:
             raise ConfigValidationError(
                 f"Invalid {exc.source or 'configuration'}",
@@ -251,8 +257,7 @@ class MapConformMapper(InlineMapper):
         executor.metrics.rows_rejected += 1
         if self._rejects is None:
             storage = Path(self.settings.reject.storage)
-            run_id = self._started.strftime("%Y%m%dT%H%M%S%fZ")
-            self._rejects = RejectSink(storage, self.settings.reject.format, run_id)
+            self._rejects = RejectSink(storage, self.settings.reject.format, self._run_id)
         self._rejects.write(executor.plan.name, rejected.error, record)
         self.logger.warning("Rejected: %s", rejected.error)
 
@@ -330,18 +335,21 @@ class MapConformMapper(InlineMapper):
 
     @override
     def map_batch_message(self, message_dict: dict) -> Iterator[RawMessage]:
-        """Refuse BATCH until the columnar engine exists (WBS 8.x).
-
-        Passing BATCH files through unconformed would contradict the conformed SCHEMA.
+        """Conform every row of the BATCH files, then write new files or RECORDs.
 
         Args:
             message_dict: A BATCH message JSON dictionary.
 
+        Yields:
+            BATCH messages for the conformed files (``batch_output.mode: batch``), or RECORD
+            messages (``record``).
+
         Raises:
-            NotImplementedError: always, for now.
+            ConfigValidationError: for a manifest file that cannot be read.
         """
-        msg = (
-            f"BATCH messages (stream {message_dict.get('stream')!r}) are conformed from phase "
-            "P4 (WBS 8.x). Until then, run the tap without BATCH output."
-        )
-        raise NotImplementedError(msg)
+        executors = self._outputs(message_dict["stream"])
+        try:
+            for out in self._batches.process(message_dict, executors):
+                yield RawMessage(payload=out)
+        except BatchFileError as exc:
+            raise ConfigValidationError(str(exc)) from exc

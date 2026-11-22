@@ -41,15 +41,21 @@ class Metadata:
         self.batched_at = start.isoformat()
         self.sync_started_at = int(start.timestamp() * 1000)
 
-    def add(self, record: dict[str, Any], message: dict[str, Any], deleted_at: object) -> None:
-        """Set the seven columns on an output record.
+    def add(
+        self,
+        record: dict[str, Any],
+        message: dict[str, Any],
+        deleted_at: object,
+        batched_at: str | None = None,
+    ) -> None:
+        """Set the seven columns on an output record; BATCH rows pass their file's time.
 
         Raises:
             StepFailed: if the source ``_sdc_deleted_at`` is not a timestamp.
         """
         record["_sdc_extracted_at"] = message.get("time_extracted")
         record["_sdc_received_at"] = dt.datetime.now(tz=dt.UTC).isoformat()
-        record["_sdc_batched_at"] = self.batched_at
+        record["_sdc_batched_at"] = batched_at or self.batched_at
         record["_sdc_deleted_at"] = conform_deleted_at(deleted_at)
         record["_sdc_sequence"] = round(time.time() * 1000)
         record["_sdc_table_version"] = message.get("version")

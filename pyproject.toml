@@ -32,6 +32,7 @@ license = "Apache-2.0"
 license-files = [ "LICENSE" ]
 requires-python = ">=3.11"
 dependencies = [
+    "fsspec>=2024.2",
     "pyarrow>=18",
     "pyyaml>=6",
     "singer-sdk~=0.54.9",
@@ -94,8 +95,8 @@ warn_unused_configs = true
 warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
-# simpleeval (a Singer SDK dependency) ships no types; the SDK parity tests use it.
-module = [ "simpleeval" ]
+# fsspec and simpleeval ship no types.
+module = [ "fsspec", "simpleeval" ]
 ignore_missing_imports = true
 
 [tool.ty.rules]
