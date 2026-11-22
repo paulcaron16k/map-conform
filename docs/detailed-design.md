@@ -64,6 +64,16 @@ Parsing rules (the Zamboni pattern):
   order is `defaults` → each matching glob from least to most specific → the exact name.
   Specificity is (literal characters, glob length).
 - Validation runs on the merged result.
+- Globs are `fnmatch` patterns, matched case-sensitively. A key whose rules have `source`
+  is an output-stream name, not a glob. It inherits from `defaults` only.
+- YAML is read with YAML 1.2 core-schema scalars: only `true`/`false` are booleans, so
+  `yes`, `no`, `on`, `off` and `NO` stay strings, and `1:30` and dates stay strings. A
+  duplicate key is an error.
+- Substitution runs on string values after loading and merging: `${name}` comes from
+  `spec_vars`, `${env:NAME}` from the environment, and `${name:-default}` /
+  `${env:NAME:-default}` supply a fallback. A string that is exactly one `${name}` takes the
+  value's type. `$${` writes a literal `${`. Inside a macro, its own `params` are left for
+  expansion. An unknown name is an error, reported with its path.
 - The JSON Schema is generated from the dataclasses and shipped as
   `map_conform/map-conform-spec.schema.json`. A test fails if the shipped schema is stale.
 
