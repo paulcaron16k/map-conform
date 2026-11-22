@@ -34,7 +34,7 @@ repos:
   - id: check-meltano
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.16.10
+  rev: v0.17.6
   hooks:
   - id: ruff-check
   - id: ruff-format
@@ -60,6 +60,8 @@ repos:
   rev: v1.51.1
   hooks:
   - id: typos
+    # Report only: tests spell names wrong on purpose, and a silent fix changes their meaning.
+    args: [--force-exclude]
 
 - repo: local
   hooks:

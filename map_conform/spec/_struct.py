@@ -204,6 +204,11 @@ def freeze_mapping(data: Mapping[str, object]) -> Mapping[str, Any]:
     return types.MappingProxyType({k: freeze(v) for k, v in data.items()})
 
 
+def thaw_mapping(data: Mapping[str, object]) -> dict[str, Any]:
+    """:func:`thaw` for a mapping, typed as a plain dict."""
+    return {k: thaw(v) for k, v in data.items()}
+
+
 def thaw(data: object) -> object:
     """Undo :func:`freeze`: tuples become lists and mappings become dicts."""
     if isinstance(data, Mapping):
