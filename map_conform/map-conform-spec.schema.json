@@ -261,9 +261,9 @@
             "truncate": "hash",
             "reserved_words": "suffix",
             "reserved_dialects": [
-              "ansi",
               "postgres",
-              "duckdb"
+              "duckdb",
+              "snowflake"
             ],
             "on_collision": "error",
             "nested": true
@@ -566,16 +566,17 @@
           "type": "array",
           "items": {
             "enum": [
-              "ansi",
               "postgres",
-              "duckdb"
+              "duckdb",
+              "snowflake",
+              "ansi"
             ]
           },
-          "description": "Reserved-word lists to union.",
+          "description": "Reserved-word lists to union. ansi (SQL:2016) is opt-in: it reserves common column names such as date, year and value.",
           "default": [
-            "ansi",
             "postgres",
-            "duckdb"
+            "duckdb",
+            "snowflake"
           ]
         },
         "on_collision": {
@@ -619,9 +620,9 @@
               "truncate": "hash",
               "reserved_words": "suffix",
               "reserved_dialects": [
-                "ansi",
                 "postgres",
-                "duckdb"
+                "duckdb",
+                "snowflake"
               ],
               "on_collision": "error",
               "nested": true

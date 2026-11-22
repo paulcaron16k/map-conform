@@ -11,6 +11,8 @@ The pipeline is pure and deterministic, and each step follows the ``naming`` def
 6. Collapse runs of ``_`` and trim it from both ends.
 7. A leading digit: prefix ``_``, turn it into a letter (SDK style) or fail.
 8. An empty result becomes ``col_<n>``, where n is the source ordinal.
+9. A reserved word of any configured dialect (case-insensitive): suffix ``_``, prefix ``_``,
+   fail, or ignore.
 
 Running the pipeline on its own output changes nothing.
 """
@@ -22,6 +24,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from map_conform.naming.reserved import reserved_words
 from map_conform.naming.translit import transliterate
 
 if TYPE_CHECKING:
@@ -75,6 +78,7 @@ class NameConformer:
     def __init__(self, naming: NamingDefaults) -> None:
         """Use these naming defaults."""
         self.naming = naming
+        self.reserved = reserved_words(naming.reserved_dialects)
 
     def conform(self, source: str, ordinal: int = 1) -> Conformed:
         """Conform one name; ``ordinal`` (1-based) names an empty result ``col_<n>``.
@@ -96,7 +100,18 @@ class NameConformer:
         if not text:
             text = f"col_{ordinal}"
             notes.append(f"nothing usable was left, so it is named {text}")
+        text = self._reserved(source, text)
         return Conformed(source, text, tuple(notes))
+
+    def _reserved(self, source: str, text: str) -> str:
+        policy = self.naming.reserved_words
+        if policy == "ignore" or text.lower() not in self.reserved:
+            return text
+        if policy == "suffix":
+            return text + "_"
+        if policy == "prefix":
+            return "_" + text
+        raise NamingError(source, f"{text!r} is a reserved word (reserved_words: error)")
 
     def _ascii(self, text: str, notes: list[str]) -> str:
         if self.naming.ascii == "keep" or text.isascii():

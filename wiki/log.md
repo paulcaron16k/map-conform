@@ -52,3 +52,4 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-22T06:00:00Z | UPDATED | components/name-conformer | Transliteration links ADR-0012 |
 | 2026-11-22T06:00:00Z | UPDATED | runbooks/dev-environment | Python 3.11–3.14 |
 | 2026-11-22T06:00:00Z | UPDATED | ci-cd/pipeline | Python 3.11–3.14 |
+| 2026-11-22T08:00:00Z | UPDATED | decisions/0008-naming-defaults | Amended: default reserved dialects postgres, duckdb, snowflake; ansi opt-in |

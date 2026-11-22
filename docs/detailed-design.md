@@ -98,7 +98,7 @@ defaults:
     max_length: 63
     truncate: hash               # hash: keep head + "_" + 6-hex of full name | error
     reserved_words: suffix       # suffix "_" | prefix "_" | error | ignore
-    reserved_dialects: [ansi, postgres, duckdb]   # unioned lists, data files
+    reserved_dialects: [postgres, duckdb, snowflake]  # unioned lists, data files; ansi is opt-in
     on_collision: error          # error | suffix (_2, _3 …)
     nested: true                 # also conform struct member names
   stream:

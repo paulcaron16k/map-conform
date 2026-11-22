@@ -34,7 +34,7 @@ from map_conform.spec.steps import Chain, Macro
 from map_conform.types.canonical import ctype_problem
 
 OnError = Literal["raise", "null", "keep", "reject"]
-Dialect = Literal["ansi", "postgres", "duckdb"]
+Dialect = Literal["postgres", "duckdb", "snowflake", "ansi"]
 
 _UDF_TARGET = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
 
@@ -82,7 +82,9 @@ class NamingDefaults:
         default="suffix",
     )
     reserved_dialects: tuple[Dialect, ...] = documented(
-        "Reserved-word lists to union.", default=("ansi", "postgres", "duckdb")
+        "Reserved-word lists to union. ansi (SQL:2016) is opt-in: it reserves common column "
+        "names such as date, year and value.",
+        default=("postgres", "duckdb", "snowflake"),
     )
     on_collision: Literal["error", "suffix"] = documented(
         "Two names conforming to the same output: error, or add _2, _3, ...", default="error"
