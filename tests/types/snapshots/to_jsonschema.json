@@ -1,0 +1,181 @@
+{
+  "boolean": {
+    "type": [
+      "boolean",
+      "null"
+    ]
+  },
+  "int16": {
+    "type": [
+      "integer",
+      "null"
+    ],
+    "minimum": -32768,
+    "maximum": 32767,
+    "x-sql-datatype": "smallint"
+  },
+  "int32": {
+    "type": [
+      "integer",
+      "null"
+    ],
+    "minimum": -2147483648,
+    "maximum": 2147483647,
+    "x-sql-datatype": "integer"
+  },
+  "int64": {
+    "type": [
+      "integer",
+      "null"
+    ],
+    "minimum": -9223372036854775808,
+    "maximum": 9223372036854775807,
+    "x-sql-datatype": "bigint"
+  },
+  "float32": {
+    "type": [
+      "number",
+      "null"
+    ],
+    "x-sql-datatype": "real"
+  },
+  "float64": {
+    "type": [
+      "number",
+      "null"
+    ],
+    "x-sql-datatype": "double precision"
+  },
+  "decimal(18,2)": {
+    "type": [
+      "string",
+      "null"
+    ],
+    "format": "x-singer.decimal",
+    "precision": 18,
+    "scale": 2
+  },
+  "decimal(50,10)": {
+    "type": [
+      "string",
+      "null"
+    ],
+    "format": "x-singer.decimal",
+    "precision": 50,
+    "scale": 10
+  },
+  "string": {
+    "type": [
+      "string",
+      "null"
+    ]
+  },
+  "string(40)": {
+    "type": [
+      "string",
+      "null"
+    ],
+    "maxLength": 40
+  },
+  "date": {
+    "type": [
+      "string",
+      "null"
+    ],
+    "format": "date"
+  },
+  "time": {
+    "type": [
+      "string",
+      "null"
+    ],
+    "format": "time"
+  },
+  "timestamp": {
+    "type": [
+      "string",
+      "null"
+    ],
+    "format": "date-time",
+    "x-sql-datatype": "timestamp"
+  },
+  "timestamptz": {
+    "type": [
+      "string",
+      "null"
+    ],
+    "format": "date-time",
+    "x-sql-datatype": "timestamptz"
+  },
+  "uuid": {
+    "type": [
+      "string",
+      "null"
+    ],
+    "format": "uuid"
+  },
+  "binary": {
+    "type": [
+      "string",
+      "null"
+    ],
+    "contentEncoding": "base64"
+  },
+  "json": {
+    "type": [
+      "string",
+      "null"
+    ],
+    "x-sql-datatype": "json"
+  },
+  "list<string>": {
+    "type": [
+      "array",
+      "null"
+    ],
+    "items": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "struct<a: int64, b: list<decimal(10,2)>>": {
+    "type": [
+      "object",
+      "null"
+    ],
+    "properties": {
+      "a": {
+        "type": [
+          "integer",
+          "null"
+        ],
+        "minimum": -9223372036854775808,
+        "maximum": 9223372036854775807,
+        "x-sql-datatype": "bigint"
+      },
+      "b": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "x-singer.decimal",
+          "precision": 10,
+          "scale": 2
+        }
+      }
+    }
+  },
+  "int64 not null": {
+    "type": "integer",
+    "minimum": -9223372036854775808,
+    "maximum": 9223372036854775807,
+    "x-sql-datatype": "bigint"
+  }
+}

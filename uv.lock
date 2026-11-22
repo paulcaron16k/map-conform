@@ -933,6 +933,7 @@ wheels = [
 name = "map-conform"
 source = { editable = "." }
 dependencies = [
+    { name = "pyarrow" },
     { name = "pyyaml" },
     { name = "singer-sdk" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
@@ -950,7 +951,6 @@ s3 = [
 dev = [
     { name = "hypothesis" },
     { name = "mypy" },
-    { name = "pyarrow" },
     { name = "pyarrow-stubs" },
     { name = "pytest" },
     { name = "pytest-github-actions-annotate-failures" },
@@ -966,7 +966,6 @@ lint = [
 ]
 test = [
     { name = "hypothesis" },
-    { name = "pyarrow" },
     { name = "pytest" },
     { name = "pytest-github-actions-annotate-failures" },
     { name = "pyyaml" },
@@ -982,6 +981,7 @@ typing = [
 
 [package.metadata]
 requires-dist = [
+    { name = "pyarrow", specifier = ">=18" },
     { name = "pyyaml", specifier = ">=6" },
     { name = "s3fs", marker = "extra == 's3'", specifier = ">=2026.1.0" },
     { name = "singer-sdk", specifier = "~=0.54.9" },
@@ -994,7 +994,6 @@ provides-extras = ["faker", "s3"]
 dev = [
     { name = "hypothesis", specifier = ">=6.100" },
     { name = "mypy", specifier = ">=2.1" },
-    { name = "pyarrow", specifier = ">=19" },
     { name = "pyarrow-stubs", specifier = ">=20.0.0.20260819" },
     { name = "pytest", specifier = ">=9" },
     { name = "pytest-github-actions-annotate-failures", specifier = ">=0.4" },
@@ -1008,7 +1007,6 @@ dev = [
 lint = [{ name = "ruff", specifier = ">=0.16" }]
 test = [
     { name = "hypothesis", specifier = ">=6.100" },
-    { name = "pyarrow", specifier = ">=19" },
     { name = "pytest", specifier = ">=9" },
     { name = "pytest-github-actions-annotate-failures", specifier = ">=0.4" },
     { name = "pyyaml", specifier = ">=6.0.4" },
