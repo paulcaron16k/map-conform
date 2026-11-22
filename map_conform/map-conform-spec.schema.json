@@ -1,0 +1,1077 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/paulcaron16k/map-conform/main/map_conform/map-conform-spec.schema.json",
+  "title": "map-conform spec (version 1)",
+  "$ref": "#/$defs/Spec",
+  "$defs": {
+    "BooleanDefaults": {
+      "description": "Words that cast to booleans (case-insensitive unless the cast says otherwise).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "true_values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Strings that mean true.",
+          "default": [
+            "true",
+            "t",
+            "yes",
+            "y",
+            "1",
+            "on"
+          ]
+        },
+        "false_values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Strings that mean false.",
+          "default": [
+            "false",
+            "f",
+            "no",
+            "n",
+            "0",
+            "off"
+          ]
+        }
+      }
+    },
+    "ColumnSpec": {
+      "description": "One output column. Unset keys inherit from the stream's defaults or the tap SCHEMA.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Output name. It is checked, never silently conformed.",
+          "default": null
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Declared CType, e.g. int64, decimal(18,2), timestamptz. From the tap SCHEMA if absent.",
+          "default": null
+        },
+        "nullable": {
+          "type": "boolean",
+          "description": "If false, a null is an error under on_error.",
+          "default": true
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Source column(s) if not the key; a list coalesces in order.",
+          "default": null
+        },
+        "expr": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Derived value. Without source, it creates a new column.",
+          "default": null
+        },
+        "default": {
+          "description": "Used when the value is missing or null after transforms.",
+          "default": null
+        },
+        "transform": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Step"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Step"
+                  },
+                  "minItems": 1
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Steps run before the implicit cast.",
+          "default": null
+        },
+        "parse": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Keyword arguments for the implicit cast, e.g. {formats: [...], tz: ...}.",
+          "default": null
+        },
+        "true_values": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Overrides boolean.true_values.",
+          "default": null
+        },
+        "false_values": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Overrides boolean.false_values.",
+          "default": null
+        },
+        "null_tokens": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Overrides values.null_tokens.",
+          "default": null
+        },
+        "trim": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Overrides values.trim.",
+          "default": null
+        },
+        "on_error": {
+          "anyOf": [
+            {
+              "enum": [
+                "raise",
+                "null",
+                "keep",
+                "reject"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Overrides on_error.",
+          "default": null
+        },
+        "max_length": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Longest string allowed.",
+          "default": null
+        },
+        "on_overflow": {
+          "enum": [
+            "truncate",
+            "error"
+          ],
+          "description": "What a string longer than max_length does.",
+          "default": "error"
+        },
+        "enum": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {}
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Allowed values, checked after the cast.",
+          "default": null
+        },
+        "drop": {
+          "type": "boolean",
+          "description": "Remove the column. Dropping a key property is an error.",
+          "default": false
+        },
+        "doc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Copied to the SCHEMA description.",
+          "default": null
+        },
+        "sql_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Overrides the emitted x-sql-datatype hint.",
+          "default": null
+        },
+        "when": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Apply the chain only to rows where this is truthy; sees conformed names.",
+          "default": null
+        },
+        "fields": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/FieldSpec"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Transforms on nested members of struct and json columns, by dotted path.",
+          "default": null
+        }
+      }
+    },
+    "Defaults": {
+      "description": "Settings inherited by every stream. A stream may override any of them.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "naming": {
+          "$ref": "#/$defs/NamingDefaults",
+          "description": "Column naming.",
+          "default": {}
+        },
+        "stream": {
+          "$ref": "#/$defs/StreamNaming",
+          "description": "Stream naming.",
+          "default": {}
+        },
+        "values": {
+          "$ref": "#/$defs/ValuesDefaults",
+          "description": "Value cleanup.",
+          "default": {}
+        },
+        "timestamp": {
+          "$ref": "#/$defs/TimestampDefaults",
+          "description": "Temporal casts.",
+          "default": {}
+        },
+        "boolean": {
+          "$ref": "#/$defs/BooleanDefaults",
+          "description": "Boolean casts.",
+          "default": {}
+        },
+        "on_error": {
+          "enum": [
+            "raise",
+            "null",
+            "keep",
+            "reject"
+          ],
+          "description": "What a failed cast or transform does: raise, null, keep the raw value, or reject the row to the dead-letter sink.",
+          "default": "raise"
+        },
+        "metadata": {
+          "enum": [
+            "sdc",
+            "none"
+          ],
+          "description": "Add the seven Singer SDK _sdc_* columns.",
+          "default": "sdc"
+        },
+        "undeclared": {
+          "enum": [
+            "conform",
+            "drop",
+            "error"
+          ],
+          "description": "Columns the spec does not mention: conform them from the tap SCHEMA, drop them, or fail.",
+          "default": "conform"
+        },
+        "nested": {
+          "enum": [
+            "json",
+            "flatten",
+            "keep"
+          ],
+          "description": "Undeclared object and array columns: JSON text, flattened, or typed struct/list.",
+          "default": "json"
+        },
+        "flatten": {
+          "$ref": "#/$defs/FlattenDefaults",
+          "description": "Flattening settings.",
+          "default": {}
+        },
+        "faker": {
+          "$ref": "#/$defs/FakerDefaults",
+          "description": "Fake data settings.",
+          "default": {}
+        }
+      }
+    },
+    "ExprRef": {
+      "description": "A value computed by an expression.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "expr": {
+          "type": "string",
+          "description": "The expression."
+        }
+      },
+      "required": [
+        "expr"
+      ]
+    },
+    "FakerDefaults": {
+      "description": "Settings for the fake builtin (needs the faker extra).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Seed for reproducible fake values.",
+          "default": null
+        },
+        "locale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Faker locale or locales.",
+          "default": null
+        }
+      }
+    },
+    "FieldSpec": {
+      "description": "Transforms on a nested member of a struct or json column, by dotted path.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "transform": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Step"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Step"
+                  },
+                  "minItems": 1
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Steps applied to the member.",
+          "default": null
+        },
+        "when": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Apply only where this expression is truthy.",
+          "default": null
+        },
+        "drop": {
+          "type": "boolean",
+          "description": "Remove the member.",
+          "default": false
+        }
+      }
+    },
+    "FlattenDefaults": {
+      "description": "Singer SDK flattening semantics, for nested: flatten.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "separator": {
+          "type": "string",
+          "description": "Joins parent and child keys.",
+          "default": "__"
+        },
+        "max_depth": {
+          "type": "integer",
+          "description": "Levels of nesting to flatten.",
+          "default": 1
+        },
+        "max_key_length": {
+          "type": "integer",
+          "description": "Longest flattened key.",
+          "default": 255
+        }
+      }
+    },
+    "NamingDefaults": {
+      "description": "How column names are conformed.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "case": {
+          "enum": [
+            "snake",
+            "lower",
+            "upper",
+            "preserve"
+          ],
+          "description": "snake splits camelCase and lowercases; lower and upper only change case.",
+          "default": "snake"
+        },
+        "split_camel": {
+          "type": "boolean",
+          "description": "customerID -> customer_id; HTTPServer -> http_server.",
+          "default": true
+        },
+        "ascii": {
+          "enum": [
+            "transliterate",
+            "strip",
+            "keep"
+          ],
+          "description": "transliterate with the bundled table (ADR-0012), strip non-ASCII, or keep it.",
+          "default": "transliterate"
+        },
+        "replace_invalid": {
+          "type": "string",
+          "description": "Replacement for characters outside [a-z0-9_] after casing.",
+          "default": "_"
+        },
+        "collapse": {
+          "type": "boolean",
+          "description": "Collapse runs of '_' and trim it from both ends.",
+          "default": true
+        },
+        "leading_digit": {
+          "enum": [
+            "prefix",
+            "letter",
+            "error"
+          ],
+          "description": "prefix '_', letter (SDK style: 0 -> a), or error.",
+          "default": "prefix"
+        },
+        "max_length": {
+          "type": "integer",
+          "description": "Longer names are truncated (see truncate).",
+          "default": 63
+        },
+        "truncate": {
+          "enum": [
+            "hash",
+            "error"
+          ],
+          "description": "hash keeps the head plus '_' and 6 hex digits of a hash of the full name.",
+          "default": "hash"
+        },
+        "reserved_words": {
+          "enum": [
+            "suffix",
+            "prefix",
+            "error",
+            "ignore"
+          ],
+          "description": "What to do with a reserved word: suffix '_', prefix '_', error or ignore.",
+          "default": "suffix"
+        },
+        "reserved_dialects": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "ansi",
+              "postgres",
+              "duckdb"
+            ]
+          },
+          "description": "Reserved-word lists to union.",
+          "default": [
+            "ansi",
+            "postgres",
+            "duckdb"
+          ]
+        },
+        "on_collision": {
+          "enum": [
+            "error",
+            "suffix"
+          ],
+          "description": "Two names conforming to the same output: error, or add _2, _3, ...",
+          "default": "error"
+        },
+        "nested": {
+          "type": "boolean",
+          "description": "Also conform the member names of struct columns.",
+          "default": true
+        }
+      }
+    },
+    "Spec": {
+      "description": "A conform spec file, version 1.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "enum": [
+            1
+          ],
+          "description": "The spec version."
+        },
+        "defaults": {
+          "$ref": "#/$defs/Defaults",
+          "description": "Inherited by every stream.",
+          "default": {}
+        },
+        "macros": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/Step"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/Step"
+                    },
+                    "minItems": 1
+                  }
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "steps"
+                ],
+                "properties": {
+                  "steps": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/Step"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/Step"
+                        },
+                        "minItems": 1
+                      }
+                    ]
+                  },
+                  "params": {
+                    "type": "object"
+                  },
+                  "doc": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "description": "Named, parameterised transform chains.",
+          "default": {}
+        },
+        "udfs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Python functions by name, as 'package.module:function'.",
+          "default": {}
+        },
+        "streams": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/StreamRules"
+          },
+          "description": "Per-stream rules: StreamSpec keys plus any Defaults key. A key is a glob over tap stream names, or a new stream name when the rules have source.",
+          "default": {}
+        },
+        "else": {
+          "enum": [
+            "keep",
+            "drop"
+          ],
+          "description": "Tap streams that match no key: keep (conform with the defaults) or drop.",
+          "default": "keep"
+        }
+      },
+      "required": [
+        "version"
+      ]
+    },
+    "Step": {
+      "description": "A step name, or a mapping whose first key (other than 'when') names the step: its value is the argument and the other keys are keyword arguments. {expr: ...} and {case: [...]} are built in.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        {
+          "type": "object",
+          "minProperties": 1
+        }
+      ]
+    },
+    "StreamNaming": {
+      "description": "How stream names are conformed.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "conform",
+            "preserve"
+          ],
+          "description": "Conform stream names like column names, or keep them.",
+          "default": "conform"
+        },
+        "prefix": {
+          "type": "string",
+          "description": "Added after conforming.",
+          "default": ""
+        },
+        "split": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Emit only the part after the last occurrence of this separator.",
+          "default": null
+        }
+      }
+    },
+    "StreamRules": {
+      "description": "Rules for the streams this key matches: StreamSpec keys plus any Defaults key, which overrides the inherited value (objects merge, lists replace).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "alias": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/ExprRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Final stream name; bypasses stream naming and prefix.",
+          "default": null
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Make this key a new output stream projected from this tap stream (split or copy).",
+          "default": null
+        },
+        "prefix": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Overrides stream.prefix.",
+          "default": null
+        },
+        "key_properties": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Overrides the tap's key properties; source or conformed names.",
+          "default": null
+        },
+        "filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Rows where this expression is falsy are dropped; sees conformed names.",
+          "default": null
+        },
+        "columns": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ColumnSpec"
+          },
+          "description": "Columns by source name, or by new name for derived columns.",
+          "default": {}
+        },
+        "order": {
+          "enum": [
+            "source",
+            "declared"
+          ],
+          "description": "Output column order: the tap's, or the order of columns here.",
+          "default": "source"
+        },
+        "drop": {
+          "type": "boolean",
+          "description": "Drop the whole stream.",
+          "default": false
+        },
+        "naming": {
+          "$ref": "#/$defs/NamingDefaults",
+          "description": "Column naming."
+        },
+        "stream": {
+          "$ref": "#/$defs/StreamNaming",
+          "description": "Stream naming."
+        },
+        "values": {
+          "$ref": "#/$defs/ValuesDefaults",
+          "description": "Value cleanup."
+        },
+        "timestamp": {
+          "$ref": "#/$defs/TimestampDefaults",
+          "description": "Temporal casts."
+        },
+        "boolean": {
+          "$ref": "#/$defs/BooleanDefaults",
+          "description": "Boolean casts."
+        },
+        "on_error": {
+          "enum": [
+            "raise",
+            "null",
+            "keep",
+            "reject"
+          ],
+          "description": "What a failed cast or transform does: raise, null, keep the raw value, or reject the row to the dead-letter sink."
+        },
+        "metadata": {
+          "enum": [
+            "sdc",
+            "none"
+          ],
+          "description": "Add the seven Singer SDK _sdc_* columns."
+        },
+        "undeclared": {
+          "enum": [
+            "conform",
+            "drop",
+            "error"
+          ],
+          "description": "Columns the spec does not mention: conform them from the tap SCHEMA, drop them, or fail."
+        },
+        "nested": {
+          "enum": [
+            "json",
+            "flatten",
+            "keep"
+          ],
+          "description": "Undeclared object and array columns: JSON text, flattened, or typed struct/list."
+        },
+        "flatten": {
+          "$ref": "#/$defs/FlattenDefaults",
+          "description": "Flattening settings."
+        },
+        "faker": {
+          "$ref": "#/$defs/FakerDefaults",
+          "description": "Fake data settings."
+        }
+      }
+    },
+    "StreamSpec": {
+      "description": "A stream's own keys. Defaults keys set on the stream are merged into its Defaults.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "alias": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/ExprRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Final stream name; bypasses stream naming and prefix.",
+          "default": null
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Make this key a new output stream projected from this tap stream (split or copy).",
+          "default": null
+        },
+        "prefix": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Overrides stream.prefix.",
+          "default": null
+        },
+        "key_properties": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Overrides the tap's key properties; source or conformed names.",
+          "default": null
+        },
+        "filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Rows where this expression is falsy are dropped; sees conformed names.",
+          "default": null
+        },
+        "columns": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ColumnSpec"
+          },
+          "description": "Columns by source name, or by new name for derived columns.",
+          "default": {}
+        },
+        "order": {
+          "enum": [
+            "source",
+            "declared"
+          ],
+          "description": "Output column order: the tap's, or the order of columns here.",
+          "default": "source"
+        },
+        "drop": {
+          "type": "boolean",
+          "description": "Drop the whole stream.",
+          "default": false
+        }
+      }
+    },
+    "TimestampDefaults": {
+      "description": "Defaults for temporal casts.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "assume_tz": {
+          "type": "string",
+          "description": "Time zone of naive input cast to timestamptz.",
+          "default": "UTC"
+        },
+        "output_precision": {
+          "enum": [
+            "s",
+            "ms",
+            "us"
+          ],
+          "description": "Fractional precision on output.",
+          "default": "us"
+        },
+        "formats": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Formats tried in order: strftime patterns, iso, excel_serial, epoch_*, rfc2822.",
+          "default": [
+            "iso"
+          ]
+        }
+      }
+    },
+    "ValuesDefaults": {
+      "description": "Value cleanup applied before casting.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "trim": {
+          "type": "boolean",
+          "description": "Trim surrounding whitespace from strings.",
+          "default": true
+        },
+        "null_tokens": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Strings that mean null.",
+          "default": [
+            "",
+            "NULL",
+            "null",
+            "N/A",
+            "n/a",
+            "#N/A",
+            "NaN",
+            "-"
+          ]
+        },
+        "null_tokens_case_sensitive": {
+          "type": "boolean",
+          "description": "Match null tokens case-sensitively.",
+          "default": false
+        },
+        "empty_string_for_string": {
+          "enum": [
+            "keep",
+            "null"
+          ],
+          "description": "What \"\" becomes in a string column.",
+          "default": "keep"
+        }
+      }
+    }
+  }
+}

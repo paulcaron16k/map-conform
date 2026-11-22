@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from map_conform.mapper import MapConformMapper
+from map_conform.cli import main
 
-MapConformMapper.cli()
+main()

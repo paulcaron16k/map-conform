@@ -51,7 +51,7 @@ Documentation = "https://github.com/paulcaron16k/map-conform/tree/main/docs"
 Issues = "https://github.com/paulcaron16k/map-conform/issues"
 
 [project.scripts]
-map-conform = 'map_conform.mapper:MapConformMapper.cli'
+map-conform = "map_conform.cli:main"
 
 [dependency-groups]
 dev = [
