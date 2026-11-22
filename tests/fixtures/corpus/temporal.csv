@@ -1,0 +1,48 @@
+case,type,input,kwargs,expected,note
+iso_z,timestamptz,2026-03-14T09:26:53Z,,2026-03-14T09:26:53.000000Z,formats default to [iso]
+iso_lower_z,timestamptz,2026-03-14T09:26:53z,,2026-03-14T09:26:53.000000Z,lenient z
+iso_offset_short_fraction,timestamptz,2026-03-14T09:26:53.5+02:00,,2026-03-14T07:26:53.500000Z,Python 3.10 fromisoformat rejects a 1-digit fraction
+iso_space_naive,timestamptz,2026-03-14 09:26:53,,2026-03-14T09:26:53.000000Z,naive input assumes UTC by default
+iso_date_only,timestamptz,2026-03-14,,2026-03-14T00:00:00.000000Z,
+naive_with_tz,timestamptz,2026-03-14 09:26:53,"{""tz"": ""America/New_York""}",2026-03-14T13:26:53.000000Z,"EDT, UTC-4"
+dst_ambiguous_default,timestamptz,2026-11-01 01:30:00,"{""tz"": ""America/New_York""}",!error,01:30 happens twice
+dst_ambiguous_earliest,timestamptz,2026-11-01 01:30:00,"{""tz"": ""America/New_York"", ""ambiguous"": ""earliest""}",2026-11-01T05:30:00.000000Z,
+dst_ambiguous_latest,timestamptz,2026-11-01 01:30:00,"{""tz"": ""America/New_York"", ""ambiguous"": ""latest""}",2026-11-01T06:30:00.000000Z,
+dst_gap_default,timestamptz,2026-03-08 02:30:00,"{""tz"": ""America/New_York""}",!error,02:30 does not exist
+dst_gap_shift,timestamptz,2026-03-08 02:30:00,"{""tz"": ""America/New_York"", ""nonexistent"": ""shift""}",2026-03-08T07:30:00.000000Z,shifted forward by the gap to 03:30 EDT
+us_slash,timestamptz,03/14/2026,"{""formats"": [""%m/%d/%Y""]}",2026-03-14T00:00:00.000000Z,
+eu_slash,timestamptz,14/03/2026,"{""formats"": [""%d/%m/%Y""]}",2026-03-14T00:00:00.000000Z,
+de_dots,timestamptz,14.03.2026,"{""formats"": [""%d.%m.%Y""]}",2026-03-14T00:00:00.000000Z,
+ymd_slash_minutes,timestamptz,2026/03/14 09:26,"{""formats"": [""%Y/%m/%d %H:%M""]}",2026-03-14T09:26:00.000000Z,
+dmy_abbrev_month,timestamptz,14-Mar-2026,"{""formats"": [""%d-%b-%Y""]}",2026-03-14T00:00:00.000000Z,
+long_month,timestamptz,"March 14, 2026","{""formats"": [""%B %d, %Y""]}",2026-03-14T00:00:00.000000Z,
+day_long_month,timestamptz,14 March 2026,"{""formats"": [""%d %B %Y""]}",2026-03-14T00:00:00.000000Z,
+us_short_ampm,timestamptz,3/14/26 9:26 AM,"{""formats"": [""%m/%d/%y %I:%M %p""]}",2026-03-14T09:26:00.000000Z,no leading zeros
+sqlserver_style,timestamptz,Mar 14 2026  9:26:53PM,"{""formats"": [""%b %d %Y %I:%M:%S%p""]}",2026-03-14T21:26:53.000000Z,double space before a 1-digit hour
+compact_ymd,timestamptz,20260314,"{""formats"": [""%Y%m%d""]}",2026-03-14T00:00:00.000000Z,
+ordinal_day,timestamptz,2026-073,"{""formats"": [""%Y-%j""]}",2026-03-14T00:00:00.000000Z,
+iso_week,timestamptz,2026-W11-6,"{""formats"": [""%G-W%V-%u""]}",2026-03-14T00:00:00.000000Z,
+rfc2822,timestamptz,"Sat, 14 Mar 2026 09:26:53 +0000","{""formats"": [""rfc2822""]}",2026-03-14T09:26:53.000000Z,
+first_format_wins,timestamptz,03/04/2026,"{""formats"": [""%m/%d/%Y"", ""%d/%m/%Y""]}",2026-03-04T00:00:00.000000Z,ambiguous list allowed; first match wins
+fallthrough_format,timestamptz,2026-03-14,"{""formats"": [""%m/%d/%Y"", ""iso""]}",2026-03-14T00:00:00.000000Z,
+excel_serial_date,timestamptz,46095,"{""formats"": [""excel_serial""]}",2026-03-14T00:00:00.000000Z,1900 date system
+excel_serial_quarter_day,timestamptz,46095.25,"{""formats"": [""excel_serial""]}",2026-03-14T06:00:00.000000Z,
+excel_serial_1904,timestamptz,44633,"{""formats"": [""excel_serial_1904""]}",2026-03-14T00:00:00.000000Z,
+excel_serial_before_leap_bug,date,59,"{""formats"": [""excel_serial""]}",1900-02-28,serials below 60 count from 1899-12-31
+excel_serial_leap_bug,date,60,"{""formats"": [""excel_serial""]}",!error,Lotus 1900-02-29 does not exist
+excel_serial_after_leap_bug,date,61,"{""formats"": [""excel_serial""]}",1900-03-01,
+epoch_s,timestamptz,1773480413,"{""formats"": [""epoch_s""]}",2026-03-14T09:26:53.000000Z,
+epoch_ms,timestamptz,1773480413123,"{""formats"": [""epoch_ms""]}",2026-03-14T09:26:53.123000Z,
+epoch_us,timestamptz,1773480413123456,"{""formats"": [""epoch_us""]}",2026-03-14T09:26:53.123456Z,
+epoch_ns,timestamptz,1773480413123456000,"{""formats"": [""epoch_ns""]}",2026-03-14T09:26:53.123456Z,
+epoch_auto_seconds,timestamptz,1773480413,"{""formats"": [""epoch_auto""]}",2026-03-14T09:26:53.000000Z,by magnitude
+epoch_auto_millis,timestamptz,1773480413123,"{""formats"": [""epoch_auto""]}",2026-03-14T09:26:53.123000Z,by magnitude
+min_year,timestamptz,0026-03-14,"{""min_year"": 1900}",!error,two-digit-year typo caught by the sanity bound
+not_a_date,timestamptz,next Tuesday,,!error,
+ts_empty,timestamptz,,,!null,
+ts_na,timestamptz,n/a,,!null,null tokens are case-insensitive by default
+naive_timestamp,timestamp,2026-03-14 09:26:53,,2026-03-14T09:26:53.000000,no offset on the wire
+date_us,date,03/14/2026,"{""formats"": [""%m/%d/%Y""]}",2026-03-14,
+date_excel,date,46095,"{""formats"": [""excel_serial""]}",2026-03-14,
+time_iso,time,09:26:53,,09:26:53.000000,
+time_ampm,time,9:26 PM,"{""formats"": [""%I:%M %p""]}",21:26:00.000000,

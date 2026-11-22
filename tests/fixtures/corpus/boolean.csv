@@ -1,0 +1,22 @@
+case,type,input,kwargs,expected,note
+bool_true_word,boolean,true,,true,
+bool_true_upper,boolean,TRUE,,true,case-insensitive by default
+bool_t,boolean,t,,true,
+bool_yes_padded,boolean, Yes ,,true,
+bool_y,boolean,Y,,true,
+bool_one,boolean,1,,true,
+bool_on,boolean,on,,true,
+bool_false_word,boolean,False,,false,
+bool_f,boolean,f,,false,
+bool_no,boolean,no,,false,
+bool_n,boolean,N,,false,
+bool_zero,boolean,0,,false,
+bool_off,boolean,OFF,,false,
+bool_two,boolean,2,,!error,only 0 and 1 are numbers that mean a boolean
+bool_one_point_zero,boolean,1.0,,!error,not a listed true value
+bool_maybe,boolean,maybe,,!error,
+bool_empty,boolean,,,!null,
+bool_dash,boolean,-,,!null,
+bool_custom_true,boolean,Sí,"{""true_values"": [""sí""]}",true,
+bool_custom_replaces_defaults,boolean,yes,"{""true_values"": [""sí""]}",!error,a list replaces the default list
+bool_case_sensitive,boolean,TRUE,"{""case_sensitive"": true}",!error,

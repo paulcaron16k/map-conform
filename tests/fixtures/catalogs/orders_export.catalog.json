@@ -1,0 +1,238 @@
+{
+  "streams": [
+    {
+      "tap_stream_id": "Orders Export",
+      "stream": "Orders Export",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "Order ID": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Order Date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "customerID": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Customer Name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Amount ($)": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Discount %": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Paid?": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Ship Date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "SKU": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Qty.": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Unit Price (€)": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Created At (UTC)": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Tracking UUID": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "key_properties": [
+        "Order ID"
+      ],
+      "metadata": [
+        {
+          "breadcrumb": [],
+          "metadata": {
+            "inclusion": "available",
+            "selected": true,
+            "table-key-properties": [
+              "Order ID"
+            ]
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Order ID"
+          ],
+          "metadata": {
+            "inclusion": "automatic"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Order Date"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "customerID"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Customer Name"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Amount ($)"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Discount %"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Paid?"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Ship Date"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Notes"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "SKU"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Qty."
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Unit Price (€)"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Created At (UTC)"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Tracking UUID"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        }
+      ]
+    }
+  ]
+}

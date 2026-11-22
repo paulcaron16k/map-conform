@@ -1,0 +1,180 @@
+{
+  "streams": [
+    {
+      "tap_stream_id": "Inventory - Sheet1",
+      "stream": "Inventory - Sheet1",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "SKU": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "On Hand": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "Last Counted": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "Received (serial)": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "Price": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "Margin": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "Active": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "Weight (kg)": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "Supplier": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Big Count": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      },
+      "key_properties": [
+        "SKU"
+      ],
+      "metadata": [
+        {
+          "breadcrumb": [],
+          "metadata": {
+            "inclusion": "available",
+            "selected": true,
+            "table-key-properties": [
+              "SKU"
+            ]
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "SKU"
+          ],
+          "metadata": {
+            "inclusion": "automatic"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "On Hand"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Last Counted"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Received (serial)"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Price"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Margin"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Active"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Weight (kg)"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Supplier"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        },
+        {
+          "breadcrumb": [
+            "properties",
+            "Big Count"
+          ],
+          "metadata": {
+            "inclusion": "available"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+case,source,expected,note
+golden_spaces_parens,Order Date (UTC),order_date_utc,design §5
+golden_camel_acronym,customerID,customer_id,design §5
+golden_acronym_run,HTTPServerURL,http_server_url,design §5
+golden_percent_lossy,% Complete,complete,design §5; lossy rename is logged
+golden_leading_digit,2023 Revenue,_2023_revenue,design §5
+golden_transliterate,Ünïcode Näme,unicode_name,design §5
+golden_reserved,select,select_,design §5
+golden_punctuation,a.b-c d,a_b_c_d,design §5
+plain_spaces,Customer Name,customer_name,
+padded,  Leading Space ,leading_space,
+already_snake,already_snake,already_snake,idempotent
+upper_snake,UPPER_CASE,upper_case,
+currency_suffix,Amount ($),amount,lossy
+euro_suffix,Unit Price (€),unit_price,lossy
+hyphen,e-mail,e_mail,
+hash_number,Ship-To Address #2,ship_to_address_2,
+lower_camel,userId,user_id,
+acronym_then_word,XMLHttpRequest,xml_http_request,
+lowercase_prefix_acronym,iOS Version,i_os_version,camel split is mechanical
+trailing_dot,Qty.,qty,
+question_mark,Paid?,paid,
+all_caps_acronym,SKU,sku,
+digits_only,123,_123,
+reserved_order,order,order_,ANSI reserved
+reserved_user,user,user_,postgres reserved
+accents,naïve café,naive_cafe,
+repeated_separators,a -- b__c,a_b_c,runs collapse
+percent_middle,Discount %,discount,lossy

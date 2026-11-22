@@ -1,0 +1,15 @@
+case,type,input,kwargs,expected,note
+str_trim,string,  hello  ,,hello,trim is on by default
+str_trim_nbsp,string,hello ,,hello,NBSP is whitespace
+str_trim_off,string,  hello  ,"{""trim"": false}",  hello  ,
+str_inner_space_kept,string,hello   world,,hello   world,trim does not collapse inner runs
+str_empty_kept,string,,,,empty_string_for_string: keep
+str_empty_to_null,string,,"{""empty_string_for_string"": ""null""}",!null,
+str_null_token,string,NULL,,!null,
+str_null_token_lower,string,null,,!null,
+str_spreadsheet_na,string,#N/A,,!null,
+str_dash,string,-,,!null,
+str_null_tokens_off,string,N/A,"{""null_tokens"": []}",N/A,
+str_unicode_kept,string,Ünïcode Näme,,Ünïcode Näme,values are not transliterated
+str_max_length_ok,string(5),hello,,hello,
+str_max_length_over,string(5),hello!,,!error,"maxLength is enforced, never truncated silently"

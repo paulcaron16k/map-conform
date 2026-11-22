@@ -63,6 +63,7 @@ lint = [
     "ruff>=0.16",
 ]
 test = [
+    "pyarrow>=19",
     "pytest>=9",
     "pytest-github-actions-annotate-failures>=0.4",
     "pyyaml>=6.0.4",
@@ -70,7 +71,9 @@ test = [
 ]
 typing = [
     "mypy>=2.1",
+    "pyarrow-stubs>=20.0.0.20260819",
     "ty>=0.0.41",
+    "types-jsonschema>=4.26.0.20261006",
     "types-pyyaml>=6.0.12.20261113",
 ]
 
