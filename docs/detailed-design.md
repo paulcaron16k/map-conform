@@ -310,6 +310,10 @@ Details of steps 2–8 (`map_conform/naming/conform.py`):
   First occurrences claim their names before any suffix is chosen, so a source genuinely
   named `order_id_2` keeps that name. Later duplicates get the next free `_2`, `_3`, …,
   shortened to fit `max_length`.
+- **Nested members** (`naming.nested: true`, `map_conform/naming/nested.py`) of declared
+  `struct<…>` types and of tap-schema objects are conformed at every depth, through lists,
+  with collisions checked per struct. `required` lists follow their properties. A name tree
+  renames the keys of record values at run time; keys it does not know are kept.
 
 Every lossy rename (dropped characters, transliteration) is logged once per stream. The mapping
 from source to conformed name is available from `spec explain` and is written to metrics.
