@@ -13,10 +13,12 @@ from typing import TYPE_CHECKING, Any
 import click
 
 from map_conform.mapper import MapConformMapper
+from map_conform.plan.compile import compile_stream, plan_report
 from map_conform.spec.check import CatalogStream, check_spec, explain, read_catalog
 from map_conform.spec.errors import SpecError
 from map_conform.spec.jsonschema import render
-from map_conform.spec.load import load_spec
+from map_conform.spec.load import load_spec, output_streams
+from map_conform.transforms.builtins import builtin_registry
 
 if TYPE_CHECKING:
     from map_conform.spec.model import Spec
@@ -118,12 +120,44 @@ def spec_explain(
     """Show what SPEC does to one tap stream: rules matched, output names, columns."""
     loaded, streams = _load(spec_path, variables, catalog)
     report = explain(loaded, tap_stream, streams)
+    entry = next((s for s in streams or [] if s.name == tap_stream), None)
+    if entry is not None:
+        _add_plans(loaded, entry, report)
     if as_json:
         click.echo(json.dumps(report, indent=2, ensure_ascii=False))
     else:
         click.echo(_render_explain(report))
     if report["findings"]:
         sys.exit(1)
+
+
+def _add_plans(loaded: Spec, entry: CatalogStream, report: dict[str, Any]) -> None:
+    """Compile each output stream against the catalog schema and add the plan."""
+    schema = {"type": "object", "properties": dict(entry.properties)}
+    for output, resolved in zip(report["outputs"], output_streams(loaded, entry.name), strict=True):
+        try:
+            plan = compile_stream(
+                loaded, resolved, schema, builtin_registry(), key_properties=entry.key_properties
+            )
+        except SpecError as exc:
+            report["findings"].extend(str(i) for i in exc.issues)
+            continue
+        output["plan"] = plan_report(plan)
+
+
+def _render_plan(plan: dict[str, Any]) -> list[str]:
+    lines = ["  plan:"]
+    for column in plan["columns"]:
+        flags = "" if column["nullable"] else " not null"
+        lines.append(
+            f"    {column['name']}: {column['type']}{flags}, on_error {column['on_error']}"
+        )
+        lines.append(f"      steps: {' -> '.join(column['steps'])}")
+        if "default" in column:
+            lines.append(f"      default: {column['default']}")
+        if "enum" in column:
+            lines.append(f"      enum: {', '.join(column['enum'])}")
+    return lines
 
 
 def _render_column(column: dict[str, Any]) -> list[str]:
@@ -159,6 +193,8 @@ def _render_explain(report: dict[str, Any]) -> str:
         lines.append("  columns:")
         for column in output["columns"]:
             lines.extend(_render_column(column))
+        if "plan" in output:
+            lines.extend(_render_plan(output["plan"]))
     if report["findings"]:
         lines.append("")
         lines.extend(f"problem: {f}" for f in report["findings"])

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import functools
 
-from map_conform.transforms import casts, numeric, privacy, temporal, text
+from map_conform.transforms import casts, nested, numeric, privacy, temporal, text
 from map_conform.transforms.registry import Registry
 
-_MODULES = (text, casts, numeric, temporal, privacy)
+_MODULES = (text, casts, numeric, temporal, nested, privacy)
 
 
 @functools.cache

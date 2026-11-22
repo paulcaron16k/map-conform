@@ -308,10 +308,24 @@ class StreamSpec:
     drop: bool = documented("Drop the whole stream.", default=False)
 
 
-STREAM_KEYS = frozenset({"alias", "source", "prefix", "key_properties", "filter", "columns",
-                         "order", "drop"})  # fmt: skip
-DEFAULTS_KEYS = frozenset({"naming", "stream", "values", "timestamp", "boolean", "on_error",
-                           "metadata", "undeclared", "nested", "flatten", "faker"})  # fmt: skip
+STREAM_KEYS = frozenset(
+    {"alias", "source", "prefix", "key_properties", "filter", "columns", "order", "drop"}
+)
+DEFAULTS_KEYS = frozenset(
+    {
+        "naming",
+        "stream",
+        "values",
+        "timestamp",
+        "boolean",
+        "on_error",
+        "metadata",
+        "undeclared",
+        "nested",
+        "flatten",
+        "faker",
+    }
+)
 
 
 @dataclass(frozen=True)

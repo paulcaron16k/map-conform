@@ -279,8 +279,13 @@ def matching_keys(spec: Spec, tap_stream: str) -> list[str]:
     return sorted(keys, key=specificity)  # stable: declaration order breaks ties
 
 
-def _resolve(spec: Spec, tap_stream: str, key: str | None, raws: list[Mapping[str, Any]],
-             matched: tuple[str, ...]) -> ResolvedStream:  # fmt: skip
+def _resolve(
+    spec: Spec,
+    tap_stream: str,
+    key: str | None,
+    raws: list[Mapping[str, Any]],
+    matched: tuple[str, ...],
+) -> ResolvedStream:
     merged: dict[str, Any] = {}
     for raw in raws:
         for name, value in raw.items():

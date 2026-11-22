@@ -22,8 +22,14 @@ from map_conform.types.wire import to_wire
 
 def run(transform: Any, value: object, target: str = "string", **column: Any) -> object:  # noqa: ANN401
     """Compile one column's chain with the real builtins and run it on a value."""
-    spec = parse_spec({"version": 1, "streams": {"s": {"columns": {"c": {
-        "type": target, "transform": transform, **column}}}}})  # fmt: skip
+    spec = parse_spec(
+        {
+            "version": 1,
+            "streams": {
+                "s": {"columns": {"c": {"type": target, "transform": transform, **column}}}
+            },
+        }
+    )
     col = spec.streams["s"].spec.columns["c"]
     issues = Issues()
     compiled = ChainCompiler(builtin_registry(), spec.defaults, {}, issues).compile(
@@ -35,8 +41,12 @@ def run(transform: Any, value: object, target: str = "string", **column: Any) ->
 
 def problems(transform: Any, target: str = "string") -> list[str]:  # noqa: ANN401
     """Compile problems for a chain."""
-    spec = parse_spec({"version": 1, "streams": {"s": {"columns": {"c": {
-        "type": target, "transform": transform}}}}})  # fmt: skip
+    spec = parse_spec(
+        {
+            "version": 1,
+            "streams": {"s": {"columns": {"c": {"type": target, "transform": transform}}}},
+        }
+    )
     col = spec.streams["s"].spec.columns["c"]
     issues = Issues()
     ChainCompiler(builtin_registry(), spec.defaults, {}, issues).compile(
@@ -81,7 +91,7 @@ def problems(transform: Any, target: str = "string") -> list[str]:  # noqa: ANN4
         ({"null_tokens": {"tokens": ["unknown"], "case_sensitive": True}}, "Unknown", "Unknown"),
         ("trim", 42, "42"),
     ],
-)  # fmt: skip
+)
 def test_text_builtins(transform: Any, value: object, expected: object) -> None:  # noqa: ANN401
     """Each text builtin, before the string cast."""
     assert run(transform, value) == expected
@@ -210,16 +220,25 @@ def test_privacy_type_checks() -> None:
 @pytest.mark.parametrize(
     ("value", "ctype", "expected"),
     [
-        (dt.datetime(2026, 3, 14, 9, 26, 53, 5, tzinfo=dt.timezone(dt.timedelta(hours=2))),
-         "timestamptz", "2026-03-14T07:26:53.000005Z"),
-        (dt.datetime(2026, 3, 14, 9, 26, 53), "timestamp",  # noqa: DTZ001 -- naive on purpose
-         "2026-03-14T09:26:53.000000"),
+        (
+            dt.datetime(2026, 3, 14, 9, 26, 53, 5, tzinfo=dt.timezone(dt.timedelta(hours=2))),
+            "timestamptz",
+            "2026-03-14T07:26:53.000005Z",
+        ),
+        (
+            dt.datetime(2026, 3, 14, 9, 26, 53),  # noqa: DTZ001 -- naive on purpose
+            "timestamp",
+            "2026-03-14T09:26:53.000000",
+        ),
         (dt.date(2026, 3, 14), "date", "2026-03-14"),
         (dt.time(9, 26), "time", "09:26:00.000000"),
         (Decimal("1E+3"), "decimal(10,2)", "1000"),
         (Decimal("1234.50"), "decimal(10,2)", "1234.50"),
-        (uuid.UUID("{123E4567-E89B-12D3-A456-426614174000}"), "uuid",
-         "123e4567-e89b-12d3-a456-426614174000"),
+        (
+            uuid.UUID("{123E4567-E89B-12D3-A456-426614174000}"),
+            "uuid",
+            "123e4567-e89b-12d3-a456-426614174000",
+        ),
         (b"hi", "binary", "aGk="),
         ({"a": [1, None]}, "json", '{"a": [1, null]}'),
         ({"d": dt.date(2026, 1, 2)}, "struct<d: date>", {"d": "2026-01-02"}),
@@ -227,7 +246,37 @@ def test_privacy_type_checks() -> None:
         (None, "int64", None),
         (True, "boolean", True),
     ],
-)  # fmt: skip
+)
 def test_wire_forms(value: object, ctype: str, expected: object) -> None:
     """Each type's RECORD wire form (Clean-Landing Contract §3)."""
     assert to_wire(value, parse_ctype(ctype)) == expected
+
+
+# --- nested --------------------------------------------------------------------------------
+
+
+def test_struct_and_list_casts() -> None:
+    """Members cast by declared type; missing members are null; undeclared keys dropped."""
+    target = "struct<zip: string, qty: int32, at: timestamptz, tags: list<string>>"
+    value = {"zip": "02139", "qty": 3.0, "at": "2026-03-14T09:00:00Z", "extra": 1, "tags": ["a"]}
+    assert run(None, value, target=target) == {
+        "zip": "02139",
+        "qty": 3,
+        "at": dt.datetime(2026, 3, 14, 9, tzinfo=dt.UTC),
+        "tags": ["a"],
+    }
+    assert run(None, '{"zip": 1}', target="struct<zip: string, qty: int32>") == {
+        "zip": "1",
+        "qty": None,
+    }
+    assert run(None, "[1.5, 2]", target="list<decimal(4,1)>") == [Decimal("1.5"), Decimal("2.0")]
+
+
+def test_nested_cast_errors_name_the_member() -> None:
+    """A failing member or item says which."""
+    with pytest.raises(StepError, match=r"member 'qty': not a number"):
+        run(None, {"qty": "x"}, target="struct<qty: int32>")
+    with pytest.raises(StepError, match="item 1: not a number"):
+        run(None, [1, "x"], target="list<int32>")
+    with pytest.raises(StepError, match="a struct needs an object"):
+        run(None, [1], target="struct<a: int32>")
