@@ -139,6 +139,18 @@ streams:
     # plus any Defaults key, overriding for this stream
 ```
 
+**Output stream names** (`map_conform/naming/streams.py`):
+
+- **`alias`**, if set, is the final name. It is checked, never silently conformed. Under
+  `stream.name: conform`, an alias that would conform differently is an error.
+- **The base name** is otherwise the `streams` key for a `source` stream, else the tap stream
+  name. With `stream.split`, only the part after the last separator is used.
+- **The base is conformed** like a column name, or kept with `stream.name: preserve`.
+- **The prefix** is the stream's `prefix`, else `stream.prefix`. It is added after
+  conforming, and the result is conformed once more, so an illegal prefix is fixed and a
+  long name still fits `max_length`. Example: `sheets-Orders 2024` with `prefix: raw_`
+  becomes `raw_sheets_orders_2024`.
+
 ### 3.3 ColumnSpec
 
 | Key | Type | Meaning |
