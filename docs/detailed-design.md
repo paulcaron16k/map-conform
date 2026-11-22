@@ -44,8 +44,8 @@ map-conform --config CONFIG [--input FILE]          # the mapper (SDK CLI)
 map-conform spec validate SPEC [--catalog C] [--var N=V] [--strict]  # strict parse; checks against a catalog
 map-conform spec explain SPEC --stream S [--catalog C] [--json]     # rules, output names, columns
 map-conform spec schema                              # print the spec's JSON Schema
-map-conform spec import --catalog C [--zamboni TC]   # draft a spec from a catalog (+ Zamboni columns)
-map-conform spec export SPEC --zamboni TC            # write canonical types into Zamboni `columns`
+map-conform spec import --catalog C [--zamboni TC] [--namespace NS] [-o OUT]  # draft a spec from a catalog (+ Zamboni columns)
+map-conform spec export SPEC --zamboni TC --catalog C [--namespace NS] [-o OUT]  # write canonical types into Zamboni `columns`
 map-conform spec import --stream-maps CONFIG.json [--catalog C] [-o OUT]  # SDK stream_maps (+ flattening) to a native spec
 map-conform doctor [--meltano-yml meltano.yml]       # check targets have add_record_metadata, etc.
 map-conform functions [--json]                       # list builtins, kwargs, vectorisable?
@@ -60,6 +60,22 @@ outputs:
 - that explicit `name:`s are legal, and output-name collisions;
 - that `key_properties` exist and that no key property is dropped;
 - `undeclared: error`.
+
+As built (`map_conform/spec/bridge.py`, `map_conform/spec/zamboni.py`, WBS 9.1–9.2):
+
+- **`spec import --catalog`** drafts a spec: one rule per catalog stream with its key
+  properties, and each property as a column with an explicit canonical type (inferred as
+  the plan would, objects as `json`) and its description as `doc`. Names are left to the
+  conformer. The draft validates against its catalog.
+- **`--zamboni TC`** takes column types from a Zamboni table-config (version 2, JSON or
+  YAML). The table is matched by the conformed output stream name, columns by output name,
+  and `defaults.columns` applies under the table's own. Aliases are read (`long` is
+  int64); a type map-conform does not know keeps the catalog's, with a note.
+- **`spec export SPEC --zamboni TC --catalog C`** compiles each catalog stream as the mapper
+  would and writes `namespaces.<ns>.tables.<output stream>.columns` as
+  `{output column: CType}`, with the `_sdc_*` columns when they are added. Everything else
+  in the file is kept, a missing table is created, and `-o` writes elsewhere. With several
+  namespaces, `--namespace` is required.
 
 Rules that match no catalog stream are warnings. An explicit `name:` is never renamed, so a
 conformed name that collides with it is an error, even under `on_collision: suffix`.
