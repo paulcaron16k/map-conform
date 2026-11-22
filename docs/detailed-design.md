@@ -7,6 +7,13 @@ Related: [HLD](architecture-hld.md) · [plan](plan-wbs.md) · [contract](../wiki
 The plugin settings are kept small on purpose. The real configuration is in the spec file,
 so Meltano's ~128 KiB-per-environment-variable limit never applies to it.
 
+The mapper validates the settings and loads the spec when it starts, before reading any
+input. Problems are reported the way the Singer SDK reports config errors: each is logged
+with its path, and the exit status is 1. With neither `spec_path` nor `spec`, the mapper
+conforms with the default rules. The settings are a frozen dataclass
+(`map_conform/settings.py`), and `config_jsonschema` is generated from it. `meltano.yml`
+declares the same settings, and a test keeps the two in step.
+
 | Setting | Type | Default | Meaning |
 | -- | -- | -- | -- |
 | `spec_path` | string | — | Path to the conform spec file (YAML or JSON). Relative paths resolve against the current directory, which is the project root under Meltano. |

@@ -13,8 +13,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass, field
-from types import MappingProxyType
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from map_conform.spec._struct import (
@@ -22,8 +21,12 @@ from map_conform.spec._struct import (
     Issues,
     child,
     dataclass_schema,
+    documented,
+    empty_mapping,
     freeze_mapping,
+    non_negative,
     parse_dataclass,
+    positive,
     thaw,
 )
 from map_conform.spec.errors import SpecError
@@ -36,27 +39,8 @@ Dialect = Literal["ansi", "postgres", "duckdb"]
 _UDF_TARGET = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
 
 
-def _doc(text: str, **kwargs: Any) -> Any:  # noqa: ANN401 -- dataclasses.field's own type
-    """A dataclass field with schema documentation."""
-    metadata = {"doc": text}
-    metadata.update(kwargs.pop("metadata", {}))
-    return field(metadata=metadata, **kwargs)
-
-
-def _empty() -> Mapping[str, Any]:
-    return MappingProxyType({})
-
-
 def _udf_problem(target: str) -> str | None:
     return None if _UDF_TARGET.match(target) else "expected 'package.module:function'"
-
-
-def _positive(value: int) -> str | None:
-    return None if value > 0 else "must be at least 1"
-
-
-def _non_negative(value: int) -> str | None:
-    return None if value >= 0 else "must not be negative"
 
 
 # --- Defaults ---------------------------------------------------------------------------------
@@ -66,53 +50,55 @@ def _non_negative(value: int) -> str | None:
 class NamingDefaults:
     """How column names are conformed."""
 
-    case: Literal["snake", "lower", "upper", "preserve"] = _doc(
+    case: Literal["snake", "lower", "upper", "preserve"] = documented(
         "snake splits camelCase and lowercases; lower and upper only change case.",
         default="snake",
     )
-    split_camel: bool = _doc("customerID -> customer_id; HTTPServer -> http_server.", default=True)
-    ascii: Literal["transliterate", "strip", "keep"] = _doc(
+    split_camel: bool = documented(
+        "customerID -> customer_id; HTTPServer -> http_server.", default=True
+    )
+    ascii: Literal["transliterate", "strip", "keep"] = documented(
         "transliterate with the bundled table (ADR-0012), strip non-ASCII, or keep it.",
         default="transliterate",
     )
-    replace_invalid: str = _doc(
+    replace_invalid: str = documented(
         "Replacement for characters outside [a-z0-9_] after casing.", default="_"
     )
-    collapse: bool = _doc("Collapse runs of '_' and trim it from both ends.", default=True)
-    leading_digit: Literal["prefix", "letter", "error"] = _doc(
+    collapse: bool = documented("Collapse runs of '_' and trim it from both ends.", default=True)
+    leading_digit: Literal["prefix", "letter", "error"] = documented(
         "prefix '_', letter (SDK style: 0 -> a), or error.", default="prefix"
     )
-    max_length: int = _doc(
+    max_length: int = documented(
         "Longer names are truncated (see truncate).",
         default=63,
-        metadata={"check": _positive},
+        metadata={"check": positive},
     )
-    truncate: Literal["hash", "error"] = _doc(
+    truncate: Literal["hash", "error"] = documented(
         "hash keeps the head plus '_' and 6 hex digits of a hash of the full name.",
         default="hash",
     )
-    reserved_words: Literal["suffix", "prefix", "error", "ignore"] = _doc(
+    reserved_words: Literal["suffix", "prefix", "error", "ignore"] = documented(
         "What to do with a reserved word: suffix '_', prefix '_', error or ignore.",
         default="suffix",
     )
-    reserved_dialects: tuple[Dialect, ...] = _doc(
+    reserved_dialects: tuple[Dialect, ...] = documented(
         "Reserved-word lists to union.", default=("ansi", "postgres", "duckdb")
     )
-    on_collision: Literal["error", "suffix"] = _doc(
+    on_collision: Literal["error", "suffix"] = documented(
         "Two names conforming to the same output: error, or add _2, _3, ...", default="error"
     )
-    nested: bool = _doc("Also conform the member names of struct columns.", default=True)
+    nested: bool = documented("Also conform the member names of struct columns.", default=True)
 
 
 @dataclass(frozen=True)
 class StreamNaming:
     """How stream names are conformed."""
 
-    name: Literal["conform", "preserve"] = _doc(
+    name: Literal["conform", "preserve"] = documented(
         "Conform stream names like column names, or keep them.", default="conform"
     )
-    prefix: str = _doc("Added after conforming.", default="")
-    split: str | None = _doc(
+    prefix: str = documented("Added after conforming.", default="")
+    split: str | None = documented(
         "Emit only the part after the last occurrence of this separator.", default=None
     )
 
@@ -121,13 +107,15 @@ class StreamNaming:
 class ValuesDefaults:
     """Value cleanup applied before casting."""
 
-    trim: bool = _doc("Trim surrounding whitespace from strings.", default=True)
-    null_tokens: tuple[str, ...] = _doc(
+    trim: bool = documented("Trim surrounding whitespace from strings.", default=True)
+    null_tokens: tuple[str, ...] = documented(
         "Strings that mean null.",
         default=("", "NULL", "null", "N/A", "n/a", "#N/A", "NaN", "-"),
     )
-    null_tokens_case_sensitive: bool = _doc("Match null tokens case-sensitively.", default=False)
-    empty_string_for_string: Literal["keep", "null"] = _doc(
+    null_tokens_case_sensitive: bool = documented(
+        "Match null tokens case-sensitively.", default=False
+    )
+    empty_string_for_string: Literal["keep", "null"] = documented(
         'What "" becomes in a string column.', default="keep"
     )
 
@@ -136,11 +124,11 @@ class ValuesDefaults:
 class TimestampDefaults:
     """Defaults for temporal casts."""
 
-    assume_tz: str = _doc("Time zone of naive input cast to timestamptz.", default="UTC")
-    output_precision: Literal["s", "ms", "us"] = _doc(
+    assume_tz: str = documented("Time zone of naive input cast to timestamptz.", default="UTC")
+    output_precision: Literal["s", "ms", "us"] = documented(
         "Fractional precision on output.", default="us"
     )
-    formats: tuple[str, ...] = _doc(
+    formats: tuple[str, ...] = documented(
         "Formats tried in order: strftime patterns, iso, excel_serial, epoch_*, rfc2822.",
         default=("iso",),
     )
@@ -150,10 +138,10 @@ class TimestampDefaults:
 class BooleanDefaults:
     """Words that cast to booleans (case-insensitive unless the cast says otherwise)."""
 
-    true_values: tuple[str, ...] = _doc(
+    true_values: tuple[str, ...] = documented(
         "Strings that mean true.", default=("true", "t", "yes", "y", "1", "on")
     )
-    false_values: tuple[str, ...] = _doc(
+    false_values: tuple[str, ...] = documented(
         "Strings that mean false.", default=("false", "f", "no", "n", "0", "off")
     )
 
@@ -162,48 +150,50 @@ class BooleanDefaults:
 class FlattenDefaults:
     """Singer SDK flattening semantics, for nested: flatten."""
 
-    separator: str = _doc("Joins parent and child keys.", default="__")
-    max_depth: int = _doc(
-        "Levels of nesting to flatten.", default=1, metadata={"check": _non_negative}
+    separator: str = documented("Joins parent and child keys.", default="__")
+    max_depth: int = documented(
+        "Levels of nesting to flatten.", default=1, metadata={"check": non_negative}
     )
-    max_key_length: int = _doc("Longest flattened key.", default=255, metadata={"check": _positive})
+    max_key_length: int = documented(
+        "Longest flattened key.", default=255, metadata={"check": positive}
+    )
 
 
 @dataclass(frozen=True)
 class FakerDefaults:
     """Settings for the fake builtin (needs the faker extra)."""
 
-    seed: int | None = _doc("Seed for reproducible fake values.", default=None)
-    locale: str | tuple[str, ...] | None = _doc("Faker locale or locales.", default=None)
+    seed: int | None = documented("Seed for reproducible fake values.", default=None)
+    locale: str | tuple[str, ...] | None = documented("Faker locale or locales.", default=None)
 
 
 @dataclass(frozen=True)
 class Defaults:
     """Settings inherited by every stream. A stream may override any of them."""
 
-    naming: NamingDefaults = _doc("Column naming.", default_factory=NamingDefaults)
-    stream: StreamNaming = _doc("Stream naming.", default_factory=StreamNaming)
-    values: ValuesDefaults = _doc("Value cleanup.", default_factory=ValuesDefaults)
-    timestamp: TimestampDefaults = _doc("Temporal casts.", default_factory=TimestampDefaults)
-    boolean: BooleanDefaults = _doc("Boolean casts.", default_factory=BooleanDefaults)
-    on_error: OnError = _doc(
+    naming: NamingDefaults = documented("Column naming.", default_factory=NamingDefaults)
+    stream: StreamNaming = documented("Stream naming.", default_factory=StreamNaming)
+    values: ValuesDefaults = documented("Value cleanup.", default_factory=ValuesDefaults)
+    timestamp: TimestampDefaults = documented("Temporal casts.", default_factory=TimestampDefaults)
+    boolean: BooleanDefaults = documented("Boolean casts.", default_factory=BooleanDefaults)
+    on_error: OnError = documented(
         "What a failed cast or transform does: raise, null, keep the raw value, or reject the "
         "row to the dead-letter sink.",
         default="raise",
     )
-    metadata: Literal["sdc", "none"] = _doc(
+    metadata: Literal["sdc", "none"] = documented(
         "Add the seven Singer SDK _sdc_* columns.", default="sdc"
     )
-    undeclared: Literal["conform", "drop", "error"] = _doc(
+    undeclared: Literal["conform", "drop", "error"] = documented(
         "Columns the spec does not mention: conform them from the tap SCHEMA, drop them, or fail.",
         default="conform",
     )
-    nested: Literal["json", "flatten", "keep"] = _doc(
+    nested: Literal["json", "flatten", "keep"] = documented(
         "Undeclared object and array columns: JSON text, flattened, or typed struct/list.",
         default="json",
     )
-    flatten: FlattenDefaults = _doc("Flattening settings.", default_factory=FlattenDefaults)
-    faker: FakerDefaults = _doc("Fake data settings.", default_factory=FakerDefaults)
+    flatten: FlattenDefaults = documented("Flattening settings.", default_factory=FlattenDefaults)
+    faker: FakerDefaults = documented("Fake data settings.", default_factory=FakerDefaults)
 
 
 # --- Columns and streams ------------------------------------------------------------------------
@@ -213,57 +203,69 @@ class Defaults:
 class ExprRef:
     """A value computed by an expression."""
 
-    expr: str = _doc("The expression.")
+    expr: str = documented("The expression.")
 
 
 @dataclass(frozen=True)
 class FieldSpec:
     """Transforms on a nested member of a struct or json column, by dotted path."""
 
-    transform: Chain | None = _doc("Steps applied to the member.", default=None)
-    when: str | None = _doc("Apply only where this expression is truthy.", default=None)
-    drop: bool = _doc("Remove the member.", default=False)
+    transform: Chain | None = documented("Steps applied to the member.", default=None)
+    when: str | None = documented("Apply only where this expression is truthy.", default=None)
+    drop: bool = documented("Remove the member.", default=False)
 
 
 @dataclass(frozen=True)
 class ColumnSpec:
     """One output column. Unset keys inherit from the stream's defaults or the tap SCHEMA."""
 
-    name: str | None = _doc("Output name. It is checked, never silently conformed.", default=None)
-    type: str | None = _doc(
+    name: str | None = documented(
+        "Output name. It is checked, never silently conformed.", default=None
+    )
+    type: str | None = documented(
         "Declared CType, e.g. int64, decimal(18,2), timestamptz. From the tap SCHEMA if absent.",
         default=None,
         metadata={"check": ctype_problem},
     )
-    nullable: bool = _doc("If false, a null is an error under on_error.", default=True)
-    source: str | tuple[str, ...] | None = _doc(
+    nullable: bool = documented("If false, a null is an error under on_error.", default=True)
+    source: str | tuple[str, ...] | None = documented(
         "Source column(s) if not the key; a list coalesces in order.", default=None
     )
-    expr: str | None = _doc("Derived value. Without source, it creates a new column.", default=None)
-    default: Any = _doc("Used when the value is missing or null after transforms.", default=None)
-    transform: Chain | None = _doc("Steps run before the implicit cast.", default=None)
-    parse: Mapping[str, Any] | None = _doc(
+    expr: str | None = documented(
+        "Derived value. Without source, it creates a new column.", default=None
+    )
+    default: Any = documented(
+        "Used when the value is missing or null after transforms.", default=None
+    )
+    transform: Chain | None = documented("Steps run before the implicit cast.", default=None)
+    parse: Mapping[str, Any] | None = documented(
         "Keyword arguments for the implicit cast, e.g. {formats: [...], tz: ...}.", default=None
     )
-    true_values: tuple[str, ...] | None = _doc("Overrides boolean.true_values.", default=None)
-    false_values: tuple[str, ...] | None = _doc("Overrides boolean.false_values.", default=None)
-    null_tokens: tuple[str, ...] | None = _doc("Overrides values.null_tokens.", default=None)
-    trim: bool | None = _doc("Overrides values.trim.", default=None)
-    on_error: OnError | None = _doc("Overrides on_error.", default=None)
-    max_length: int | None = _doc(
-        "Longest string allowed.", default=None, metadata={"check": _positive}
+    true_values: tuple[str, ...] | None = documented("Overrides boolean.true_values.", default=None)
+    false_values: tuple[str, ...] | None = documented(
+        "Overrides boolean.false_values.", default=None
     )
-    on_overflow: Literal["truncate", "error"] = _doc(
+    null_tokens: tuple[str, ...] | None = documented("Overrides values.null_tokens.", default=None)
+    trim: bool | None = documented("Overrides values.trim.", default=None)
+    on_error: OnError | None = documented("Overrides on_error.", default=None)
+    max_length: int | None = documented(
+        "Longest string allowed.", default=None, metadata={"check": positive}
+    )
+    on_overflow: Literal["truncate", "error"] = documented(
         "What a string longer than max_length does.", default="error"
     )
-    enum: tuple[Any, ...] | None = _doc("Allowed values, checked after the cast.", default=None)
-    drop: bool = _doc("Remove the column. Dropping a key property is an error.", default=False)
-    doc: str | None = _doc("Copied to the SCHEMA description.", default=None)
-    sql_type: str | None = _doc("Overrides the emitted x-sql-datatype hint.", default=None)
-    when: str | None = _doc(
+    enum: tuple[Any, ...] | None = documented(
+        "Allowed values, checked after the cast.", default=None
+    )
+    drop: bool = documented(
+        "Remove the column. Dropping a key property is an error.", default=False
+    )
+    doc: str | None = documented("Copied to the SCHEMA description.", default=None)
+    sql_type: str | None = documented("Overrides the emitted x-sql-datatype hint.", default=None)
+    when: str | None = documented(
         "Apply the chain only to rows where this is truthy; sees conformed names.", default=None
     )
-    fields: Mapping[str, FieldSpec] | None = _doc(
+    fields: Mapping[str, FieldSpec] | None = documented(
         "Transforms on nested members of struct and json columns, by dotted path.",
         default=None,
     )
@@ -273,27 +275,27 @@ class ColumnSpec:
 class StreamSpec:
     """A stream's own keys. Defaults keys set on the stream are merged into its Defaults."""
 
-    alias: str | ExprRef | None = _doc(
+    alias: str | ExprRef | None = documented(
         "Final stream name; bypasses stream naming and prefix.", default=None
     )
-    source: str | None = _doc(
+    source: str | None = documented(
         "Make this key a new output stream projected from this tap stream (split or copy).",
         default=None,
     )
-    prefix: str | None = _doc("Overrides stream.prefix.", default=None)
-    key_properties: tuple[str, ...] | None = _doc(
+    prefix: str | None = documented("Overrides stream.prefix.", default=None)
+    key_properties: tuple[str, ...] | None = documented(
         "Overrides the tap's key properties; source or conformed names.", default=None
     )
-    filter: str | None = _doc(
+    filter: str | None = documented(
         "Rows where this expression is falsy are dropped; sees conformed names.", default=None
     )
-    columns: Mapping[str, ColumnSpec] = _doc(
-        "Columns by source name, or by new name for derived columns.", default_factory=_empty
+    columns: Mapping[str, ColumnSpec] = documented(
+        "Columns by source name, or by new name for derived columns.", default_factory=empty_mapping
     )
-    order: Literal["source", "declared"] = _doc(
+    order: Literal["source", "declared"] = documented(
         "Output column order: the tap's, or the order of columns here.", default="source"
     )
-    drop: bool = _doc("Drop the whole stream.", default=False)
+    drop: bool = documented("Drop the whole stream.", default=False)
 
 
 STREAM_KEYS = frozenset({"alias", "source", "prefix", "key_properties", "filter", "columns",
@@ -357,22 +359,22 @@ class StreamRules:
 class Spec:
     """A conform spec file, version 1."""
 
-    version: Literal[1] = _doc("The spec version.")
-    defaults: Defaults = _doc("Inherited by every stream.", default_factory=Defaults)
-    macros: Mapping[str, Macro] = _doc(
-        "Named, parameterised transform chains.", default_factory=_empty
+    version: Literal[1] = documented("The spec version.")
+    defaults: Defaults = documented("Inherited by every stream.", default_factory=Defaults)
+    macros: Mapping[str, Macro] = documented(
+        "Named, parameterised transform chains.", default_factory=empty_mapping
     )
-    udfs: Mapping[str, str] = _doc(
+    udfs: Mapping[str, str] = documented(
         "Python functions by name, as 'package.module:function'.",
-        default_factory=_empty,
+        default_factory=empty_mapping,
         metadata={"check": lambda m: next(filter(None, map(_udf_problem, m.values())), None)},
     )
-    streams: Mapping[str, StreamRules] = _doc(
+    streams: Mapping[str, StreamRules] = documented(
         "Per-stream rules: StreamSpec keys plus any Defaults key. A key is a glob over tap "
         "stream names, or a new stream name when the rules have source.",
-        default_factory=_empty,
+        default_factory=empty_mapping,
     )
-    else_: Literal["keep", "drop"] = _doc(
+    else_: Literal["keep", "drop"] = documented(
         "Tap streams that match no key: keep (conform with the defaults) or drop.",
         default="keep",
         metadata={"key": "else"},

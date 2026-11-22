@@ -130,8 +130,8 @@ select = ["ALL"]
 runtime-evaluated-decorators = ["dataclasses.dataclass"]
 
 [tool.ruff.lint.flake8-bugbear]
-# _doc wraps dataclasses.field, so it is a field specifier, not a mutable default.
-extend-immutable-calls = ["map_conform.spec.model._doc"]
+# documented() wraps dataclasses.field, so it is a field specifier, not a mutable default.
+extend-immutable-calls = ["map_conform.spec._struct.documented"]
 
 [tool.ruff.lint.flake8-annotations]
 allow-star-arg-any = true
