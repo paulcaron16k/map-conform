@@ -117,7 +117,7 @@ streams:
     key_properties: [..]         # source or conformed names; overrides tap
     filter: <expr>               # falsy → drop row; sees CONFORMED column names
     columns: {<source name or new name>: ColumnSpec}
-    order: declared | source     # output column order
+    order: source | declared     # output column order (default source: the tap's)
     drop: true                   # drop the whole stream
     # plus any Defaults key, overriding for this stream
 ```
@@ -155,6 +155,11 @@ A **chain** is one step or a list of steps. A **step** is one of:
 | expression | `{expr: "value.replace('O', '0')"}` |
 | conditional | `{case: [{when: <expr>, then: <chain>}, …, {else: <chain>}]}` |
 | UDF | `{fiscal_week: {start_month: 7}}` |
+
+In mapping form, the **first key other than `when` names the step**. Its value is the
+step's argument, and the remaining keys are keyword arguments. For example,
+`{cast: decimal, rounding: half_even}` is `cast` with argument `decimal` and the keyword
+`rounding`. YAML and JSON keep key order, so this is unambiguous.
 
 Any step in mapping form may also carry `when: <expr>`, so the step applies only to rows where
 it is truthy: `{hash: {}, when: "country == 'DE'"}`.
