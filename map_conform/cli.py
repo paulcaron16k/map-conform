@@ -6,12 +6,14 @@ Singer SDK's CLI unchanged. Tool subcommands (``map-conform spec ...``) are hand
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import sys
 from typing import TYPE_CHECKING, Any
 
 import click
 
+from map_conform.expr.functions import FUNCTIONS
 from map_conform.mapper import MapConformMapper
 from map_conform.plan.compile import compile_stream, plan_report
 from map_conform.spec.check import CatalogStream, check_spec, explain, read_catalog
@@ -22,8 +24,9 @@ from map_conform.transforms.builtins import builtin_registry
 
 if TYPE_CHECKING:
     from map_conform.spec.model import Spec
+    from map_conform.transforms.registry import Transform
 
-TOOL_COMMANDS = frozenset({"spec"})
+TOOL_COMMANDS = frozenset({"spec", "functions"})
 
 
 @click.group(name="map-conform")
@@ -199,6 +202,68 @@ def _render_explain(report: dict[str, Any]) -> str:
         lines.append("")
         lines.extend(f"problem: {f}" for f in report["findings"])
     return "\n".join(lines)
+
+
+@tools.command(name="functions")
+@click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
+def functions(*, as_json: bool) -> None:
+    """List the builtin steps and the functions expressions can call."""
+    report = functions_report()
+    if as_json:
+        click.echo(json.dumps(report, indent=2))
+        return
+    lines = ["Builtin steps:"]
+    for step in report["steps"]:
+        flags = " [vectorised]" if step["vectorised"] else ""
+        lines.append(f"  {step['name']}({step['signature']}){flags}")
+        if step["doc"]:
+            lines.append(f"      {step['doc']}")
+    lines.append(f"  cast: one of {', '.join(report['casts'])}")
+    group = None
+    for fn in report["functions"]:
+        if fn["group"] != group:
+            group = fn["group"]
+            lines.extend(["", f"Expression functions: {group}"])
+        lines.append(f"  {fn['signature']}")
+        lines.append(f"      {fn['doc']}")
+    click.echo("\n".join(lines))
+
+
+def functions_report() -> dict[str, Any]:
+    """Builtin steps, cast targets and expression functions, as plain data."""
+    registry = builtin_registry()
+    groups = ("predicates", "coercion", "temporal", "text", "numeric", "misc", "python", "modules")
+    ordered = sorted(FUNCTIONS.values(), key=lambda f: (groups.index(f.group), f.name))
+    return {
+        "steps": [_step_report(t) for _, t in sorted(registry.names().items())],
+        "casts": sorted(registry.casts),
+        "functions": [
+            {"name": f.name, "group": f.group, "signature": f.signature, "doc": f.doc}
+            for f in ordered
+        ],
+    }
+
+
+def _step_report(transform: Transform) -> dict[str, Any]:
+    params = [
+        f"{f.name}={f.default!r}" if _shown_default(f.default) else f.name
+        for f in dataclasses.fields(transform.kwargs)
+    ]
+    return {
+        "name": transform.name,
+        "signature": ", ".join(params),
+        "positional": transform.positional,
+        "accepts": sorted(transform.accepts),
+        "vectorised": transform.vectorised,
+        "doc": transform.doc,
+    }
+
+
+def _shown_default(default: object) -> bool:
+    """Whether a kwarg's default is a real value (not missing, not an internal sentinel)."""
+    return default is not dataclasses.MISSING and isinstance(
+        default, (str, int, float, bool, tuple, type(None))
+    )
 
 
 def main(argv: list[str] | None = None) -> None:
