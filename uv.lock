@@ -1086,6 +1086,7 @@ dev = [
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-github-actions-annotate-failures" },
+    { name = "pyyaml" },
     { name = "ruff" },
     { name = "singer-sdk", extra = ["testing"] },
     { name = "ty" },
@@ -1096,6 +1097,7 @@ lint = [
 test = [
     { name = "pytest" },
     { name = "pytest-github-actions-annotate-failures" },
+    { name = "pyyaml" },
     { name = "singer-sdk", extra = ["testing"] },
 ]
 typing = [
@@ -1117,6 +1119,7 @@ dev = [
     { name = "mypy", specifier = ">=2.1" },
     { name = "pytest", specifier = ">=9" },
     { name = "pytest-github-actions-annotate-failures", specifier = ">=0.4" },
+    { name = "pyyaml", specifier = ">=6.0.4" },
     { name = "ruff", specifier = ">=0.16" },
     { name = "singer-sdk", extras = ["testing"] },
     { name = "ty", specifier = ">=0.0.41" },
@@ -1125,6 +1128,7 @@ lint = [{ name = "ruff", specifier = ">=0.16" }]
 test = [
     { name = "pytest", specifier = ">=9" },
     { name = "pytest-github-actions-annotate-failures", specifier = ">=0.4" },
+    { name = "pyyaml", specifier = ">=6.0.4" },
     { name = "singer-sdk", extras = ["testing"] },
 ]
 typing = [
