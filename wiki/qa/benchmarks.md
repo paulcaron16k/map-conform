@@ -4,7 +4,7 @@ title: "Benchmarks"
 description: "Throughput baseline for RECORD, row-wise BATCH and columnar BATCH, and the CI regression gate."
 resource: tests/bench/
 tags: [qa, performance, active]
-timestamp: 2026-11-22T20:00:00Z
+timestamp: 2026-11-22T21:00:00Z
 sources:
   - path: tests/bench/baseline.json
   - path: tests/bench/workload.py
@@ -31,7 +31,10 @@ Recorded on x86_64, 4 cores, Python 3.14.6, pyarrow 26.0.1 (`tests/bench/baselin
 | BATCH, row by row | 9,186 | a parquet BATCH with the columnar engine off |
 | BATCH, columnar | 40,055 | the same BATCH through the columnar engine |
 
-The columnar engine is about 4× the row path on this workload. The uuid column, the messy
+CI's *Benchmarks* job on its first run (ubuntu-latest, Python 3.14) measured RECORD
+17,325, row-wise BATCH 23,367 and columnar BATCH 109,735 rows/s.
+
+The columnar engine is about 4–5× the row path on this workload. The uuid column, the messy
 values and the `_sdc_*`/policy bookkeeping still run per row, so it gains most on clean,
 vectorisable data.
 

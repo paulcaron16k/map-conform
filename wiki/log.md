@@ -78,3 +78,7 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-22T19:30:00Z | UPDATED | plans/roadmap | Added WBS 7.5 (done) and 8.10 (first in P4) |
 | 2026-11-22T20:00:00Z | CREATED | qa/benchmarks | Throughput baseline and the CI regression gate (WBS 8.9) |
 | 2026-11-22T20:00:00Z | UPDATED | qa/test-strategy | Parity and bench layers built; draft → active |
+| 2026-11-22T21:00:00Z | UPDATED | components/execution-engines | P4 built: BATCH I/O, columnar executor, case lowering, polars; draft → active |
+| 2026-11-22T21:00:00Z | UPDATED | concepts/clean-landing-contract | BATCH delivers the contract as of P4; _sdc_* follow add_record_metadata |
+| 2026-11-22T21:00:00Z | UPDATED | qa/benchmarks | CI's first benchmark numbers |
+| 2026-11-22T21:00:00Z | UPDATED | plans/roadmap | P4 done |

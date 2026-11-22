@@ -4,7 +4,7 @@ title: "Roadmap and WBS"
 description: "Phases P0-P6, epics E1-E12 and how they map to gh agile issues."
 resource: docs/plan-wbs.md
 tags: [management, planning, active]
-timestamp: 2026-11-22T19:30:00Z
+timestamp: 2026-11-22T21:00:00Z
 sources:
   - path: docs/plan-wbs.md
   - path: bin/create-agile-issues.py
@@ -24,8 +24,8 @@ Issues are filed by [bin/create-agile-issues.py](../../bin/create-agile-issues.p
 | P1 Spec & names | E2, E3 | 32 | Done 2026-11-22 (PRs #87–#96) |
 | P2 RECORD engine | E4, E5, E7 | 64 | Done 2026-11-22 (PRs #98–#105; 7.5 in #114) |
 | P3 Expressions, UDFs & stream-map parity | E6, E12 | 53 | Done 2026-11-22 (PRs #106–#111) |
-| P4 BATCH engine | E8 | 40 | Next (8.10 declared flattening first) |
-| P5 Bridges, docs & release | E9, E10 | 21 | |
+| P4 BATCH engine | E8 | 40 | Done 2026-11-22 (PRs #115–#120) |
+| P5 Bridges, docs & release | E9, E10 | 21 | Next |
 | P6 Adoption | E11 | 6 | |
 
 Each phase ends with verification and an explicit approval from the owner.
