@@ -92,6 +92,27 @@ class CType:
     members: tuple[tuple[str, CType], ...] = ()
     item: CType | None = None
 
+    def __post_init__(self) -> None:
+        """Reject shapes no parse could produce."""
+        if self.kind == "decimal" and (self.precision is None or self.scale is None):
+            raise CTypeError(f"decimal needs a precision and scale: {self!r}")
+        if self.kind == "list" and self.item is None:
+            raise CTypeError(f"list needs an item type: {self!r}")
+
+    @property
+    def decimal_params(self) -> tuple[int, int]:
+        """``(precision, scale)`` of a decimal."""
+        if self.precision is None or self.scale is None:
+            raise CTypeError(f"{self} is not a decimal")
+        return self.precision, self.scale
+
+    @property
+    def list_item(self) -> CType:
+        """The item type of a list."""
+        if self.item is None:
+            raise CTypeError(f"{self} is not a list")
+        return self.item
+
     @override
     def __str__(self) -> str:
         """The canonical spelling, e.g. ``decimal(18,2)`` or ``list<string>``."""
@@ -106,12 +127,23 @@ class CType:
         return self.kind
 
 
+_MULTI_WORD = (
+    (re.compile(r"\bdouble\s+precision\b", re.IGNORECASE), "double"),
+    (re.compile(r"\btimestamp\s+with\s+time\s+zone\b", re.IGNORECASE), "timestamptz"),
+    (re.compile(r"\btimestamp\s+without\s+time\s+zone\b", re.IGNORECASE), "timestamp"),
+    (re.compile(r"\bcharacter\s+varying\b", re.IGNORECASE), "varchar"),
+)
+"""SQL type names of several words, as taps write them in x-sql-datatype hints."""
+
+
 def parse_ctype(text: str) -> CType:
-    """Parse a CType string, accepting the documented aliases.
+    """Parse a CType string, accepting the documented aliases and SQL multi-word names.
 
     Raises:
         CTypeError: if ``text`` is not a valid CType.
     """
+    for pattern, alias in _MULTI_WORD:
+        text = pattern.sub(alias, text)
     parser = _Parser(text)
     ctype = parser.ctype()
     parser.skip_space()
