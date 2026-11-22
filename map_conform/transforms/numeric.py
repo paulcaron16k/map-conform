@@ -149,7 +149,13 @@ def _is_finite(number: float | Decimal) -> bool:
     return number.is_finite() if isinstance(number, Decimal) else math.isfinite(number)
 
 
+_MAX_DIGITS = 150
+"""Larger numbers fit no column; quantizing them would overflow the decimal context."""
+
+
 def _round(number: Decimal, exponent: Decimal, mode: Rounding) -> Decimal:
+    if number.adjusted() >= _MAX_DIGITS:
+        raise StepFailed(f"{number} is too large for any numeric column")
     if mode == "error":
         try:
             return number.quantize(exponent, context=DecimalContext(prec=200, traps=[Inexact]))

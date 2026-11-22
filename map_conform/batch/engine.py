@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from map_conform.batch.arrow import output_columns
+from map_conform.batch.columnar import ColumnarExecutor, columnar
 from map_conform.batch.files import (
     Writer,
     compression_for,
@@ -27,6 +28,7 @@ from map_conform.batch.files import (
     last_modified,
     output_uri,
     read_rows,
+    read_tables,
 )
 from map_conform.errors import RowRejected
 from map_conform.settings import BatchOutputSettings
@@ -59,11 +61,19 @@ class BatchEngine:
         }
         manifests: dict[int, list[str]] = {id(e): [] for e in executors}
         params = self.settings.storage.params
+        encoding = message.get("encoding") or {}
         for uri in message.get("manifest", []):
             batched_at = last_modified(uri, params).isoformat()
             writers: dict[int, Writer] = {}
-            for chunk in read_rows(uri, message.get("encoding") or {}, params,
-                                   self.settings.row_group_size):  # fmt: skip
+            if self._columnar(encoding, executors):
+                self._columnar_file(
+                    uri, tap_stream=tap_stream, executors=executors, passed=passed,
+                    batched_at=batched_at, writers=writers,
+                )  # fmt: skip
+                chunks: Iterator[list[dict[str, Any]]] = iter(())
+            else:
+                chunks = read_rows(uri, encoding, params, self.settings.row_group_size)
+            for chunk in chunks:
                 yield from self._chunk(
                     chunk,
                     tap_stream=tap_stream,
@@ -124,6 +134,45 @@ class BatchEngine:
                 rows = buffers[id(executor)]
                 if rows:
                     self._writer(executor, uri, writers).write(rows)
+
+    def _columnar(self, encoding: dict[str, Any], executors: list[RowExecutor]) -> bool:
+        """Parquet in, parquet out, and every output stream has vectorised columns."""
+        return (
+            encoding.get("format") == "parquet"
+            and self.settings.mode == "batch"
+            and self.settings.format == "parquet"
+            and bool(executors)
+            and all(columnar(e) for e in executors)
+        )
+
+    def _columnar_file(  # noqa: PLR0913 -- the file and where it goes
+        self,
+        uri: str,
+        *,
+        tap_stream: str,
+        executors: list[RowExecutor],
+        passed: dict[str, Any],
+        batched_at: str,
+        writers: dict[int, Writer],
+    ) -> None:
+        """Conform a parquet file batch by batch with the columnar executor."""
+        runners = {id(e): ColumnarExecutor(e) for e in executors}
+        for table in read_tables(uri, self.settings.storage.params, self.settings.row_group_size):
+            first = self.rows.get(tap_stream, 0) + 1
+            self.rows[tap_stream] = first + table.num_rows - 1
+            for executor in executors:
+
+                def reject(
+                    rejected: RowRejected, record: dict[str, Any], e: RowExecutor = executor
+                ) -> None:
+                    self.reject(e, rejected, record)
+
+                out = runners[id(executor)].run(
+                    table, passed=passed, first_row=first, batched_at=batched_at, reject=reject
+                )
+                executor.metrics.rows_out += out.num_rows
+                if out.num_rows:
+                    self._writer(executor, uri, writers).write_table(out)
 
     def _writer(self, executor: RowExecutor, uri: str, writers: dict[int, Writer]) -> Writer:
         writer = writers.get(id(executor))

@@ -83,6 +83,22 @@ def read_rows(
         raise BatchFileError(msg) from exc
 
 
+def read_tables(uri: str, params: Mapping[str, Any], chunk: int) -> Iterator[pa.Table]:
+    """A parquet file's rows as Arrow tables of at most ``chunk`` rows.
+
+    Raises:
+        BatchFileError: for an unreadable file.
+    """
+    fs, path = _fs(uri, params)
+    try:
+        with fs.open(path, "rb") as handle:
+            for batch in pq.ParquetFile(handle).iter_batches(batch_size=chunk):
+                yield pa.Table.from_batches([batch])
+    except (OSError, pa.ArrowException) as exc:
+        msg = f"cannot read {uri}: {exc}"
+        raise BatchFileError(msg) from exc
+
+
 def _jsonl(
     fs: fsspec.AbstractFileSystem, path: str, compression: str, chunk: int
 ) -> Iterator[list[dict[str, Any]]]:
@@ -165,6 +181,15 @@ class Writer:
             )
         else:
             self._text.write("".join(dumps(dict(row), compact=True) + "\n" for row in rows))
+
+    def write_table(self, table: pa.Table) -> None:
+        """Append a conformed Arrow table (parquet output only)."""
+        if self._parquet is None:
+            msg = "write_table is for parquet output"
+            raise TypeError(msg)
+        self.rows += table.num_rows
+        if table.num_rows:
+            self._parquet.write_table(table, row_group_size=self.row_group_size)
 
     def close(self) -> None:
         """Finish the file."""
