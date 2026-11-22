@@ -137,6 +137,9 @@ extend-immutable-calls = ["map_conform.spec._struct.documented"]
 allow-star-arg-any = true
 
 [tool.ruff.lint.per-file-ignores]
+# Greek, Cyrillic and fullwidth letters are the subject matter here, not look-alike typos.
+"map_conform/naming/translit.py" = ["RUF001"]
+"tests/naming/*.py" = ["RUF001"]
 "bin/*.py" = [
   "INP001", # stand-alone scripts, not a package
   "S603",   # argv lists built in the script, never from a shell string
