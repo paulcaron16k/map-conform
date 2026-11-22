@@ -23,7 +23,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Topic :: Database",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -31,7 +30,7 @@ classifiers = [
 ]
 license = "Apache-2.0"
 license-files = [ "LICENSE" ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "singer-sdk~=0.54.9",
     "typing-extensions>=4.5.0; python_version < '3.13'",
@@ -102,9 +101,6 @@ addopts = [
 ]
 filterwarnings = [
     "error",
-    # Python 3.10 is past end of life; the SDK says so on import. Support stays (ADR-0001)
-    # until the floor is raised.
-    "ignore::singer_sdk.helpers._compat.SingerSDKPythonEOLWarning",
 ]
 log_level = "INFO"
 minversion = "9"
@@ -150,7 +146,7 @@ requires = [
 ]
 env_list = [
     "typing",
-    { prefix = "3.", start = 10 },
+    { prefix = "3.", start = 11, stop = 14 },  # the supported range; keep in step with the classifiers
 ]
 
 [tool.tox.env_run_base]

@@ -41,8 +41,8 @@ Each cast table has the columns `case, type, input, kwargs, expected, note`.
 Wire forms follow the [Clean-Landing Contract](../../wiki/concepts/clean-landing-contract.md)
 §3. Where the contract leaves the fraction open, the corpus uses six digits
 (`output_precision: us`): `timestamptz` is `YYYY-MM-DDTHH:MM:SS.ffffffZ`, `timestamp` is the
-same without `Z`, and `time` is `HH:MM:SS.ffffff`. Two choices the design leaves open are
-also fixed here and should be confirmed when the casts are built (WBS 4.x):
+same without `Z`, and `time` is `HH:MM:SS.ffffff`. Two rules decided by the owner on 2026-11-22
+(guidance §7, rows 19–20) are encoded here:
 
 - Excel serial `60` (the Lotus 1900-02-29 that never existed) is an error, and serials below
   60 count from 1899-12-31.

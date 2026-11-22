@@ -4,7 +4,7 @@ title: "Development environment"
 description: "How to set up, test, lint and type-check map-conform locally."
 resource: pyproject.toml
 tags: [platform, active]
-timestamp: 2026-11-22T05:00:00Z
+timestamp: 2026-11-22T06:00:00Z
 sources:
   - path: pyproject.toml
   - path: .pre-commit-config.yaml
@@ -15,8 +15,7 @@ sources:
 
 Parent: [Wiki Index](../index.md)
 
-Requires [uv](https://docs.astral.sh/uv/). Python 3.10–3.14 are supported (path:pyproject.toml).
-3.10 is past end of life, so pytest ignores the SDK's EOL warning on it.
+Requires [uv](https://docs.astral.sh/uv/). Python 3.11–3.14 are supported (path:pyproject.toml).
 
 ## Everyday commands
 
@@ -33,8 +32,8 @@ Requires [uv](https://docs.astral.sh/uv/). Python 3.10–3.14 are supported (pat
 | Regenerate derived fixtures | `uv run python -m tests.fixtures.generate` |
 | Try the mapper | `uv run map-conform --about` |
 
-pre-commit runs through `uvx`, not as a project dependency: its dependency chain resolves to a
-vulnerable `filelock` on Python 3.10.
+pre-commit runs through `uvx`, not as a project dependency, so its tool chain stays out of the
+project's lockfile.
 
 ## Hooks
 

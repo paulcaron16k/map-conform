@@ -222,7 +222,8 @@ macros:
 The pipeline is pure and deterministic, and each step can be configured:
 
 1. Unicode NFKC normalisation.
-1. Transliterate to ASCII (`unidecode`-style table, vendored subset) or strip.
+1. Transliterate to ASCII with the bundled table (pinned Unicode decompositions plus a curated
+   supplement for Latin, Greek and Cyrillic; [ADR-0012](../wiki/decisions/0012-bundled-transliteration-table.md)), or strip.
 1. Split camelCase (`aB` → `a_B`) and acronym boundaries (`ABc` → `A_Bc`), so that
    `customerID` → `customer_ID` and `HTTPServer` → `HTTP_Server`.
 1. Apply the case.
@@ -286,7 +287,7 @@ are marked ✓.
 | Builtin | Kwargs / grammar | Vec |
 | -- | -- | -- |
 | `cast: int*` / `cast: float*` / `cast: decimal` | The default grammar accepts: surrounding whitespace; a sign; one currency symbol or ISO-4217 code before or after; thousands separators in valid groups (`thousands=","`, `decimal_point="."`, locale presets `us`, `eu`, `ch`); an exponent; `(x)` as negative when `parens_negative`; a trailing `-` when `trailing_minus`; `%` when `percent: divide`. | ✓ (a regex validate + pyarrow cast; failures go row-wise for the error path) |
-| `rounding` (on cast) | `half_up` (default), `half_even`, `down`, `error`. Also controls int-from-fraction: `error` default. `"12.0"` → 12 is always allowed. | ✓ |
+| `rounding` (on cast) | `half_up` (default; halves round away from zero, `-12.5` → `-13`), `half_even`, `down`, `error`. Also controls int-from-fraction: `error` default. `"12.0"` → 12 is always allowed. | ✓ |
 | `round` | `ndigits` | ✓ |
 | `clamp` | `min`, `max`, `on_out_of_range` | ✓ |
 | `nan` | `null` \| `error`. NaN/Inf from float sources become null by default for decimal and int columns. | ✓ |
@@ -296,7 +297,7 @@ are marked ✓.
 
 | Builtin | Kwargs | Vec |
 | -- | -- | -- |
-| `cast: timestamptz` / `timestamp` / `date` / `time` | `formats`: tried in order, each one of: a `strftime` pattern; `iso` (fromisoformat with a lenient `Z`/`z`/space separator); `excel_serial` (1900 system, with the Lotus leap bug handled; `excel_serial_1904`); `epoch_s` / `epoch_ms` / `epoch_us` / `epoch_ns`; `epoch_auto` (by magnitude, opt-in only); `rfc2822`. Also `tz` (source zone for naive input), `ambiguous: error \| earliest \| latest` and `nonexistent: error \| shift`, `dayfirst` (only for `auto`), `min_year` / `max_year` sanity bounds. | ✓ for strptime and ISO via `pyarrow.compute.strptime` / `cast`; serial and epoch via arithmetic; otherwise row-wise |
+| `cast: timestamptz` / `timestamp` / `date` / `time` | `formats`: tried in order, each one of: a `strftime` pattern; `iso` (fromisoformat with a lenient `Z`/`z`/space separator); `excel_serial` (1900 system; serials below 60 count from 1899-12-31 and serial 60, Lotus's nonexistent 1900-02-29, is an error; `excel_serial_1904`); `epoch_s` / `epoch_ms` / `epoch_us` / `epoch_ns`; `epoch_auto` (by magnitude, opt-in only); `rfc2822`. Also `tz` (source zone for naive input), `ambiguous: error \| earliest \| latest` and `nonexistent: error \| shift`, `dayfirst` (only for `auto`), `min_year` / `max_year` sanity bounds. | ✓ for strptime and ISO via `pyarrow.compute.strptime` / `cast`; serial and epoch via arithmetic; otherwise row-wise |
 | `to_utc` | timestamptz is always UTC on output; this is explicit for clarity | ✓ |
 | `assume_tz` | `tz` | ✓ |
 | `to_local` | `tz` (for `timestamp` naive local wall clock) | ✓ |
@@ -609,5 +610,5 @@ inferred types written explicitly, so a project can migrate in one step.
 | Q1 | uuid in BATCH | **Resolved:** `arrow.uuid` → parquet FLBA(16) with UUID logical type (checked with pyarrow 26 and DuckDB); RECORD stays canonical string |
 | Q2 | `_sdc_batched_at` | **Resolved:** BATCH = input file last-modified; RECORD = mapper start |
 | Q3 | `filter` names | **Resolved:** conformed names |
-| Q4 | Transliteration table: vendor it or depend on a library | **Open:** decide when licence restrictions are known (before WBS 3.1) |
+| Q4 | Transliteration table: vendor it or depend on a library | **Resolved:** bundle a generated table, no GPL source ([ADR-0012](../wiki/decisions/0012-bundled-transliteration-table.md)) |
 | Q5 | Upstream SDK proposal for `_sdc_*` | **Closed:** no. The Singer spec and the SDK own `_sdc_*` behaviour |

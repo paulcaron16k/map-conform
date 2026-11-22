@@ -45,3 +45,10 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-22T05:00:00Z | UPDATED | ci-cd/pipeline | P0 built: workflows as merged, publish gating; draft → active |
 | 2026-11-22T05:00:00Z | UPDATED | qa/test-strategy | Fixtures, wiki claim tests and gates as built |
 | 2026-11-22T05:00:00Z | UPDATED | plans/roadmap | P0 done; description says E1-E12 |
+| 2026-11-22T06:00:00Z | CREATED | decisions/0012-bundled-transliteration-table | Q4 resolved: bundle a generated table |
+| 2026-11-22T06:00:00Z | UPDATED | decisions/0001-name-and-licence | Amended: Python floor 3.11 |
+| 2026-11-22T06:00:00Z | UPDATED | index | ADR 0012 |
+| 2026-11-22T06:00:00Z | UPDATED | plans/roadmap | Q4 resolved |
+| 2026-11-22T06:00:00Z | UPDATED | components/name-conformer | Transliteration links ADR-0012 |
+| 2026-11-22T06:00:00Z | UPDATED | runbooks/dev-environment | Python 3.11–3.14 |
+| 2026-11-22T06:00:00Z | UPDATED | ci-cd/pipeline | Python 3.11–3.14 |
