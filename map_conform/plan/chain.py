@@ -9,8 +9,10 @@ Every problem is recorded with its spec path; nothing is checked again at run ti
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
+import typing
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -226,8 +228,8 @@ class ChainCompiler:
         self, transform: Transform, arg: object, extra: Mapping[str, Any], path: str
     ) -> Any:  # noqa: ANN401 -- the transform's own kwargs dataclass
         data: dict[str, Any] = {}
-        if isinstance(arg, Mapping):
-            data.update(thaw_mapping(arg))
+        if isinstance(arg, Mapping) and not _positional_takes_mapping(transform, arg):
+            data.update(thaw_mapping(arg))  # {hash: {algo: md5}}: keyword arguments
         elif arg is not None:
             if transform.positional is None:
                 self.issues.add(path, f"{transform.name} takes keyword arguments only")
@@ -278,6 +280,20 @@ class ChainCompiler:
         except CTypeError as exc:
             self.issues.add(path, str(exc))
             return None
+
+
+def _positional_takes_mapping(transform: Transform, arg: Mapping[str, Any]) -> bool:
+    """Whether a mapping argument is the positional value, as in ``{map_values: {Y: yes}}``.
+
+    That is so only when the positional kwarg is itself a mapping and the argument's keys are
+    not all kwarg names (``{map_values: {values: {...}, default: x}}`` is keyword arguments).
+    """
+    if transform.positional is None:
+        return False
+    hints = typing.get_type_hints(transform.kwargs)
+    if typing.get_origin(hints[transform.positional]) not in (Mapping, dict):
+        return False
+    return not set(arg) <= {f.name for f in dataclasses.fields(transform.kwargs)}
 
 
 def _stage(stage: CType | None) -> str:
