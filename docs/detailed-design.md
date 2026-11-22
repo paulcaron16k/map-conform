@@ -437,7 +437,28 @@ Details pinned by the implementation (`map_conform/transforms/numeric.py`):
 | `date_from_timestamp` | `tz` | ✓ |
 
 **Ambiguity rule.** A pattern list that could parse the same string to two different
-instants, such as `%m/%d` and `%d/%m` both listed, is allowed. The first match wins. `spec explain` warns about it.
+instants, such as `%m/%d` and `%d/%m` both listed, is allowed. The first match wins. A
+`spec explain` warning for it is planned.
+
+Details pinned by the implementation (`map_conform/transforms/temporal.py`):
+
+- **ISO parsing** uses its own parser, not `fromisoformat`, so it behaves the same on every
+  supported Python. It accepts `Z`/`z`, a `T`, `t` or space separator, `.` or `,` before any
+  number of fraction digits (kept to microseconds), offsets with or without `:`, and
+  date-only or time-only values.
+- **Excel serials** use exact decimal day fractions. Serials below 60 count from
+  1899-12-31; serial 60 is an error, and 0 or less is before the epoch.
+- **Epochs.** `epoch_auto` picks the unit by magnitude: below 1e11 seconds, then
+  milliseconds, microseconds and nanoseconds. Sub-microsecond digits are truncated.
+- **Zones and DST.** Naive input is placed in `tz` (default `timestamp.assume_tz`), and
+  `fold` detects DST ambiguity and gaps. `nonexistent: shift` gives the instant after the
+  gap. Input with its own offset is never re-zoned.
+- **Targets.** A `timestamp` or `date` from aware input is the wall time in `tz`. A time of
+  day cannot become a timestamp.
+- **Checked at compile time:** format tokens and zones.
+- **Not built:** `auto` and `dayfirst`, which need a guessing parser.
+- **Builtins:** `to_utc`, `assume_tz` (timestamp → timestamptz), `to_local` (timestamptz →
+  timestamp), `truncate` and `date_from_timestamp`.
 
 ### 6.4 Boolean, JSON, binary, privacy
 
