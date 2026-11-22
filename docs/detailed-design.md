@@ -221,10 +221,38 @@ position (e.g. `round` before the cast on a string column).
 macros:
   money:
     params: {currency: "$"}
-    steps: [{strip_chars: "${currency}, "}, {parens_negative: true}, {cast: decimal}]
+    steps: [{strip_chars: "${currency}, "}, {cast: decimal, parens_negative: true}]
   sheet_date:
     steps: [{cast: timestamptz, formats: ["%m/%d/%Y %I:%M %p", "%m/%d/%Y", excel_serial, iso]}]
 ```
+
+As built (`map_conform/plan/chain.py`, `map_conform/plan/ops.py`):
+
+- **Stages.** An `expr` step's result is untyped (raw). A chain that ends raw gets the
+  implicit cast even after an explicit one, so `[cast, {expr: "value * 2"}]` is cast
+  again to the column's type.
+- **`when` on a step** runs the step only where the condition is truthy. After the cast the
+  step must keep the value's type, since other rows skip it. Before the cast every row is
+  raw afterwards, and the implicit cast follows. A macro reference may carry `when` too.
+- **`case`** compiles every branch from the same stage. Branches that end in different
+  types each get the implicit cast, so every row leaves the case as the column's type. A
+  row that matches no branch, with no `else`, keeps its value.
+- **A column's `expr`** is the chain's first step. With no source it creates a column,
+  which needs a declared `type`. The column's own name is not in scope: use `value`.
+- **A column's `when`** applies the whole chain (with `fields`) where it is truthy. Other
+  rows get only the implicit cast.
+- **`fields`** run after the cast, on struct or json columns. Paths are member names joined
+  by `.`, with `[*]` for list items. A struct member's chain starts and ends at its
+  declared type; `drop` works on json members. Containers on the path are copied, so the
+  source record is never changed. A missing member is left alone.
+- **Steps as functions.** Builtins (except names the library already has, such as `lower`
+  and `round`), `cast(value, "decimal(10,2)", **options)` and macros are callable in
+  expressions. Their kwargs are checked when they first run. A bare `{cast: decimal}` in a
+  macro called from an expression means the column's type. A macro that reads columns
+  cannot be called as a function.
+- **Errors** in `when` or `case` conditions name the condition. They follow `on_error` like
+  any step failure.
+- The design's `money` example had `{parens_negative: true}` as a step; it is a cast option.
 
 ## 4. Canonical type system (CType)
 
@@ -680,13 +708,15 @@ As built (`map_conform/plan/compile.py`):
     an error at its path.
 - **Keys and bookmarks.** Key and bookmark properties, given as source or output names,
   are renamed to output names. `strict` turns `undeclared` into `error`.
-- **Deferred:**
-  - `expr`, `filter`, `when` and `fields` are refused until the expression language
-    (WBS 6.x) and nested field transforms (WBS 12.x) exist, so there are no derived-column
-    dependencies to order yet;
-  - the plan cache lives in the mapper (WBS 5.8).
+- **Dependencies.** The columns a column's expressions read are its dependencies. Columns
+  are computed in dependency order (`StreamPlan.order`); the output keeps its own order. A
+  cycle is an error naming it (`a -> b -> a`).
+- **Expression scope.** Columns are visible by output name. `config` is `spec_vars`, and
+  `stream` and `source_stream` are the output and tap stream names.
+- **`filter`** is compiled with every column in scope and no `value`.
+- The plan cache lives in the mapper (WBS 5.8).
 - `spec explain --catalog` prints the compiled plan: each column's type, nullability,
-  `on_error`, steps, default and enum.
+  `on_error`, steps, default, enum and the columns it reads, and the stream's filter.
 
 ## 10. Execution
 
@@ -702,6 +732,8 @@ As built (`map_conform/plan/compile.py`):
 
 As built (`map_conform/plan/row.py`, `map_conform/mapper.py`):
 
+- **Order.** Columns are computed in dependency order. Expressions see the typed values of
+  the columns computed before them (`Decimal`, `datetime`), and the output keeps plan order.
 - **Per column**, in order:
   - take the first non-null source value;
   - decode JSON text and rename nested members;
@@ -711,6 +743,10 @@ As built (`map_conform/plan/row.py`, `map_conform/mapper.py`):
   - encode the result for the wire.
 - **Failures.** A failed value follows the column's `on_error`. `reject` removes the row from
   the output and logs it. The reject sink is WBS 7.3.
+- **`filter`** runs after every column, on the typed values. A falsy result drops the row,
+  which is counted in `rows_filtered`. A filter that fails follows the stream's `on_error`:
+  `raise` stops, `reject` rejects the row, `null` drops it (a null filter is falsy) and
+  `keep` keeps it.
 - **Messages.**
   - SCHEMA compiles a plan for each output stream and emits its conformed SCHEMA, with
     `_sdc_*` declared.
@@ -826,10 +862,11 @@ Emitted as SDK-style metric log lines, and optionally to `metrics_path`.
 As built (`map_conform/metrics.py`):
 
 - **Counters**, per output stream: `rows_in`, `rows_out`, `rows_rejected`, `rows_nulled`,
-  `values_kept`, and `errors` by (column, rule), whatever `on_error` did with them.
+  `rows_filtered`, `values_kept`, and `errors` by (column, rule), whatever `on_error` did
+  with them.
 - **Output.** One `Metrics for '<stream>': {...}` log line per stream at the end of the run,
   and `metrics_path` as `{"streams": {name: counters}}`.
-- **Later:** filtered rows (with `filter`, WBS 6.x) and row-wise BATCH columns (WBS 8.x).
+- **Later:** row-wise BATCH columns (WBS 8.x).
   Lossy renames are logged once per stream, when its SCHEMA compiles.
 
 ## 14. Testing strategy (summary — see [wiki/qa/test-strategy.md](../wiki/qa/test-strategy.md))

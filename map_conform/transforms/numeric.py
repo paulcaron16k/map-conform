@@ -30,7 +30,7 @@ from map_conform.transforms.casts import Cleanup, clean, cleanup_defaults
 from map_conform.transforms.registry import NUMERIC, RAW, Registry, Transform
 
 if TYPE_CHECKING:
-    from map_conform.plan.chain import CastArgs
+    from map_conform.plan.ops import CastArgs
     from map_conform.spec.model import ColumnSpec, Defaults
     from map_conform.transforms.registry import Context
 

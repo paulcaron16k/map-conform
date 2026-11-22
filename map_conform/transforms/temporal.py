@@ -35,7 +35,7 @@ from map_conform.types.canonical import CType, Kind
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from map_conform.plan.chain import CastArgs
+    from map_conform.plan.ops import CastArgs
     from map_conform.spec.model import ColumnSpec, Defaults
     from map_conform.transforms.registry import Context
 

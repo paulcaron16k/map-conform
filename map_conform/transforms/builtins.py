@@ -34,7 +34,7 @@ DOCS = MappingProxyType(
         "scale": "Multiply by factor, exactly for decimals (e.g. cents to units).",
         "set_null": "Always null; the column becomes nullable.",
         "split": "Split text into a list of strings.",
-        "strip_chars": "Remove every listed character, e.g. currency symbols and commas.",
+        "strip_chars": "Strip the listed characters from both ends, e.g. currency symbols.",
         "substring": "length characters from start.",
         "title": "Title Case text.",
         "to_local": "The wall-clock time in tz, as a naive timestamp.",

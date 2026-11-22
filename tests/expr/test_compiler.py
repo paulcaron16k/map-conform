@@ -156,3 +156,8 @@ def test_temporal_values_support_their_methods() -> None:
     """Typed values from conformed columns keep their methods."""
     moment = dt.datetime(2026, 3, 14, 9, 26, tzinfo=dt.UTC)
     assert evaluate("ts.date().year + ts.hour", columns={"ts": moment}) == 2035  # noqa: PLR2004
+
+
+def test_regex_escapes_in_plain_strings_need_no_raw_prefix() -> None:
+    r"""YAML authors write matches("^\d+$", x); the backslash stays, without a warning."""
+    assert evaluate(r'matches("^\d+$", "12") and not matches("^\d+$", "1a")') is True

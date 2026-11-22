@@ -10,7 +10,8 @@ from typing import Any
 
 import pytest
 
-from map_conform.plan.chain import ChainCompiler, StepError
+from map_conform.plan.chain import ChainCompiler
+from map_conform.plan.ops import StepError
 from map_conform.spec._struct import Issues
 from map_conform.spec.model import Defaults, parse_spec
 from map_conform.transforms.builtins import builtin_registry

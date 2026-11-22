@@ -21,7 +21,7 @@ from map_conform.transforms.registry import RAW, Registry, Transform
 from map_conform.types.canonical import CType
 
 if TYPE_CHECKING:
-    from map_conform.plan.chain import CastArgs
+    from map_conform.plan.ops import CastArgs
     from map_conform.transforms.registry import Context
 
 _NUMBER = numeric.NumberCast(trim=False)

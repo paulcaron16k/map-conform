@@ -37,7 +37,9 @@ def executor(columns: dict[str, Any], **defaults: Any) -> RowExecutor:
 
 def run(columns: dict[str, Any], record: dict[str, Any], **defaults: Any) -> dict[str, Any]:
     """Conform one record."""
-    return executor(columns, **defaults).run(record, {}, row=1)
+    out = executor(columns, **defaults).run(record, {}, row=1)
+    assert out is not None
+    return out
 
 
 def test_missing_and_coalesced_sources() -> None:

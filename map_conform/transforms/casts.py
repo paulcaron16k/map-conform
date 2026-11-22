@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import datetime as dt
 import json
 import uuid
 from dataclasses import dataclass, field
@@ -16,10 +17,10 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Literal
 
 from map_conform.errors import StepFailed
-from map_conform.transforms.registry import RAW, Registry, Transform
+from map_conform.transforms.registry import RAW, TEMPORAL, Registry, Transform
 
 if TYPE_CHECKING:
-    from map_conform.plan.chain import CastArgs
+    from map_conform.plan.ops import CastArgs
     from map_conform.spec.model import ColumnSpec, Defaults
     from map_conform.transforms.registry import Context
 
@@ -92,8 +93,12 @@ def cast_string(value: object, args: CastArgs, _ctx: Context) -> object:
         return None
     if isinstance(cleaned, bool):
         text = "true" if cleaned else "false"
-    elif isinstance(cleaned, (int, float, Decimal)):
+    elif isinstance(cleaned, Decimal):
+        text = format(cleaned, "f")  # 1E+2 is written 100
+    elif isinstance(cleaned, (int, float, uuid.UUID)):
         text = str(cleaned)
+    elif isinstance(cleaned, (dt.datetime, dt.date, dt.time)):
+        text = cleaned.isoformat()  # an expression's temporal result
     elif isinstance(cleaned, str):
         text = cleaned
     else:
@@ -259,6 +264,7 @@ def register(registry: Registry) -> None:
                     "float64",
                     "decimal",
                     "uuid",
+                    *TEMPORAL,
                 }
             ),
         ),
