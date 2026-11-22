@@ -248,9 +248,18 @@
       "additionalProperties": false,
       "properties": {
         "naming": {
-          "$ref": "#/$defs/NamingDefaults",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NamingDefaults"
+            },
+            {
+              "const": "sdk",
+              "description": "Short for {preset: sdk}."
+            }
+          ],
           "description": "Column naming.",
           "default": {
+            "preset": "map-conform",
             "case": "snake",
             "split_camel": true,
             "ascii": "transliterate",
@@ -508,10 +517,18 @@
       }
     },
     "NamingDefaults": {
-      "description": "How column names are conformed.",
+      "description": "How column names are conformed. ``naming: sdk`` is short for ``{preset: sdk}``.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "preset": {
+          "enum": [
+            "map-conform",
+            "sdk"
+          ],
+          "description": "sdk reproduces the Singer SDK's SQL conform_name byte for byte (for migrations); only on_collision applies then.",
+          "default": "map-conform"
+        },
         "case": {
           "enum": [
             "snake",
@@ -626,6 +643,7 @@
           "description": "Inherited by every stream.",
           "default": {
             "naming": {
+              "preset": "map-conform",
               "case": "snake",
               "split_camel": true,
               "ascii": "transliterate",
@@ -904,7 +922,15 @@
           "default": false
         },
         "naming": {
-          "$ref": "#/$defs/NamingDefaults",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NamingDefaults"
+            },
+            {
+              "const": "sdk",
+              "description": "Short for {preset: sdk}."
+            }
+          ],
           "description": "Column naming."
         },
         "stream": {

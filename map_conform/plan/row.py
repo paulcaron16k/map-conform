@@ -27,6 +27,8 @@ from map_conform.transforms.registry import Context
 from map_conform.types.wire import to_wire
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from map_conform.expr.compiler import Expression
     from map_conform.plan.compile import ColumnPlan
 
@@ -65,11 +67,13 @@ class RowExecutor:
         self.metrics.rows_in += 1
         self._nulled = False
         state = Row.of(record, row)
+        plan = self.plan
+        sources = plan.flattener.record(record, plan.flat_properties) if plan.flattener else record
         wired: dict[str, Any] = {}
-        columns = self.plan.columns
-        for i in self.plan.order or range(len(columns)):
+        columns = plan.columns
+        for i in plan.order or range(len(columns)):
             column = columns[i]
-            typed, wired[column.name] = self._column(column, self._contexts[i], state, row)
+            typed, wired[column.name] = self._column(column, self._contexts[i], state, sources, row)
             state.values[column.name] = typed
         if self._nulled:
             self.metrics.rows_nulled += 1
@@ -106,11 +110,10 @@ class RowExecutor:
             return policy == "keep"
 
     def _column(
-        self, column: ColumnPlan, ctx: Context, state: Row, row: int
+        self, column: ColumnPlan, ctx: Context, state: Row, sources: Mapping[str, Any], row: int
     ) -> tuple[object, object]:
         """The column's typed value (what later expressions see) and its wire value."""
-        record = state.record
-        raw = next((record[s] for s in column.sources if record.get(s) is not None), None)
+        raw = next((sources[s] for s in column.sources if sources.get(s) is not None), None)
         if raw is not None and column.member_names is not None:
             raw = rename_value(_decode(raw), column.member_names)
         try:

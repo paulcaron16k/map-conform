@@ -62,7 +62,9 @@ def test_schema_rejects_what_the_parser_rejects(spec: dict[str, Any], where: lis
     """Unknown keys, bad enums and wrong types fail schema validation at the same place."""
     errors = list(validator().iter_errors(spec))
     assert errors
-    assert any(list(e.absolute_path) == where for e in errors), [e.absolute_path for e in errors]
+    # An anyOf (naming: {...} | "sdk") reports the deeper error in its context.
+    found = [e for error in errors for e in (error, *error.context)]
+    assert any(list(e.absolute_path) == where for e in found), [e.absolute_path for e in found]
 
 
 def test_stream_rules_do_not_claim_defaults() -> None:

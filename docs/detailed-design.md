@@ -272,7 +272,7 @@ As built (`map_conform/plan/chain.py`, `map_conform/plan/ops.py`):
 | `timestamptz` | timestamp_tz | string, `format: date-time`, `x-sql-datatype: timestamptz` | timestamp[us, UTC] | timestamptz |
 | `uuid` |  | string, `format: uuid` | `arrow.uuid` extension, which parquet stores as `fixed_len_byte_array(16)` with the UUID logical type; `uuid_as: string` is an option | uuid |
 | `binary` | bytes, blob | string, `contentEncoding: base64` | binary | binary |
-| `json` | variant | string, `x-sql-datatype: json` (the value is JSON **text**) | string | string |
+| `json` | variant | string, `x-sql-datatype: json` (the value is JSON **text**; decimals inside are exact JSON numbers) | string | string |
 | `struct<a: T, …>` |  | object with `properties`, `required` for non-nullable members | struct | struct\<…> |
 | `list<T>` | array<T> | array with `items` | list | list\<…> |
 
@@ -370,6 +370,25 @@ Details of steps 2–8 (`map_conform/naming/conform.py`):
   `struct<…>` types and of tap-schema objects are conformed at every depth, through lists,
   with collisions checked per struct. `required` lists follow their properties. A name tree
   renames the keys of record values at run time; keys it does not know are kept.
+- **`naming: sdk`** (short for `{preset: sdk}`) replaces steps 1–10 with the Singer SDK's
+  SQL `conform_name`, byte for byte. It drops everything but ASCII letters, digits, `_`,
+  `-`, `.` and whitespace, lowercases, trims, turns `.`, `-` and spaces into `_`, and turns
+  a leading digit into a letter. There is no camel split, collapse, reserved-word handling
+  or truncation; only `on_collision` still applies. A name with nothing left, where the SDK
+  crashes, is an error. Tests compare it with the SDK's own function on the golden names and
+  on generated names. A stream's naming options merge into the preset:
+  `{preset: sdk, on_collision: suffix}`.
+- **`nested: flatten`** (`map_conform/naming/flatten.py`) is the SDK's flattening,
+  re-implemented and tested against the SDK's functions:
+  - Undeclared object properties become `parent__child` columns down to `flatten.max_depth`,
+    with the SDK's key shortening at `flatten.max_key_length`.
+  - Objects and arrays below the limit become JSON text (compact, exact decimals).
+  - Properties the spec names, as a column key or a source, are not flattened.
+  - Records are flattened the same way before columns read their sources; expressions'
+    `record` stays the unflattened source.
+  - The flattened keys are then conformed like any name. The default naming collapses `__`
+    to `_`; use `naming: sdk` or `collapse: false` to keep it.
+  - Two paths giving the same key is an error at `streams.<s>.nested`.
 
 Every lossy rename (dropped characters, transliteration) is logged once per stream. The mapping
 from source to conformed name is available from `spec explain` and is written to metrics.

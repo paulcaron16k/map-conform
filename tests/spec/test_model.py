@@ -176,9 +176,8 @@ def test_every_problem_is_reported_with_its_path() -> None:
         "version: expected one of 1, got 2",
         (
             "defaults.naming.bogus: unknown key; allowed here: ascii, case, collapse, "
-            "leading_digit, max_length, nested, on_collision, replace_invalid, reserved_dialects, "
-            "reserved_words, "
-            "split_camel, truncate"
+            "leading_digit, max_length, nested, on_collision, preset, replace_invalid, "
+            "reserved_dialects, reserved_words, split_camel, truncate"
         ),
         "defaults.naming.case: expected one of 'snake', 'lower', 'upper', 'preserve', got 'camel'",
         "defaults.on_error: expected one of 'raise', 'null', 'keep', 'reject', got 'ignore'",

@@ -65,8 +65,13 @@ def _udf_problem(target: str) -> str | None:
 
 @dataclass(frozen=True)
 class NamingDefaults:
-    """How column names are conformed."""
+    """How column names are conformed. ``naming: sdk`` is short for ``{preset: sdk}``."""
 
+    preset: Literal["map-conform", "sdk"] = documented(
+        "sdk reproduces the Singer SDK's SQL conform_name byte for byte (for migrations); "
+        "only on_collision applies then.",
+        default="map-conform",
+    )
     case: Literal["snake", "lower", "upper", "preserve"] = documented(
         "snake splits camelCase and lowercases; lower and upper only change case.",
         default="snake",
@@ -107,6 +112,22 @@ class NamingDefaults:
         "Two names conforming to the same output: error, or add _2, _3, ...", default="error"
     )
     nested: bool = documented("Also conform the member names of struct columns.", default=True)
+
+    @classmethod
+    def spec_parse(cls, data: object, path: str, issues: Issues) -> NamingDefaults | Any:  # noqa: ANN401
+        """A mapping of options, or the preset name ``sdk``."""
+        if data == "sdk":
+            return cls(preset="sdk")
+        if isinstance(data, str):
+            issues.add(path, f"expected a mapping of naming options or 'sdk', got {data!r}")
+            return INVALID
+        return parse_dataclass(cls, data, path, issues)
+
+    @classmethod
+    def spec_schema(cls, defs: dict[str, Any]) -> dict[str, Any]:
+        """The options object, or the string ``sdk``."""
+        options = dataclass_schema(cls, defs)
+        return {"anyOf": [options, {"const": "sdk", "description": "Short for {preset: sdk}."}]}
 
 
 @dataclass(frozen=True)
