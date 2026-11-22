@@ -40,8 +40,8 @@ declares the same settings, and a test keeps the two in step.
 
 ```
 map-conform --config CONFIG [--input FILE]          # the mapper (SDK CLI)
-map-conform spec validate SPEC [--catalog CATALOG]   # strict parse + plan compile against a catalog
-map-conform spec explain SPEC --stream S [--catalog C]  # print the resolved plan per column
+map-conform spec validate SPEC [--catalog C] [--var N=V] [--strict]  # strict parse; checks against a catalog
+map-conform spec explain SPEC --stream S [--catalog C] [--json]     # rules, output names, columns
 map-conform spec schema                              # print the spec's JSON Schema
 map-conform spec import --catalog C [--zamboni TC]   # draft a spec from a catalog (+ Zamboni columns)
 map-conform spec export SPEC --zamboni TC            # write canonical types into Zamboni `columns`
@@ -49,6 +49,20 @@ map-conform spec import --stream-maps CONFIG.json    # convert SDK stream_maps (
 map-conform doctor [--meltano-yml meltano.yml]       # check targets have add_record_metadata, etc.
 map-conform functions [--json]                       # list builtins, kwargs, vectorisable?
 ```
+
+`spec validate` reports every problem, each with its path, and exits 1 when there is an
+error (or a warning, with `--strict`). With `--catalog` it also checks each catalog stream's
+outputs:
+
+- output stream names, including alias legality and collisions between outputs;
+- that columns and sources exist (a new column needs `expr`);
+- that explicit `name:`s are legal, and output-name collisions;
+- that `key_properties` exist and that no key property is dropped;
+- `undeclared: error`.
+
+Rules that match no catalog stream are warnings. An explicit `name:` is never renamed, so a
+conformed name that collides with it is an error, even under `on_collision: suffix`.
+`spec explain` uses the same column naming as the plan compiler.
 
 ## 3. The conform spec
 
