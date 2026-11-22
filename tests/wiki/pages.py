@@ -19,7 +19,7 @@ _CODE_SPAN = re.compile(r"(`+)(?!`).+?(?<!`)\1", re.DOTALL)
 _LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 _CITATION = re.compile(r"\(path:([^)]+)\)")
 _HEADING = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$", re.MULTILINE)
-_MODULE_PATH = re.compile(r"\bmap_conform/[A-Za-z0-9_./]*")
+_MODULE_PATH = re.compile(r"\bmap_conform/[A-Za-z0-9_./-]*")
 
 
 @dataclass(frozen=True)
@@ -97,7 +97,7 @@ def citations(page: Page) -> list[str]:
 
 def module_paths(page: Page) -> list[str]:
     """``map_conform/...`` paths named anywhere outside fenced blocks."""
-    return [m.rstrip(".") for m in _MODULE_PATH.findall(page.prose_with_code_spans)]
+    return [m.rstrip(".-") for m in _MODULE_PATH.findall(page.prose_with_code_spans)]
 
 
 def slug(heading: str) -> str:
