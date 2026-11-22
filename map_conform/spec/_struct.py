@@ -112,6 +112,28 @@ class Custom(Protocol):
         """Return the JSON Schema of this type, registering shared parts in ``defs``."""
 
 
+def documented(text: str, **kwargs: Any) -> Any:  # noqa: ANN401 -- dataclasses.field's own type
+    """A dataclass field with a schema description (and optional ``check`` metadata)."""
+    metadata = {"doc": text}
+    metadata.update(kwargs.pop("metadata", {}))
+    return dataclasses.field(metadata=metadata, **kwargs)
+
+
+def empty_mapping() -> Mapping[str, Any]:
+    """A read-only empty mapping, for ``default_factory``."""
+    return types.MappingProxyType({})
+
+
+def positive(value: int) -> str | None:
+    """A ``check``: at least 1."""
+    return None if value > 0 else "must be at least 1"
+
+
+def non_negative(value: int) -> str | None:
+    """A ``check``: zero or more."""
+    return None if value >= 0 else "must not be negative"
+
+
 def child(path: str, key: str | int) -> str:
     """The path of ``key`` inside ``path``: ``a.b``, ``a["odd key"]`` or ``a[3]``."""
     if isinstance(key, int):
@@ -350,22 +372,25 @@ def _parse_field(
     return value
 
 
-def dump(value: object) -> object:
-    """The plain-data form of a parsed value, omitting dataclass fields left at their default."""
+def dump(value: object, *, full: bool = False) -> object:
+    """The plain-data form of a parsed value.
+
+    Dataclass fields left at their default are omitted unless ``full`` is set.
+    """
     if isinstance(value, Dumpable):
         return value.spec_dump()
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         out: dict[str, object] = {}
         for field, _ in fields_of(type(value)):
             item = getattr(value, field.name)
-            if _has_default(field) and item == _default(field):
+            if not full and _has_default(field) and item == _default(field):
                 continue
-            out[spec_key(field)] = dump(item)
+            out[spec_key(field)] = dump(item, full=full)
         return out
     if isinstance(value, Mapping):
-        return {k: dump(v) for k, v in value.items()}
+        return {k: dump(v, full=full) for k, v in value.items()}
     if isinstance(value, tuple):
-        return [dump(v) for v in value]
+        return [dump(v, full=full) for v in value]
     return value
 
 
@@ -386,13 +411,34 @@ def schema(tp: Any, defs: dict[str, Any]) -> dict[str, Any]:  # noqa: ANN401, PL
     if origin is Literal:
         return {"enum": list(get_args(tp))}
     if _is_union(tp):
-        return {"anyOf": [schema(a, defs) for a in get_args(tp)]}
+        return _union_schema([schema(a, defs) for a in get_args(tp)])
     if origin is tuple:
         return {"type": "array", "items": schema(get_args(tp)[0], defs)}
     if origin in (Mapping, dict):
         return {"type": "object", "additionalProperties": schema(get_args(tp)[1], defs)}
     msg = f"unsupported annotation {tp!r}"
     raise TypeError(msg)
+
+
+def _union_schema(arms: list[dict[str, Any]]) -> dict[str, Any]:
+    """Collapse simple unions to ``{"type": [...]}`` or an enum; otherwise ``anyOf``.
+
+    ``str | None`` becomes ``{"type": ["string", "null"]}``, ``Literal["a"] | None`` becomes
+    ``{"enum": ["a", None]}`` and ``Mapping[str, X] | None`` keeps its keywords with a nullable
+    type. Tools that read ``type`` (the Singer SDK's ``--about``, Meltano) then see it.
+    """
+    if all(set(a) == {"enum"} or a == {"type": "null"} for a in arms):
+        values: list[object] = []
+        for arm in arms:
+            values.extend(arm.get("enum", [None]))
+        return {"enum": values}
+    typed = [a for a in arms if isinstance(a.get("type"), str)]
+    detailed = [a for a in typed if set(a) != {"type"}]
+    if len(typed) == len(arms) and len(detailed) <= 1:
+        merged = dict(detailed[0]) if detailed else {}
+        merged["type"] = [a["type"] for a in arms]
+        return merged
+    return {"anyOf": arms}
 
 
 def dataclass_schema(cls: type[DataclassInstance], defs: dict[str, Any]) -> dict[str, Any]:
@@ -408,7 +454,9 @@ def dataclass_schema(cls: type[DataclassInstance], defs: dict[str, Any]) -> dict
                 prop = {**prop, "description": doc}
             default = _default(field)
             if default is not dataclasses.MISSING:
-                prop = {**prop, "default": thaw(dump(default))}
+                # Complete defaults: validators that fill defaults in (the Singer SDK's) would
+                # otherwise write into a shared, partial default object.
+                prop = {**prop, "default": thaw(dump(default, full=True))}
             else:
                 required.append(spec_key(field))
             properties[spec_key(field)] = prop

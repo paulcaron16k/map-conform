@@ -1,0 +1,9 @@
+# Example conform spec used by meltano.yml's map-conform mapping.
+# Reference: docs/detailed-design.md §3; schema: map_conform/map-conform-spec.schema.json
+version: 1
+defaults:
+  on_error: raise
+streams:
+  animals:
+    columns:
+      id: {type: int64, nullable: false}

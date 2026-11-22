@@ -29,7 +29,83 @@ plugins:
     capabilities:
     - about
     - structured-logging
-    # Settings are declared with the spec loader (WBS 2.4).
+    settings:
+    - name: spec_path
+      kind: string
+      label: Spec path
+      description: Path to the conform spec (YAML or JSON), relative to the project root.
+    - name: spec
+      kind: object
+      label: Inline spec
+      description: An inline conform spec for small cases; deep-merged over spec_path.
+    - name: spec_vars
+      kind: object
+      label: Spec variables
+      description: Values for ${name} in the spec. Environment variables are ${env:NAME}.
+    - name: strict
+      kind: boolean
+      value: false
+      label: Strict
+      description: Treat undeclared columns as errors and make warnings errors.
+    - name: allow_python_udfs
+      kind: boolean
+      value: false
+      label: Allow Python UDFs
+      description: Allow udfs given as module paths. Entry-point UDFs are always allowed.
+    - name: batch_output.mode
+      kind: options
+      value: batch
+      options:
+      - {label: Write BATCH files, value: batch}
+      - {label: Emit RECORD messages, value: record}
+      label: BATCH output mode
+    - name: batch_output.format
+      kind: options
+      value: parquet
+      options:
+      - {label: Parquet, value: parquet}
+      - {label: JSONL, value: jsonl}
+      label: BATCH output format
+    - name: batch_output.compression
+      kind: options
+      options:
+      - {label: zstd, value: zstd}
+      - {label: snappy, value: snappy}
+      - {label: gzip, value: gzip}
+      - {label: None, value: none}
+      label: BATCH output compression
+      description: Default zstd for parquet, gzip for jsonl.
+    - name: batch_output.storage.root
+      kind: string
+      label: BATCH output root
+      description: An fsspec URL (file://, s3://, ...). Default the input file's directory.
+    - name: batch_output.storage.params
+      kind: object
+      label: BATCH storage options
+    - name: batch_output.delete_input
+      kind: boolean
+      value: false
+      label: Delete BATCH input
+    - name: batch_output.row_group_size
+      kind: integer
+      value: 131072
+      label: Parquet row group size
+    - name: reject.storage
+      kind: string
+      value: ./.map-conform/rejects
+      label: Reject directory
+    - name: reject.format
+      kind: options
+      value: jsonl
+      options:
+      - {label: JSONL, value: jsonl}
+      - {label: Parquet, value: parquet}
+      label: Reject format
+    - name: metrics_path
+      kind: string
+      label: Metrics path
+      description: Write per-stream metrics as JSON here at the end of the run.
     mappings:
     - name: map-conform
-      config: {}
+      config:
+        spec_path: conform.yml

@@ -47,25 +47,17 @@
       "additionalProperties": false,
       "properties": {
         "name": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Output name. It is checked, never silently conformed.",
           "default": null
         },
         "type": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Declared CType, e.g. int64, decimal(18,2), timestamptz. From the tap SCHEMA if absent.",
           "default": null
@@ -76,31 +68,21 @@
           "default": true
         },
         "source": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "array",
+            "null"
           ],
+          "items": {
+            "type": "string"
+          },
           "description": "Source column(s) if not the key; a list coalesces in order.",
           "default": null
         },
         "expr": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Derived value. Without source, it creates a new column.",
           "default": null
@@ -133,100 +115,70 @@
           "default": null
         },
         "parse": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "object",
+            "null"
           ],
+          "additionalProperties": {},
           "description": "Keyword arguments for the implicit cast, e.g. {formats: [...], tz: ...}.",
           "default": null
         },
         "true_values": {
-          "anyOf": [
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "array",
+            "null"
           ],
+          "items": {
+            "type": "string"
+          },
           "description": "Overrides boolean.true_values.",
           "default": null
         },
         "false_values": {
-          "anyOf": [
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "array",
+            "null"
           ],
+          "items": {
+            "type": "string"
+          },
           "description": "Overrides boolean.false_values.",
           "default": null
         },
         "null_tokens": {
-          "anyOf": [
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "array",
+            "null"
           ],
+          "items": {
+            "type": "string"
+          },
           "description": "Overrides values.null_tokens.",
           "default": null
         },
         "trim": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "boolean",
+            "null"
           ],
           "description": "Overrides values.trim.",
           "default": null
         },
         "on_error": {
-          "anyOf": [
-            {
-              "enum": [
-                "raise",
-                "null",
-                "keep",
-                "reject"
-              ]
-            },
-            {
-              "type": "null"
-            }
+          "enum": [
+            "raise",
+            "null",
+            "keep",
+            "reject",
+            null
           ],
           "description": "Overrides on_error.",
           "default": null
         },
         "max_length": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "integer",
+            "null"
           ],
           "description": "Longest string allowed.",
           "default": null
@@ -240,15 +192,11 @@
           "default": "error"
         },
         "enum": {
-          "anyOf": [
-            {
-              "type": "array",
-              "items": {}
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "array",
+            "null"
           ],
+          "items": {},
           "description": "Allowed values, checked after the cast.",
           "default": null
         },
@@ -258,53 +206,37 @@
           "default": false
         },
         "doc": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Copied to the SCHEMA description.",
           "default": null
         },
         "sql_type": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Overrides the emitted x-sql-datatype hint.",
           "default": null
         },
         "when": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Apply the chain only to rows where this is truthy; sees conformed names.",
           "default": null
         },
         "fields": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/$defs/FieldSpec"
-              }
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "object",
+            "null"
           ],
+          "additionalProperties": {
+            "$ref": "#/$defs/FieldSpec"
+          },
           "description": "Transforms on nested members of struct and json columns, by dotted path.",
           "default": null
         }
@@ -318,27 +250,85 @@
         "naming": {
           "$ref": "#/$defs/NamingDefaults",
           "description": "Column naming.",
-          "default": {}
+          "default": {
+            "case": "snake",
+            "split_camel": true,
+            "ascii": "transliterate",
+            "replace_invalid": "_",
+            "collapse": true,
+            "leading_digit": "prefix",
+            "max_length": 63,
+            "truncate": "hash",
+            "reserved_words": "suffix",
+            "reserved_dialects": [
+              "ansi",
+              "postgres",
+              "duckdb"
+            ],
+            "on_collision": "error",
+            "nested": true
+          }
         },
         "stream": {
           "$ref": "#/$defs/StreamNaming",
           "description": "Stream naming.",
-          "default": {}
+          "default": {
+            "name": "conform",
+            "prefix": "",
+            "split": null
+          }
         },
         "values": {
           "$ref": "#/$defs/ValuesDefaults",
           "description": "Value cleanup.",
-          "default": {}
+          "default": {
+            "trim": true,
+            "null_tokens": [
+              "",
+              "NULL",
+              "null",
+              "N/A",
+              "n/a",
+              "#N/A",
+              "NaN",
+              "-"
+            ],
+            "null_tokens_case_sensitive": false,
+            "empty_string_for_string": "keep"
+          }
         },
         "timestamp": {
           "$ref": "#/$defs/TimestampDefaults",
           "description": "Temporal casts.",
-          "default": {}
+          "default": {
+            "assume_tz": "UTC",
+            "output_precision": "us",
+            "formats": [
+              "iso"
+            ]
+          }
         },
         "boolean": {
           "$ref": "#/$defs/BooleanDefaults",
           "description": "Boolean casts.",
-          "default": {}
+          "default": {
+            "true_values": [
+              "true",
+              "t",
+              "yes",
+              "y",
+              "1",
+              "on"
+            ],
+            "false_values": [
+              "false",
+              "f",
+              "no",
+              "n",
+              "0",
+              "off"
+            ]
+          }
         },
         "on_error": {
           "enum": [
@@ -379,12 +369,19 @@
         "flatten": {
           "$ref": "#/$defs/FlattenDefaults",
           "description": "Flattening settings.",
-          "default": {}
+          "default": {
+            "separator": "__",
+            "max_depth": 1,
+            "max_key_length": 255
+          }
         },
         "faker": {
           "$ref": "#/$defs/FakerDefaults",
           "description": "Fake data settings.",
-          "default": {}
+          "default": {
+            "seed": null,
+            "locale": null
+          }
         }
       }
     },
@@ -408,32 +405,22 @@
       "additionalProperties": false,
       "properties": {
         "seed": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "integer",
+            "null"
           ],
           "description": "Seed for reproducible fake values.",
           "default": null
         },
         "locale": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "array",
+            "null"
           ],
+          "items": {
+            "type": "string"
+          },
           "description": "Faker locale or locales.",
           "default": null
         }
@@ -468,13 +455,9 @@
           "default": null
         },
         "when": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Apply only where this expression is truthy.",
           "default": null
@@ -624,7 +607,84 @@
         "defaults": {
           "$ref": "#/$defs/Defaults",
           "description": "Inherited by every stream.",
-          "default": {}
+          "default": {
+            "naming": {
+              "case": "snake",
+              "split_camel": true,
+              "ascii": "transliterate",
+              "replace_invalid": "_",
+              "collapse": true,
+              "leading_digit": "prefix",
+              "max_length": 63,
+              "truncate": "hash",
+              "reserved_words": "suffix",
+              "reserved_dialects": [
+                "ansi",
+                "postgres",
+                "duckdb"
+              ],
+              "on_collision": "error",
+              "nested": true
+            },
+            "stream": {
+              "name": "conform",
+              "prefix": "",
+              "split": null
+            },
+            "values": {
+              "trim": true,
+              "null_tokens": [
+                "",
+                "NULL",
+                "null",
+                "N/A",
+                "n/a",
+                "#N/A",
+                "NaN",
+                "-"
+              ],
+              "null_tokens_case_sensitive": false,
+              "empty_string_for_string": "keep"
+            },
+            "timestamp": {
+              "assume_tz": "UTC",
+              "output_precision": "us",
+              "formats": [
+                "iso"
+              ]
+            },
+            "boolean": {
+              "true_values": [
+                "true",
+                "t",
+                "yes",
+                "y",
+                "1",
+                "on"
+              ],
+              "false_values": [
+                "false",
+                "f",
+                "no",
+                "n",
+                "0",
+                "off"
+              ]
+            },
+            "on_error": "raise",
+            "metadata": "sdc",
+            "undeclared": "conform",
+            "nested": "json",
+            "flatten": {
+              "separator": "__",
+              "max_depth": 1,
+              "max_key_length": 255
+            },
+            "faker": {
+              "seed": null,
+              "locale": null
+            }
+          }
         },
         "macros": {
           "type": "object",
@@ -739,13 +799,9 @@
           "default": ""
         },
         "split": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Emit only the part after the last occurrence of this separator.",
           "default": null
@@ -773,52 +829,36 @@
           "default": null
         },
         "source": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Make this key a new output stream projected from this tap stream (split or copy).",
           "default": null
         },
         "prefix": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Overrides stream.prefix.",
           "default": null
         },
         "key_properties": {
-          "anyOf": [
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "array",
+            "null"
           ],
+          "items": {
+            "type": "string"
+          },
           "description": "Overrides the tap's key properties; source or conformed names.",
           "default": null
         },
         "filter": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Rows where this expression is falsy are dropped; sees conformed names.",
           "default": null
@@ -927,52 +967,36 @@
           "default": null
         },
         "source": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Make this key a new output stream projected from this tap stream (split or copy).",
           "default": null
         },
         "prefix": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Overrides stream.prefix.",
           "default": null
         },
         "key_properties": {
-          "anyOf": [
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "array",
+            "null"
           ],
+          "items": {
+            "type": "string"
+          },
           "description": "Overrides the tap's key properties; source or conformed names.",
           "default": null
         },
         "filter": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "description": "Rows where this expression is falsy are dropped; sees conformed names.",
           "default": null
