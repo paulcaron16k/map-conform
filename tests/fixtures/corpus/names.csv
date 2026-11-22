@@ -27,3 +27,13 @@ reserved_user,user,user_,postgres reserved
 accents,naïve café,naive_cafe,
 repeated_separators,a -- b__c,a_b_c,runs collapse
 percent_middle,Discount %,discount,lossy
+plural_acronym,customerIDs,customer_ids,a plural acronym stays whole
+plural_acronym_alone,APIs,apis,
+eszett,Straße,strasse,supplement: ß -> ss
+cyrillic,Цена за ед.,tsena_za_ed,Cyrillic romanisation
+cyrillic_all_caps,ЖУРНАЛ,zhurnal,multi-letter capital in an all-caps word
+greek_all_caps,ΑΡΙΘΜΟΣ,arithmos,"Θ -> TH beside capitals, not Th"
+greek_title,Θεός,theos,
+latin_ligature_caps,ÆRØ Total,aero_total,
+thorn,Þór,thor,
+unmapped_script,日本語 Name,name,"CJK is outside the table: dropped, lossy"

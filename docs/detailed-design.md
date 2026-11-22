@@ -271,6 +271,22 @@ Golden examples:
 | `select` | `select_` |
 | `a.b-c d` | `a_b_c_d` |
 
+Details of steps 2–8 (`map_conform/naming/conform.py`):
+
+- **Camel split** applies only with `case: snake` and `split_camel: true`, on ASCII text. A
+  plural acronym stays whole: `customerIDs` → `customer_ids`, `APIs` → `apis`.
+- **Transliteration** uses the bundled table. A capital that becomes several letters is
+  title-cased (`Θεός` → `Theos`), but in all caps beside another capital (`ΘΕΑ` → `THEA`),
+  so the camel split does not cut all-caps words apart. Characters outside the table are
+  dropped.
+- **Allowed characters** depend on `case`: `[a-z0-9_]` for snake and lower, `[A-Z0-9_]` for
+  upper, `[A-Za-z0-9_]` for preserve, and any Unicode word character with `ascii: keep`.
+- **Separators versus losses.** Whitespace and `- _ . ( ) [ ] { } / \ : , ; ' "` are
+  separators: replacing them is not a loss. Dropping any other character (`%`, `$`, `#`, `€`)
+  or transliterating is a lossy change, and is recorded.
+- `leading_digit: letter` replaces the first digit as the Singer SDK does (`0`→`a` …
+  `9`→`j`).
+
 Every lossy rename (dropped characters, transliteration) is logged once per stream. The mapping
 from source to conformed name is available from `spec explain` and is written to metrics.
 
