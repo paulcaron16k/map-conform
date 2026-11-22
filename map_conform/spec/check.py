@@ -109,6 +109,7 @@ def output_columns(
     properties: Mapping[str, Any] | None,
     findings: list[Finding],
     path: str,
+    key_properties: tuple[str, ...] = (),
 ) -> list[OutputColumn]:
     """The output columns of a resolved stream, named and de-duplicated.
 
@@ -120,7 +121,7 @@ def output_columns(
         # The tap's own _sdc_* columns feed the metadata columns, not ordinary ones.
         properties = {k: v for k, v in properties.items() if not k.startswith("_sdc_")}
     conformer = NameConformer(resolved.settings.naming)
-    entries = _column_entries(resolved, properties, findings, path)
+    entries = _column_entries(resolved, properties, findings, path, key_properties)
     explicit: dict[str, str] = {}
     for key, spec, _ in entries:
         if spec is not None and spec.name is not None:
@@ -167,8 +168,13 @@ def _column_entries(
     properties: Mapping[str, Any] | None,
     findings: list[Finding],
     path: str,
+    key_properties: tuple[str, ...],
 ) -> list[tuple[str, ColumnSpec | None, tuple[str, ...]]]:
-    """(key, spec, sources) for each output column, in output order, drops removed."""
+    """(key, spec, sources) for each output column, in output order, drops removed.
+
+    Under ``undeclared: drop`` the key properties stay (the spec's ``key_properties`` if set,
+    else the tap's), as the SDK's ``__else__: null`` keeps them.
+    """
     settings, columns = resolved.settings, resolved.spec.columns
     entries: list[tuple[str, ColumnSpec | None, tuple[str, ...]]] = []
     known = properties if properties is not None else {}
@@ -204,6 +210,10 @@ def _column_entries(
         )
     elif settings.undeclared == "conform":
         entries.extend((p, None, (p,)) for p in undeclared)
+    else:
+        keys = resolved.spec.key_properties
+        kept = set(keys if keys is not None else key_properties)
+        entries.extend((p, None, (p,)) for p in undeclared if p in kept)
     if resolved.spec.order == "source":
         position = {name: i for i, name in enumerate(properties)}
         entries.sort(key=lambda e: position.get(e[2][0] if e[2] else "", len(position)))
@@ -261,7 +271,7 @@ def check_spec(spec: Spec, catalog: list[CatalogStream] | None) -> list[Finding]
                 )
             outputs[name.casefold()] = key
             _check_stream_keys(resolved, stream, findings, path)
-            output_columns(resolved, stream.properties, findings, path)
+            output_columns(resolved, stream.properties, findings, path, stream.key_properties)
     for key, rules in spec.streams.items():
         if rules.spec.source is not None:
             matched.add(key)
@@ -318,7 +328,8 @@ def explain(spec: Spec, tap_stream: str, catalog: list[CatalogStream] | None) ->
         except NamingError as exc:
             findings.append(Finding("error", path, exc.reason))
             name = None
-        columns = output_columns(resolved, properties, findings, path)
+        keys = entry.key_properties if entry is not None else ()
+        columns = output_columns(resolved, properties, findings, path, keys)
         report["outputs"].append(
             {
                 "name": name,

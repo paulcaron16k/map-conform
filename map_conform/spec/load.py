@@ -218,6 +218,8 @@ def load_spec(
     inline: Mapping[str, object] | None = None,
     spec_vars: Mapping[str, object] | None = None,
     env: Mapping[str, str] | None = None,
+    *,
+    base: Mapping[str, object] | None = None,
 ) -> Spec:
     """Load, merge, substitute and strictly parse a spec.
 
@@ -226,11 +228,13 @@ def load_spec(
         inline: An inline spec (the ``spec`` setting), deep-merged over the file.
         spec_vars: Values for ``${name}``.
         env: The environment for ``${env:NAME}``; defaults to ``os.environ``.
+        base: A spec merged *under* the others after substitution: the translated SDK
+            ``stream_maps``, whose expressions must not be substituted.
 
     Raises:
         SpecError: listing every problem, each with its path.
     """
-    if path is None and inline is None:
+    if path is None and inline is None and base is None:
         raise SpecError([Issue("", "no spec: set spec_path or spec")])
     document: object = read_document(path) if path is not None else {}
     if inline is not None:
@@ -238,6 +242,9 @@ def load_spec(
     issues = Issues()
     document = substitute(document, spec_vars or {}, os.environ if env is None else env, issues)
     source = str(path) if path is not None else "the inline spec"
+    if base is not None:
+        document = deep_merge(thaw(base), document)
+        source = "the spec and stream_maps" if path or inline else "the stream_maps settings"
     if issues:
         raise SpecError(issues.items, source)
     return parse_spec(document, source)
@@ -320,6 +327,7 @@ def output_streams(spec: Spec, tap_stream: str) -> list[ResolvedStream]:
     if own is not None and not own.spec.drop:
         out.append(own)
     for key, rules in spec.streams.items():
-        if rules.spec.source == tap_stream and not rules.spec.drop:
+        source = rules.spec.source
+        if source is not None and fnmatchcase(tap_stream, source) and not rules.spec.drop:
             out.append(_resolve(spec, tap_stream, key, [rules.raw], (key,)))
     return out

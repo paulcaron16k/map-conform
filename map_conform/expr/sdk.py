@@ -29,7 +29,11 @@ _SDK_NAMES = frozenset(
         "__stream_name__",
         "__original_stream_name__",
         "fake",
-        # simpleeval's DEFAULT_FUNCTIONS plus the SDK's additions
+        # simpleeval's DEFAULT_FUNCTIONS, its compound types, and the SDK's additions
+        "list",
+        "tuple",
+        "dict",
+        "set",
         "rand",
         "randint",
         "int",

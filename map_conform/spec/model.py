@@ -323,6 +323,11 @@ class ColumnSpec:
         "Transforms on nested members of struct and json columns, by dotted path.",
         default=None,
     )
+    infer_type: Literal["sdk"] | None = documented(
+        "Without type: infer it from expr as the Singer SDK mapper does (int(...) is an "
+        "integer, and so on). Set by stream_maps translation; declaring type is clearer.",
+        default=None,
+    )
 
 
 @dataclass(frozen=True)

@@ -84,10 +84,20 @@ def test_illegal_alias_is_an_error() -> None:
         name_of({"streams": {"orders": {"alias": "Shop Orders"}}}, "orders")
 
 
-def test_expression_alias_waits_for_the_expression_language() -> None:
-    """An {expr} alias is refused clearly until expressions exist."""
-    with pytest.raises(NamingError, match="expression alias"):
-        name_of({"streams": {"orders": {"alias": {"expr": "'x'"}}}}, "orders")
+def test_expression_aliases() -> None:
+    """An {expr} alias is evaluated with stream (or __stream_name__) as the tap stream."""
+    assert name_of({"streams": {"orders": {"alias": {"expr": "'raw_' + stream"}}}}, "orders") == (
+        "raw_orders"
+    )
+    preserve = {"defaults": {"stream": {"name": "preserve"}}}
+    spec = {"streams": {"o*": {"alias": {"expr": "__stream_name__.upper() + '_v2'"}}}}
+    assert name_of({**preserve, **spec}, "orders") == "ORDERS_v2"
+    with pytest.raises(NamingError, match="would conform to 'orders_v2'"):
+        name_of(spec, "orders")
+    with pytest.raises(NamingError, match="gave 3, not a name"):
+        name_of({"streams": {"orders": {"alias": {"expr": "1 + 2"}}}}, "orders")
+    with pytest.raises(NamingError, match="alias expression 'nope': unknown name"):
+        name_of({"streams": {"orders": {"alias": {"expr": "nope"}}}}, "orders")
 
 
 def test_lossy_stream_names_carry_notes() -> None:

@@ -14,7 +14,7 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa
 
@@ -30,6 +30,7 @@ from map_conform.spec._struct import Issues, child, freeze_mapping, thaw
 from map_conform.spec.check import Finding, OutputColumn, output_columns
 from map_conform.spec.errors import SpecError
 from map_conform.spec.load import ResolvedStream
+from map_conform.spec.stream_maps import sdk_type
 from map_conform.transforms.fake import FakeData
 from map_conform.transforms.registry import Context
 from map_conform.types.canonical import CType, CTypeError, parse_ctype
@@ -140,7 +141,7 @@ def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spe
         except FlattenError as exc:
             issues.add(child(path, "nested"), str(exc))
     findings: list[Finding] = []
-    columns = output_columns(resolved, properties, findings, path)
+    columns = output_columns(resolved, properties, findings, path, key_properties)
     for finding in findings:
         if finding.severity == "error":
             issues.add(finding.path, finding.message)
@@ -296,15 +297,34 @@ class _ColumnBuilder:
             except CTypeError as exc:  # already reported by the spec parser; be safe
                 self.issues.add(child(col_path, "type"), str(exc))
                 return None, True
+        if spec is not None and spec.infer_type == "sdk" and spec.expr is not None:
+            return self._sdk_type(column, spec.expr, notes)
         if column.tap_schema is None:
             self.issues.add(
                 col_path, "declare its type: the tap SCHEMA has no single source property for it"
             )
             return None, True
         nested = self.resolved.settings.nested
-        inferred = from_jsonschema(column.tap_schema, "keep" if nested == "keep" else "json")
+        inferred = from_jsonschema(column.tap_schema, _shape(nested))
         notes.extend(f"column {column.key!r}: {w}" for w in inferred.warnings)
         return inferred.ctype, inferred.nullable
+
+    def _sdk_type(
+        self, column: OutputColumn, expr: str, notes: list[str]
+    ) -> tuple[CType | None, bool]:
+        """The SDK mapper's prefix inference (WBS 12.2), with a note suggesting a type."""
+        dropped = self.resolved.settings.undeclared == "drop"
+        ctype, schema = sdk_type(expr, column.key, self.properties, undeclared_dropped=dropped)
+        nullable = True
+        if ctype is None and schema is not None:
+            nested = self.resolved.settings.nested
+            inferred = from_jsonschema(schema, _shape(nested))
+            ctype, nullable = inferred.ctype, inferred.nullable
+        notes.append(
+            f"column {column.key!r}: type {ctype} inferred from its expression as the SDK "
+            "does; declare type to make it explicit"
+        )
+        return ctype, nullable
 
     def _nullable(
         self, spec: ColumnSpec | None, chain: CompiledChain, *, tap_nullable: bool, col_path: str
@@ -347,6 +367,15 @@ class _ColumnBuilder:
             to_wire(self._typed(v, chain, col_path, "enum"), chain.target) for v in spec.enum
         }
         return frozenset(_hashable(v) for v in allowed)
+
+
+def _shape(nested: str) -> Literal["keep", "json"]:
+    """How an object property is typed.
+
+    Flattening has already turned objects below its depth into JSON text, so the objects left
+    (at depth 0) keep their shape, as in the SDK.
+    """
+    return "json" if nested == "json" else "keep"
 
 
 def _hashable(value: object) -> object:

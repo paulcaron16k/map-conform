@@ -45,7 +45,7 @@ map-conform spec explain SPEC --stream S [--catalog C] [--json]     # rules, out
 map-conform spec schema                              # print the spec's JSON Schema
 map-conform spec import --catalog C [--zamboni TC]   # draft a spec from a catalog (+ Zamboni columns)
 map-conform spec export SPEC --zamboni TC            # write canonical types into Zamboni `columns`
-map-conform spec import --stream-maps CONFIG.json    # convert SDK stream_maps (+ flattening) to a native spec
+map-conform spec import --stream-maps CONFIG.json [--catalog C] [-o OUT]  # SDK stream_maps (+ flattening) to a native spec
 map-conform doctor [--meltano-yml meltano.yml]       # check targets have add_record_metadata, etc.
 map-conform functions [--json]                       # list builtins, kwargs, vectorisable?
 ```
@@ -983,6 +983,53 @@ also accepted unchanged ([ADR-0010](../wiki/decisions/0010-stream-map-superset.m
 
 `map-conform spec import --stream-maps` writes the translation out as a native spec, with the
 inferred types written explicitly, so a project can migrate in one step.
+
+As built (`map_conform/spec/stream_maps.py`, `map_conform/spec/importer.py`, `map_conform/expr/sdk.py`):
+
+- **Translation** happens once, at start-up, into a raw spec merged under the native one
+  (after `${...}` substitution, so SDK expressions are never substituted). The mapper
+  advertises the `stream-maps` and `schema-flattening` capabilities. Problems are reported
+  at `stream_maps.<stream>.<key>` before any data flows. What the SDK refuses is refused:
+  `__else__` other than null, a string stream definition, a non-string property.
+- **Expressions** are rewritten so free record names read `record['...']`; `self`, `_`,
+  `record`, `config`, `__stream_name__`, `__original_stream_name__`, `fake` and the SDK
+  functions (simpleeval's `int`, `float`, `str`, `rand`, `randint`, `list`, `tuple`,
+  `dict`, `set`, and the SDK's `md5`, `sha256`, `bool`, `datetime`, `json`) keep their
+  meaning. An `__alias__` that parses and uses no name but `__stream_name__` is an
+  expression; otherwise it is the literal name, as in the SDK.
+- **Compatibility defaults** apply with `stream_maps` set, unless the spec sets them, so a
+  project moving from meltano-map-transformer keeps its output:
+  - `naming: sdk`: the names an SDK SQL target creates;
+  - `stream.name: preserve`;
+  - `metadata: none`: targets add `_sdc_*`;
+  - `nested: keep`;
+  - `values: {trim: false, null_tokens: []}`.
+- **Types** (WBS 12.2). An expression column gets `infer_type: sdk`: the SDK's prefix rules
+  (`int(` → int64, `float(` → float64, `str(`/`json.dumps(`/a quoted literal → string,
+  `bool(` → boolean, `.date()` or `datetime.date` → date, `datetime.datetime` →
+  timestamptz). Otherwise it takes the type of the existing or passthrough property, or
+  string; `record` is the record's struct. A note per column suggests declaring the type.
+- **`__else__: null`** keeps the key properties: under `undeclared: drop` the spec's
+  `key_properties`, or the tap's, stay. A stream-level `source` may be a glob.
+- **Parity** (WBS 12.9, `tests/compat/`). Every case of the SDK's own mapper tests runs
+  through the SDK's `PluginMapper` and through map-conform: 38 cases, all but the BATCH one
+  (P4). Stream names, key properties, columns, type families and values agree, except for
+  these deliberate differences:
+  1. canonical UTC timestamps;
+  1. exact decimals written as strings (ADR-0007);
+  1. untyped values written as JSON text;
+  1. richer SCHEMAs;
+  1. column names after the SDK target's `conform_name`;
+  1. every column in every record, null when the tap left it out.
+- **`spec import --stream-maps CONFIG.json [--catalog C] [-o OUT]`** writes the translation,
+  compatibility defaults included, as YAML.
+  - Types the expression decides are written as `type`.
+  - With `--catalog`, so are types taken from tap properties, when every matching stream
+    agrees.
+  - Otherwise the column keeps `infer_type: sdk` and a note says so.
+  - `stream_map_config` should move to `spec_vars`.
+  - A round-trip test checks that running the imported spec gives the same output as
+    running the stream maps.
 
 ## 16. Open questions
 
