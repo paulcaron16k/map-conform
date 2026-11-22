@@ -63,6 +63,7 @@ lint = [
     "ruff>=0.16",
 ]
 test = [
+    "hypothesis>=6.100",
     "pyarrow>=19",
     "pytest>=9",
     "pytest-github-actions-annotate-failures>=0.4",

@@ -541,7 +541,7 @@
         },
         "max_length": {
           "type": "integer",
-          "description": "Longer names are truncated (see truncate).",
+          "description": "Longer names are truncated (see truncate). At least 8, room for a hash suffix.",
           "default": 63
         },
         "truncate": {
