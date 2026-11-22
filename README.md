@@ -19,7 +19,7 @@ any target and, once, upstream:
 - **accepts SDK `stream_maps` settings unchanged**, so meltano-map-transformer projects move
   over without changes.
 
-Targets can then rely on the [Clean-Landing Contract](wiki/concepts/clean-landing-contract.md)
+Targets can then rely on the [Clean-Landing Contract](https://github.com/paulcaron16k/map-conform/blob/main/wiki/concepts/clean-landing-contract.md)
 instead of re-implementing cleanup.
 
 ## Install
@@ -80,14 +80,14 @@ defaults. `map-conform doctor` checks the project, including that targets keep t
 
 ## Documentation
 
-- [Cookbook](docs/cookbook.md): CSV and spreadsheet exports, epoch times, masking, derived
+- [Cookbook](https://github.com/paulcaron16k/map-conform/blob/main/docs/cookbook.md): CSV and spreadsheet exports, epoch times, masking, derived
   columns, nested JSON with declared shapes, moving from stream maps. Every example is
   tested.
-- [Spec reference](docs/spec-reference.md): every setting, spec key, step and function,
+- [Spec reference](https://github.com/paulcaron16k/map-conform/blob/main/docs/spec-reference.md): every setting, spec key, step and function,
   generated from the code.
-- [Detailed design](docs/detailed-design.md): how each feature behaves, and why.
-- [Clean-Landing Contract](wiki/concepts/clean-landing-contract.md): what a target may assume.
-- The project's knowledge base is in [wiki/](wiki/index.md).
+- [Detailed design](https://github.com/paulcaron16k/map-conform/blob/main/docs/detailed-design.md): how each feature behaves, and why.
+- [Clean-Landing Contract](https://github.com/paulcaron16k/map-conform/blob/main/wiki/concepts/clean-landing-contract.md): what a target may assume.
+- The project's knowledge base is in [wiki/](https://github.com/paulcaron16k/map-conform/blob/main/wiki/index.md).
 
 ## Command line
 
