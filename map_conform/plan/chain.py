@@ -256,7 +256,7 @@ class ChainCompiler:
         # Before the cast, rows that skip the step stay raw, so the value is raw after it.
         return _Sequence((GuardedOp(when, seq.ops),), stage, cast_seen=False)
 
-    def _call(
+    def _call(  # noqa: PLR0911 -- one early return per problem
         self, step: CallStep, path: str, stage: CType | None, context: _Context
     ) -> _Sequence | None:
         if step.name == "cast":
@@ -273,6 +273,14 @@ class ChainCompiler:
             return None
         if not transform.accepts_stage(stage):
             self.issues.add(path, f"{step.name} cannot take {_stage(stage)} here")
+            return None
+        kinds = transform.column_kinds
+        if kinds is not None and context.target.kind not in kinds:
+            self.issues.add(
+                path,
+                f"{step.name} works only in {', '.join(sorted(kinds))} columns, not "
+                f"{context.target}; declare the column's type",
+            )
             return None
         kwargs = self._kwargs(transform, step.arg, step.kwargs, path)
         if isinstance(kwargs, Invalid):
@@ -503,7 +511,8 @@ class ChainCompiler:
 
     def context(self, target: CType = _STRING) -> Context:
         """A context for steps called from an expression."""
-        return Context(self.stream, "<expr>", self.settings, target)
+        fake = self.scope.constants.get("fake")
+        return Context(self.stream, "<expr>", self.settings, target, fake=fake)
 
 
 def _member_type(ctype: CType, segments: tuple[str, ...]) -> CType | None:

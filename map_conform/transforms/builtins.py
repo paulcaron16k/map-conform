@@ -6,10 +6,10 @@ import dataclasses
 import functools
 from types import MappingProxyType
 
-from map_conform.transforms import casts, nested, numeric, privacy, temporal, text
+from map_conform.transforms import casts, fake, nested, numeric, privacy, temporal, text
 from map_conform.transforms.registry import Registry
 
-_MODULES = (text, casts, numeric, temporal, nested, privacy)
+_MODULES = (text, casts, numeric, temporal, nested, privacy, fake)
 
 DOCS = MappingProxyType(
     {
@@ -21,6 +21,10 @@ DOCS = MappingProxyType(
         "lower": "Lowercase text.",
         "map_values": "Replace listed values; others become default when it is set.",
         "mask": "Replace characters with char, keeping keep_first and keep_last.",
+        "mask_hidden": "Replace a string with value ('hidden'); string columns only.",
+        "mask_number": "Replace a number with value (0), in the column's own type.",
+        "tokenize": "Keyed HMAC-SHA256 hex digest: stable across runs, secret without the key.",
+        "fake": "A fake value from a Faker provider, seeded by defaults.faker (faker extra).",
         "normalize_unicode": "Unicode normalisation (NFKC by default).",
         "normalize_whitespace": "Collapse runs of whitespace to one space and trim.",
         "null_tokens": "Null for any of the tokens (e.g. N/A, -).",

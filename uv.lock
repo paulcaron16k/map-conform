@@ -956,7 +956,7 @@ dev = [
     { name = "pytest-github-actions-annotate-failures" },
     { name = "pyyaml" },
     { name = "ruff" },
-    { name = "singer-sdk", extra = ["testing"] },
+    { name = "singer-sdk", extra = ["faker", "testing"] },
     { name = "ty" },
     { name = "types-jsonschema" },
     { name = "types-pyyaml" },
@@ -969,7 +969,7 @@ test = [
     { name = "pytest" },
     { name = "pytest-github-actions-annotate-failures" },
     { name = "pyyaml" },
-    { name = "singer-sdk", extra = ["testing"] },
+    { name = "singer-sdk", extra = ["faker", "testing"] },
 ]
 typing = [
     { name = "mypy" },
@@ -999,7 +999,7 @@ dev = [
     { name = "pytest-github-actions-annotate-failures", specifier = ">=0.4" },
     { name = "pyyaml", specifier = ">=6.0.4" },
     { name = "ruff", specifier = ">=0.16" },
-    { name = "singer-sdk", extras = ["testing"] },
+    { name = "singer-sdk", extras = ["faker", "testing"] },
     { name = "ty", specifier = ">=0.0.41" },
     { name = "types-jsonschema", specifier = ">=4.26.0.20261006" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20261113" },
@@ -1010,7 +1010,7 @@ test = [
     { name = "pytest", specifier = ">=9" },
     { name = "pytest-github-actions-annotate-failures", specifier = ">=0.4" },
     { name = "pyyaml", specifier = ">=6.0.4" },
-    { name = "singer-sdk", extras = ["testing"] },
+    { name = "singer-sdk", extras = ["faker", "testing"] },
 ]
 typing = [
     { name = "mypy", specifier = ">=2.1" },
