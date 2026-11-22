@@ -18,11 +18,13 @@ import yaml
 from map_conform.expr.functions import FUNCTIONS
 from map_conform.mapper import MapConformMapper
 from map_conform.plan.compile import compile_stream, plan_report
+from map_conform.spec.bridge import draft_from_catalog, export_columns
 from map_conform.spec.check import CatalogStream, check_spec, explain, read_catalog
 from map_conform.spec.errors import SpecError
 from map_conform.spec.importer import import_stream_maps
 from map_conform.spec.jsonschema import render
 from map_conform.spec.load import load_spec, output_streams
+from map_conform.spec.zamboni import namespace_of, read_table_config, write_table_config
 from map_conform.transforms.builtins import builtin_registry
 from map_conform.udfs import load_udfs, registry_with
 
@@ -54,6 +56,14 @@ _CATALOG = click.option(
     "--catalog",
     type=click.Path(exists=True, dir_okay=False),
     help="A Singer catalog to check the spec against.",
+)
+_ZAMBONI = click.option(
+    "--zamboni",
+    type=click.Path(exists=True, dir_okay=False),
+    help="A Zamboni table-config (version 2) whose columns give the types.",
+)
+_NAMESPACE = click.option(
+    "--namespace", help="The Zamboni namespace, when the table-config has several."
 )
 _VARS = click.option(
     "--var",
@@ -123,22 +133,40 @@ def spec_validate(
     help="A plugin config (JSON) with SDK stream_maps and flattening settings.",
 )
 @_CATALOG
+@_ZAMBONI
+@_NAMESPACE
 @click.option(
     "-o", "--output", type=click.Path(dir_okay=False), help="Write the spec here, not stdout."
 )
-def spec_import(config_path: str | None, catalog: str | None, output: str | None) -> None:
-    """Write SDK stream_maps settings as a native spec, with inferred types made explicit.
+def spec_import(
+    config_path: str | None,
+    catalog: str | None,
+    zamboni: str | None,
+    namespace: str | None,
+    output: str | None,
+) -> None:
+    """Draft a spec from a catalog (and Zamboni columns), or convert SDK stream_maps.
 
-    With --catalog, column types the SDK takes from tap properties are written out too.
+    With --stream-maps, the SDK settings become a native spec, and --catalog makes the types
+    the SDK takes from tap properties explicit. Without it, --catalog drafts a spec with an
+    explicit canonical type for every property, taken from --zamboni's columns where given.
     """
-    if config_path is None:
+    if config_path is None and catalog is None:
+        raise click.UsageError("give --catalog CATALOG.json, --stream-maps CONFIG.json, or both")
+    if zamboni is not None and (config_path is not None or catalog is None):
         raise click.UsageError(
-            "give --stream-maps CONFIG.json (spec import --catalog alone arrives with WBS 9.1)"
+            "--zamboni drafts from a --catalog; it does not apply to stream maps"
         )
     try:
-        config = json.loads(Path(config_path).read_text(encoding="utf-8"))
         streams = read_catalog(catalog) if catalog else None
-        native, notes = import_stream_maps(config, streams)
+        if config_path is not None:
+            config = json.loads(Path(config_path).read_text(encoding="utf-8"))
+            native, notes = import_stream_maps(config, streams)
+        else:
+            assert streams is not None  # noqa: S101 -- checked above
+            document = read_table_config(zamboni) if zamboni else None
+            space = namespace_of(document, namespace, zamboni) if document and zamboni else None
+            native, notes = draft_from_catalog(streams, document, space)
     except (OSError, json.JSONDecodeError) as exc:
         raise click.ClickException(f"cannot read {config_path}: {exc}") from exc
     except SpecError as exc:
@@ -153,6 +181,54 @@ def spec_import(config_path: str | None, catalog: str | None, output: str | None
         click.echo(text, nl=False)
     for note in notes:
         click.echo(f"note: {note}", err=True)
+
+
+@spec.command(name="export")
+@_SPEC_ARG
+@click.option(
+    "--zamboni",
+    "zamboni",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+    help="The Zamboni table-config (version 2) whose columns to fill.",
+)
+@click.option(
+    "--catalog",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+    help="The Singer catalog to compile each stream against.",
+)
+@_NAMESPACE
+@_VARS
+@click.option(
+    "-o", "--output", type=click.Path(dir_okay=False), help="Write here instead of in place."
+)
+def spec_export(  # noqa: PLR0913 -- one parameter per option
+    spec_path: str,
+    *,
+    zamboni: str,
+    catalog: str,
+    namespace: str | None,
+    variables: tuple[str, ...],
+    output: str | None,
+) -> None:
+    """Write each output stream's canonical column types into Zamboni table-config columns."""
+    loaded, streams = _load(spec_path, variables, catalog)
+    assert streams is not None  # noqa: S101 -- --catalog is required
+    try:
+        document = read_table_config(zamboni)
+        space = namespace_of(document, namespace, zamboni)
+        registry = _registry(loaded, allow_python_udfs=False)
+        written = export_columns(
+            loaded, streams, document, space, registry=registry, config=_spec_vars(variables)
+        )
+    except SpecError as exc:
+        click.echo(f"{exc.source}: {len(exc.issues)} problem(s)", err=True)
+        for issue in exc.issues:
+            click.echo(f"  {issue}", err=True)
+        sys.exit(1)
+    write_table_config(document, output or zamboni)
+    click.echo(f"{output or zamboni}: columns written for {', '.join(written) or 'no table'}")
 
 
 @spec.command(name="explain")

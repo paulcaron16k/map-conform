@@ -98,7 +98,7 @@ def test_output_file_and_problems(tmp_path: Path) -> None:
     assert "stream_maps.s: a stream map is a mapping, null or __NULL__" in result.stderr
     result = CliRunner().invoke(tools, ["spec", "import"])
     assert result.exit_code == 2  # noqa: PLR2004 -- click's usage error
-    assert "arrives with WBS 9.1" in result.output
+    assert "give --catalog CATALOG.json, --stream-maps CONFIG.json, or both" in result.output
 
 
 def test_samples_cover_both_fixtures() -> None:
