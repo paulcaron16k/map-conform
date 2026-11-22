@@ -578,6 +578,38 @@ transform:
 - **Output typing.** The column's declared `type` is authoritative. After the expr, the
   implicit cast coerces the result to it. Nothing is inferred from expression prefixes.
 
+As built (`map_conform/expr/`):
+
+- **Name lookup**, fixed at compile time, in this order: comprehension variables; `value` /
+  `self` (column chains only); `record` / `_`, `row_number`, `NULL`; the constants `config`,
+  `stream`, `source_stream` (and `__stream_name__`, `__original_stream_name__`); columns by
+  conformed name; the library. An unknown name is a compile error at the spec path, with a
+  hint to use `record['...']` for a source property.
+- **Columns** evaluate to their *conformed* (typed) values, and the names an expression
+  reads are its dependencies. The column being computed cannot read itself by name: use
+  `value`, or `record['...']` for its source.
+- **In call position** the library is looked up before columns, so a column named `max`
+  does not hide `max()`. Only names and attributes can be called. `source(name)` reads the
+  source record by raw name.
+- **The sandbox** (`sandbox.py`) allows attributes only on str, bytes, numbers, Decimal,
+  the temporal types, UUID, list, tuple, dict, set, read-only mappings and regex
+  objects (and on those classes). Names starting with `_`, `format`, `format_map` and
+  `mro` are refused, as are methods that mutate a list, dict or set. Modules expose a
+  fixed list of names (no `decimal.setcontext`, no `math.factorial`).
+- **Size limits:** repetition, padding and format widths up to 1,000,000; integer
+  exponents and shifts up to 10,000; at most 100,000 steps per comprehension or `range`.
+- **Generator expressions** are evaluated eagerly into lists, so no generator (and its
+  frame) is ever reachable. The read-only `record` view leaves as a plain dict.
+- **The library** (`functions.py`) adds Python's `len`, `sum`, `any`, `all`, `sorted`,
+  `list`, `dict`, `tuple`, `set`, `enumerate`, `zip` and a bounded `range`, and the
+  `json` module that the SDK exposes. Except the predicates, `coalesce`, `nullif` and the
+  Python builtins, a function given a null returns null. `round` rounds half away from
+  zero, like the `round` step. `map-conform functions` lists every step and function.
+- **SDK expressions** read record properties as bare names. `expr/sdk.py` rewrites such
+  free names to `record['...']` once, at translation. A differential test evaluates every
+  expression from the SDK's own mapper tests with the SDK's simpleeval evaluator and with
+  map-conform, and the results are equal.
+
 ## 8. UDFs (Python functions)
 
 ```python

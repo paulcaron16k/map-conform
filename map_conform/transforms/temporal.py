@@ -200,7 +200,12 @@ def parse_temporal(value: object, options: TemporalCast) -> dt.datetime | dt.tim
         return cleaned
     if isinstance(cleaned, bool):
         raise StepFailed("a boolean is not a date")
-    text = cleaned if isinstance(cleaned, str) else repr(cleaned)
+    if isinstance(cleaned, str):
+        text = cleaned
+    elif isinstance(cleaned, Decimal):  # the SDK decodes JSON fractions as Decimal
+        text = format(cleaned, "f")
+    else:
+        text = repr(cleaned)
     for fmt in options.formats:
         parsed = _one_format(text, fmt)
         if parsed is not None:

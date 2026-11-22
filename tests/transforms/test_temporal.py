@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -96,6 +97,16 @@ def test_timestamp_and_date_targets_use_the_wall_time_in_tz() -> None:
             dt.datetime(2026, 3, 14, 9, 26, 53, tzinfo=UTC),
         ),
         (46095.0, {"formats": ["excel_serial"]}, dt.datetime(2026, 3, 14, tzinfo=UTC)),
+        (
+            Decimal("46095.25"),  # how the SDK decodes a JSON fraction
+            {"formats": ["excel_serial"]},
+            dt.datetime(2026, 3, 14, 6, tzinfo=UTC),
+        ),
+        (
+            Decimal("1773480413.5"),
+            {"formats": ["epoch_s"]},
+            dt.datetime(2026, 3, 14, 9, 26, 53, 500000, tzinfo=UTC),
+        ),
         (1773480413, {"formats": ["epoch_s"]}, dt.datetime(2026, 3, 14, 9, 26, 53, tzinfo=UTC)),
         (
             "1773480413123456789",

@@ -36,3 +36,20 @@ def test_tool_help_lists_spec() -> None:
     result = run("spec", "--help")
     assert result.returncode == 0
     assert "schema" in result.stdout
+
+
+def test_functions_lists_steps_and_expression_functions() -> None:
+    """`map-conform functions` documents builtins and the expression library (WBS 6.2)."""
+    result = run("functions", "--json")
+    assert result.returncode == 0, result.stderr
+    report = json.loads(result.stdout)
+    steps = {step["name"]: step for step in report["steps"]}
+    assert steps["hash"]["signature"] == "algo='sha256', salt='', skip_first=0"
+    assert all(step["doc"] for step in report["steps"])
+    assert "decimal(p,s)" not in report["casts"]
+    assert "timestamptz" in report["casts"]
+    functions = {fn["name"]: fn for fn in report["functions"]}
+    assert functions["coalesce"]["group"] == "misc"
+    text = run("functions").stdout
+    assert "Expression functions: predicates" in text
+    assert '  parse_datetime(value, *formats, tz="UTC")' in text
