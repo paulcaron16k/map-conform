@@ -410,6 +410,21 @@ are marked ✓.
 | `nan` | `null` \| `error`. NaN/Inf from float sources become null by default for decimal and int columns. | ✓ |
 | `scale` | `factor` (e.g. cents → units) | ✓ |
 
+Details pinned by the implementation (`map_conform/transforms/numeric.py`):
+
+- **Removal order.** After cleanup, the parser removes: parentheses (`parens_negative`), a
+  trailing `%` (`percent: divide | strip`, otherwise an error), a trailing minus
+  (`trailing_minus`), then one currency marker. The marker is a symbol (`$€£¥₹…`) or an
+  ISO-4217 code, before or after the number, and may have a sign before it (`-$12`). A
+  second marker is an error.
+- **Exact arithmetic.** Decimal arithmetic is exact throughout. A float from a JSON tap
+  converts through its shortest repr, so `0.1` stays `0.1`.
+- **Rounding** defaults to `half_up` for decimals and to `error` for integers. `error` on a
+  decimal fails when digits would be lost. A decimal with more digits than its precision
+  fails.
+- **NaN.** NaN and Inf follow the cast option `nan` (`null` by default). The `nan` row in the
+  table above is this cast option, not a separate step.
+
 ### 6.3 Temporal
 
 | Builtin | Kwargs | Vec |
