@@ -29,6 +29,7 @@ from map_conform.spec._struct import Issues, child, freeze_mapping, thaw
 from map_conform.spec.check import Finding, OutputColumn, output_columns
 from map_conform.spec.errors import SpecError
 from map_conform.spec.load import ResolvedStream
+from map_conform.transforms.fake import FakeData
 from map_conform.transforms.registry import Context
 from map_conform.types.canonical import CType, CTypeError, parse_ctype
 from map_conform.types.from_jsonschema import from_jsonschema
@@ -94,6 +95,8 @@ class StreamPlan:
     """Indexes into ``columns`` in the order they are computed: dependencies first."""
     filter: Expression | None = None
     """Rows where this is falsy are dropped; it sees every column by output name."""
+    fake: FakeData | None = None
+    """The stream's fake-data generator (created on first use)."""
 
 
 def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spec context
@@ -130,12 +133,14 @@ def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spe
     for finding in findings:
         if finding.severity == "error":
             issues.add(finding.path, finding.message)
+    fake = FakeData.from_settings(resolved.settings.faker)
     scope = Names(
         columns=frozenset(c.name for c in columns),
         constants={
             "config": freeze_mapping(dict(config or {})),
             "stream": named.name if named else resolved.tap_stream,
             "source_stream": resolved.tap_stream,
+            "fake": fake,
         },
     )
     compiler = ChainCompiler(
@@ -163,6 +168,7 @@ def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spe
         notes=tuple(notes),
         order=order,
         filter=row_filter,
+        fake=fake,
     )
 
 

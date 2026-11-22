@@ -16,8 +16,10 @@ compile time: an unknown name is an error at the spec path, not a crash on the f
 6. the caller's functions (builtin steps, ``cast``, macros, UDFs), then the function library
    and the read-only modules.
 
-In call position (``name(...)``) functions are looked up before columns, so a column named
-``max`` does not hide ``max()``. ``source(name)`` reads the source record by raw name.
+In call position (``name(...)``) functions are looked up first, after comprehension
+variables, so a column named ``max`` does not hide ``max()``, and ``fake(value, 'name')`` is
+the step while ``fake.name()`` uses the ``fake`` object. ``source(name)`` reads the source
+record by raw name.
 
 Anything outside the whitelist (assignment, lambdas, ``await``, the walrus operator, private
 attributes, calls through anything but a name or an attribute) is a compile error. What an
@@ -230,12 +232,12 @@ class _Compiler:
             return lambda f: f.row.number
         if name == "NULL":
             return lambda _f: None
+        if call and (fn := self._function(name)) is not None:
+            return lambda _f: fn
         constant_name = _STREAM_ALIASES.get(name, name)
         if constant_name in self.names.constants:
             constant = self.names.constants[constant_name]
             return lambda _f: constant
-        if call and (fn := self._function(name)) is not None:
-            return lambda _f: fn
         if name == self.names.own:
             raise ExprError(
                 f"{name!r} is the column being computed; use value, or record[{name!r}] "

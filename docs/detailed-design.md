@@ -534,6 +534,24 @@ Details pinned by the implementation (`map_conform/transforms/casts.py`, `privac
 - **`hash`** reads a typed value in a canonical text form: ISO dates and plain decimals.
 - **`mask`** masks a value too short to show both kept ends entirely, rather than revealing
   it.
+- **`mask_number`** gives its value (0) in the column's own type: `0`, `0.0`, `"0.00"`
+  for decimal(10,2), `"0"` for a string. pipelinewise writes the int 0 whatever the
+  column.
+- **`mask_hidden`** is allowed only in string columns; elsewhere it is a compile error.
+  pipelinewise writes `"hidden"` into numeric columns, which targets then reject. Steps can
+  declare the column types they work in (`Transform.column_kinds`).
+- **`redact_date`** also clears the time of day, which pipelinewise's `MASK-DATE` keeps.
+- **`tokenize`** is `HMAC-SHA256(key, canonical text)` as hex, and `key` is required.
+- **`fake`** (`map_conform/transforms/fake.py`, the `faker` extra) is a step
+  (`{fake: email}`, with `args` and `unique`) and an object in expressions (`fake.email()`,
+  `fake.seed_instance(value) or fake.email()`).
+  - Each stream has one generator, created on first use. With `defaults.faker.seed`,
+    `Faker.seed` is called first, as the SDK does, so seeded values match the SDK
+    mapper's snapshots exactly.
+  - The provider is checked at compile time.
+  - In expressions, `fake.seed`, `add_provider`, `random`, `factories` and private names
+    are refused.
+  - Without the extra, the step and the object say what to install.
 - **Wire forms.** Values are encoded for RECORD messages by `map_conform/types/wire.py`.
 
 ## 7. Expression language
@@ -616,9 +634,10 @@ As built (`map_conform/expr/`):
 - **Columns** evaluate to their *conformed* (typed) values, and the names an expression
   reads are its dependencies. The column being computed cannot read itself by name: use
   `value`, or `record['...']` for its source.
-- **In call position** the library is looked up before columns, so a column named `max`
-  does not hide `max()`. Only names and attributes can be called. `source(name)` reads the
-  source record by raw name.
+- **In call position** functions are looked up first (after comprehension variables), so
+  a column named `max` does not hide `max()`, and `fake(value, 'name')` is the step while
+  `fake.name()` uses the `fake` object. Only names and attributes can be called.
+  `source(name)` reads the source record by raw name.
 - **The sandbox** (`sandbox.py`) allows attributes only on str, bytes, numbers, Decimal,
   the temporal types, UUID, list, tuple, dict, set, read-only mappings and regex
   objects (and on those classes). Names starting with `_`, `format`, `format_map` and

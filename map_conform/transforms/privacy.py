@@ -1,13 +1,22 @@
-"""Privacy builtins: hash, mask, set_null, redact_date (detailed design §6.4, WBS 5.6).
+"""Privacy builtins (detailed design §6.4, WBS 5.6 and 12.5).
 
 These follow pipelinewise-transform-field's semantics, minus its bugs:
 
 - ``HASH`` is ``hash``; ``HASH-SKIP-FIRST-n`` is ``{hash: {skip_first: n}}`` for any n,
   where pipelinewise reads a single digit;
-- ``MASK-DATE`` is ``{redact_date: {to: year}}`` and keeps the column's type;
+- ``MASK-DATE`` is ``{redact_date: {to: year}}`` and keeps the column's type. Unlike
+  pipelinewise it also clears the time of day, which can identify a person as well;
+- ``MASK-NUMBER`` is ``mask_number``, giving 0 *in the column's type* (pipelinewise writes
+  the int 0 whatever the column);
+- ``MASK-HIDDEN`` is ``mask_hidden``, allowed only where the column is a string
+  (pipelinewise writes ``"hidden"`` into numeric columns too, which targets reject);
 - ``MASK-STRING-SKIP-ENDS-n`` is ``{mask: {keep_first: n, keep_last: n}}``, and a value too
   short to show both ends is masked entirely rather than shown;
-- ``SET-NULL`` is ``set_null``, which also makes the column nullable in the SCHEMA.
+- ``SET-NULL`` is ``set_null``, which also makes the column nullable in the SCHEMA
+  (pipelinewise leaves the SCHEMA saying the column is never null).
+
+``tokenize`` gives a keyed HMAC-SHA256: the same input gives the same token in every run, and
+without the key the token cannot be recomputed from a guessed input, unlike a plain hash.
 
 A typed value is hashed in a canonical text form (ISO dates, plain decimals), so the hash
 does not depend on Python's repr.
@@ -18,12 +27,14 @@ from __future__ import annotations
 import base64
 import datetime as dt
 import hashlib
+import hmac
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING, Literal
 
 from map_conform.errors import StepFailed
-from map_conform.transforms.registry import ANY, RAW, NoKwargs, Registry, Transform
+from map_conform.transforms.numeric import INT_BOUNDS
+from map_conform.transforms.registry import ANY, NUMERIC, RAW, NoKwargs, Registry, Transform
 from map_conform.types.canonical import CType
 
 if TYPE_CHECKING:
@@ -100,6 +111,49 @@ def _redact_date(value: object, k: RedactDateKwargs, _ctx: Context) -> object:
     raise StepFailed(f"redact_date needs a date or timestamp, got {type(value).__name__}")
 
 
+@dataclass(frozen=True)
+class MaskNumberKwargs:
+    """mask_number options."""
+
+    value: int | float = 0
+
+
+def _mask_number(_value: object, k: MaskNumberKwargs, ctx: Context) -> object:
+    """``value`` in the column's own type, so the SCHEMA stays true."""
+    kind = ctx.target.kind
+    if kind in INT_BOUNDS:
+        return int(k.value)
+    if kind in {"float32", "float64"}:
+        return float(k.value)
+    if kind == "decimal":
+        return Decimal(repr(k.value)).quantize(Decimal(1).scaleb(-(ctx.target.scale or 0)))
+    if kind == "string":
+        return format(k.value)
+    return k.value  # called from an expression, where there is no column type
+
+
+@dataclass(frozen=True)
+class MaskHiddenKwargs:
+    """mask_hidden options."""
+
+    value: str = "hidden"
+
+
+@dataclass(frozen=True)
+class TokenizeKwargs:
+    """tokenize options."""
+
+    key: str
+    """The secret, e.g. ``${env:TOKEN_KEY}``; keep it out of the spec file."""
+
+
+def _tokenize(value: object, k: TokenizeKwargs, _ctx: Context) -> object:
+    if not k.key:
+        raise StepFailed("tokenize needs a non-empty key")
+    text = _canonical_text(value).encode("utf-8")
+    return hmac.new(k.key.encode("utf-8"), text, hashlib.sha256).hexdigest()
+
+
 def register(registry: Registry) -> None:
     """Add the privacy builtins."""
     registry.register(
@@ -131,5 +185,36 @@ def register(registry: Registry) -> None:
             kwargs=RedactDateKwargs,
             positional="to",
             accepts=frozenset({"date", "timestamp", "timestamptz"}),
+        )
+    )
+    registry.register(
+        Transform(
+            "mask_number",
+            _mask_number,
+            kwargs=MaskNumberKwargs,
+            positional="value",
+            accepts=frozenset({RAW, "string", *NUMERIC}),
+            column_kinds=frozenset({"string", *NUMERIC}),
+        )
+    )
+    registry.register(
+        Transform(
+            "mask_hidden",
+            lambda _v, k, _c: k.value,
+            kwargs=MaskHiddenKwargs,
+            positional="value",
+            accepts=frozenset({RAW, "string"}),
+            produces=lambda _stage, _k: CType("string"),
+            column_kinds=frozenset({"string"}),
+        )
+    )
+    registry.register(
+        Transform(
+            "tokenize",
+            _tokenize,
+            kwargs=TokenizeKwargs,
+            positional="key",
+            accepts=frozenset({ANY}),
+            produces=lambda _stage, _k: CType("string"),
         )
     )

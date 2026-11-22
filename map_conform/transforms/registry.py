@@ -37,6 +37,8 @@ class Context:
     target: CType
     """The column's declared output type."""
     row: int | None = None
+    fake: Any = None
+    """The stream's :class:`~map_conform.transforms.fake.FakeData`, for the fake step."""
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,8 @@ class Transform:
     """For casts: kwargs taken from the stream defaults and column overrides."""
     forces_nullable: bool = False
     """The step can produce null whatever the input (set_null), so the column is nullable."""
+    column_kinds: frozenset[str] | None = None
+    """The column types the step may be used in, when it is restricted (mask_hidden)."""
 
     @property
     def vectorised(self) -> bool:

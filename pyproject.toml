@@ -68,7 +68,7 @@ test = [
     "pytest>=9",
     "pytest-github-actions-annotate-failures>=0.4",
     "pyyaml>=6.0.4",
-    "singer-sdk[testing]",
+    "singer-sdk[faker,testing]",
 ]
 typing = [
     "mypy>=2.1",

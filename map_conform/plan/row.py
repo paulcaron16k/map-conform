@@ -44,7 +44,9 @@ class RowExecutor:
         """Build each column's context once."""
         self._nulled = False
         self._contexts = [
-            Context(self.plan.tap_stream, column.name, self.settings, column.ctype)
+            Context(
+                self.plan.tap_stream, column.name, self.settings, column.ctype, fake=self.plan.fake
+            )
             for column in self.plan.columns
         ]
 

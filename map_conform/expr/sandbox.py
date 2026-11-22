@@ -97,7 +97,17 @@ class SandboxError(Exception):
     """An expression tried to leave the safety envelope."""
 
 
-class ModuleProxy:
+class Proxy:
+    """An object whose attributes expressions reach only through :meth:`attribute`."""
+
+    __slots__ = ()
+
+    def attribute(self, name: str) -> object:
+        """The attribute, or a SandboxError."""
+        raise NotImplementedError
+
+
+class ModuleProxy(Proxy):
     """A read-only view of a module that exposes only the listed names."""
 
     __slots__ = ("_exposed", "_name")
@@ -109,6 +119,7 @@ class ModuleProxy:
             {name: getattr(module, name) for name in names}
         )
 
+    @override
     def attribute(self, name: str) -> object:
         """The exposed attribute.
 
@@ -215,7 +226,7 @@ def get_attribute(obj: object, name: str) -> object:
         SandboxError: for a private, denied or mutating attribute, or a receiver outside the
             allowed types.
     """
-    if isinstance(obj, ModuleProxy):
+    if isinstance(obj, Proxy):
         return obj.attribute(name)
     if name.startswith("_") or name in _DENIED:
         msg = f"attribute {name!r} is not available in expressions"
