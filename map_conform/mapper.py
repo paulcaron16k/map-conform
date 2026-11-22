@@ -7,8 +7,11 @@ the output streams. BATCH is conformed from phase P4 (WBS 8.x).
 
 from __future__ import annotations
 
+import datetime as dt
+import json
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from singer_sdk.exceptions import ConfigValidationError
@@ -17,14 +20,16 @@ from singer_sdk.mapper_base import InlineMapper
 from singer_sdk.singerlib.encoding.base import SingerMessageType
 from singer_sdk.singerlib.encoding.simple import Message
 
-from map_conform.errors import RowRejected
+from map_conform.errors import RowRejected, ThresholdExceeded
 from map_conform.metadata import Metadata, sdc_schema
+from map_conform.metrics import StreamMetrics, write_metrics
 from map_conform.plan.compile import compile_stream
 from map_conform.plan.row import RowExecutor
+from map_conform.rejects import RejectSink
 from map_conform.settings import Settings, parse_settings, settings_jsonschema
 from map_conform.spec.errors import SpecError
 from map_conform.spec.load import load_spec, output_streams
-from map_conform.spec.model import Spec, parse_spec
+from map_conform.spec.model import Defaults, Spec, parse_spec
 from map_conform.transforms.builtins import builtin_registry
 
 if sys.version_info >= (3, 12):
@@ -102,10 +107,13 @@ class MapConformMapper(InlineMapper):
             parse_env_config=parse_env_config,
             validate_config=validate_config,
         )
-        self._metadata = Metadata()
+        self._started = dt.datetime.now(tz=dt.UTC)
+        self._metadata = Metadata(self._started)
         self._executors: dict[str, list[RowExecutor]] = {}
         self._rows: dict[str, int] = {}
-        self._rejected: dict[str, int] = {}
+        self._metrics: dict[str, StreamMetrics] = {}
+        self._limits: dict[str, Defaults] = {}
+        self._rejects: RejectSink | None = None
         try:
             self.settings: Settings = parse_settings(self.config)
             self.spec: Spec = self._load_spec(self.settings)
@@ -169,7 +177,9 @@ class MapConformMapper(InlineMapper):
             for note in plan.notes:
                 self.logger.info("Stream %r: %s", tap_stream, note)
             metadata = self._metadata if resolved.settings.metadata == "sdc" else None
-            executors.append(RowExecutor(plan, resolved.settings, metadata))
+            metrics = self._metrics.setdefault(plan.name, StreamMetrics())
+            self._limits[plan.name] = resolved.settings
+            executors.append(RowExecutor(plan, resolved.settings, metadata, metrics))
             schema = dict(plan.schema)
             if metadata is not None:
                 schema["properties"] = {**schema["properties"], **sdc_schema()}
@@ -203,18 +213,52 @@ class MapConformMapper(InlineMapper):
             try:
                 record = executor.run(message_dict["record"], message_dict, row)
             except RowRejected as rejected:
-                self._reject(executor, rejected, row)
+                self._reject(executor, rejected, message_dict["record"])
                 continue
+            executor.metrics.rows_out += 1
             out: dict[str, Any] = {"type": "RECORD", "stream": executor.plan.name, "record": record}
             for passed in ("version", "time_extracted"):
                 if passed in message_dict:
                     out[passed] = message_dict[passed]
             yield RawMessage(payload=out)
 
-    def _reject(self, executor: RowExecutor, rejected: RowRejected, row: int) -> None:
-        stream = executor.plan.name
-        self._rejected[stream] = self._rejected.get(stream, 0) + 1
-        self.logger.warning("Rejected row %d of %r: %s", row, executor.plan.tap_stream, rejected)
+    def _reject(self, executor: RowExecutor, rejected: RowRejected, record: dict[str, Any]) -> None:
+        executor.metrics.rows_rejected += 1
+        if self._rejects is None:
+            storage = Path(self.settings.reject.storage)
+            run_id = self._started.strftime("%Y%m%dT%H%M%S%fZ")
+            self._rejects = RejectSink(storage, self.settings.reject.format, run_id)
+        self._rejects.write(executor.plan.name, rejected.error, record)
+        self.logger.warning("Rejected: %s", rejected.error)
+
+    def _close_rejects(self) -> None:
+        if self._rejects is None:
+            return
+        self._rejects.close()
+        for stream, path in self._rejects.paths.items():
+            self.logger.warning("Rejected rows of %r are in %s", stream, path)
+
+    def _check_thresholds(self) -> None:
+        """Fail when a stream's reject or null rate is over its limit.
+
+        Raises:
+            ThresholdExceeded: naming the stream, the rate and the limit.
+        """
+        for stream, metrics in self._metrics.items():
+            limits = self._limits[stream]
+            for label, count, limit in (
+                ("rejected", metrics.rows_rejected, limits.max_reject_rate),
+                ("nulled", metrics.rows_nulled, limits.max_null_rate),
+            ):
+                if limit is not None and metrics.rate(count) > limit:
+                    raise ThresholdExceeded(
+                        stream,
+                        what=label,
+                        rate=metrics.rate(count),
+                        limit=limit,
+                        count=count,
+                        rows=metrics.rows_in,
+                    )
 
     @override
     def map_state_message(self, message_dict: dict) -> Iterator[RawMessage]:
@@ -224,9 +268,27 @@ class MapConformMapper(InlineMapper):
             message_dict: A STATE message JSON dictionary.
 
         Yields:
-            The input message.
+            The input message, after the rate thresholds are checked, so a target never
+            commits a bookmark past rows a bad source spoiled.
         """
+        try:
+            self._check_thresholds()
+        except ThresholdExceeded:
+            self._close_rejects()
+            raise
         yield RawMessage(payload=message_dict)
+
+    @override
+    def process_endofpipe(self) -> None:
+        """Check thresholds, close the reject sink, and report metrics."""
+        try:
+            self._check_thresholds()
+        finally:
+            self._close_rejects()
+            for stream, metrics in sorted(self._metrics.items()):
+                self.logger.info("Metrics for %r: %s", stream, json.dumps(metrics.to_dict()))
+            if self.settings.metrics_path:
+                write_metrics(self.settings.metrics_path, self._metrics)
 
     @override
     def map_activate_version_message(self, message_dict: dict) -> Iterator[RawMessage]:

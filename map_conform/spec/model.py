@@ -11,6 +11,7 @@ the merged :class:`Defaults` of the resolved stream.
 
 from __future__ import annotations
 
+import dataclasses
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -27,6 +28,7 @@ from map_conform.spec._struct import (
     non_negative,
     parse_dataclass,
     positive,
+    spec_key,
     thaw,
 )
 from map_conform.spec.errors import SpecError
@@ -48,6 +50,10 @@ MIN_NAME_LENGTH = 8
 
 def _name_length(value: int) -> str | None:
     return None if value >= MIN_NAME_LENGTH else f"must be at least {MIN_NAME_LENGTH}"
+
+
+def _fraction(value: float) -> str | None:
+    return None if 0 <= value <= 1 else "must be between 0 and 1"
 
 
 def _udf_problem(target: str) -> str | None:
@@ -208,6 +214,17 @@ class Defaults:
     )
     flatten: FlattenDefaults = documented("Flattening settings.", default_factory=FlattenDefaults)
     faker: FakerDefaults = documented("Fake data settings.", default_factory=FakerDefaults)
+    max_reject_rate: float | None = documented(
+        "Fail the run when more than this fraction of a stream's rows is rejected (0-1).",
+        default=None,
+        metadata={"check": _fraction},
+    )
+    max_null_rate: float | None = documented(
+        "Fail the run when on_error: null nulls values in more than this fraction of a "
+        "stream's rows (0-1).",
+        default=None,
+        metadata={"check": _fraction},
+    )
 
 
 # --- Columns and streams ------------------------------------------------------------------------
@@ -314,24 +331,8 @@ class StreamSpec:
     drop: bool = documented("Drop the whole stream.", default=False)
 
 
-STREAM_KEYS = frozenset(
-    {"alias", "source", "prefix", "key_properties", "filter", "columns", "order", "drop"}
-)
-DEFAULTS_KEYS = frozenset(
-    {
-        "naming",
-        "stream",
-        "values",
-        "timestamp",
-        "boolean",
-        "on_error",
-        "metadata",
-        "undeclared",
-        "nested",
-        "flatten",
-        "faker",
-    }
-)
+STREAM_KEYS = frozenset(spec_key(f) for f in dataclasses.fields(StreamSpec))
+DEFAULTS_KEYS = frozenset(spec_key(f) for f in dataclasses.fields(Defaults))
 
 
 @dataclass(frozen=True)

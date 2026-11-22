@@ -18,8 +18,11 @@ from map_conform.mapper import MapConformMapper
 from map_conform.settings import Settings, parse_settings, settings_jsonschema
 from map_conform.spec._struct import fields_of
 from map_conform.spec.errors import SpecError
+from map_conform.spec.model import DEFAULTS_KEYS, STREAM_KEYS
 
 ROOT = Path(__file__).resolve().parents[1]
+
+STREAM_RULE_KEYS = ", ".join(sorted(STREAM_KEYS | DEFAULTS_KEYS))
 
 
 def test_defaults_match_the_design() -> None:
@@ -96,11 +99,7 @@ def test_mapper_rejects_a_bad_spec_with_every_problem(tmp_path: Path) -> None:
     with pytest.raises(ConfigValidationError) as caught:
         MapConformMapper(config={"spec_path": str(spec)})
     assert caught.value.errors == [
-        (
-            "streams.s.bogus: unknown key; allowed here: alias, boolean, columns, drop, faker, "
-            "filter, flatten, key_properties, metadata, naming, nested, on_error, order, prefix, "
-            "source, stream, timestamp, undeclared, values"
-        ),
+        f"streams.s.bogus: unknown key; allowed here: {STREAM_RULE_KEYS}",
         "streams.s.columns.a.type: unknown type 'decimel' at position 7 in 'decimel'",
     ]
     assert str(caught.value) == f"Invalid {spec}"

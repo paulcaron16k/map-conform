@@ -382,6 +382,22 @@
             "seed": null,
             "locale": null
           }
+        },
+        "max_reject_rate": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Fail the run when more than this fraction of a stream's rows is rejected (0-1).",
+          "default": null
+        },
+        "max_null_rate": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Fail the run when on_error: null nulls values in more than this fraction of a stream's rows (0-1).",
+          "default": null
         }
       }
     },
@@ -684,7 +700,9 @@
             "faker": {
               "seed": null,
               "locale": null
-            }
+            },
+            "max_reject_rate": null,
+            "max_null_rate": null
           }
         },
         "macros": {
@@ -944,6 +962,20 @@
         "faker": {
           "$ref": "#/$defs/FakerDefaults",
           "description": "Fake data settings."
+        },
+        "max_reject_rate": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Fail the run when more than this fraction of a stream's rows is rejected (0-1)."
+        },
+        "max_null_rate": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Fail the run when on_error: null nulls values in more than this fraction of a stream's rows (0-1)."
         }
       }
     },

@@ -134,14 +134,14 @@ def test_a_bad_value_stops_the_run_with_its_context(capsys: pytest.CaptureFixtur
 
 
 def test_reject_drops_the_row_and_says_so(
-    capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture
+    capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture, tmp_path: Path
 ) -> None:
     """on_error: reject removes the row from the output and logs it."""
     spec = {**SPEC, "defaults": {**SPEC["defaults"], "on_error": "reject"}}
     bad = {**RECORD, "record": {**RECORD["record"], "Amount": "lots"}}
-    out = run_mapper([SCHEMA, bad, RECORD], capsys, spec)
+    out = run_mapper([SCHEMA, bad, RECORD], capsys, spec, reject={"storage": str(tmp_path)})
     assert [m["type"] for m in out] == ["SCHEMA", "RECORD"]
-    assert "Rejected row 1 of 'Customer Orders'" in caplog.text
+    assert "Rejected: stream 'Customer Orders', column 'amount', row 1" in caplog.text
 
 
 def test_new_schema_recompiles(capsys: pytest.CaptureFixture[str]) -> None:

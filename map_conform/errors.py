@@ -90,3 +90,18 @@ def apply_policy(policy: OnError, error: ConformError, raw: object) -> object:
     if policy == "reject":
         raise RowRejected(error)
     raise error
+
+
+class ThresholdExceeded(RuntimeError):  # noqa: N818 -- reads as what happened
+    """A stream's reject or null rate went over its limit."""
+
+    def __init__(  # noqa: PLR0913 -- the numbers that explain the failure
+        self, stream: str, *, what: str, rate: float, limit: float, count: int, rows: int
+    ) -> None:
+        """Say which stream, which rate, and by how much."""
+        self.stream = stream
+        super().__init__(
+            f"stream {stream!r}: {count} of {rows} rows {what} ({rate:.1%}), over the limit of "
+            f"{limit:.1%}. The source may have changed; check its rejects or nulls, then fix "
+            "the spec or raise the limit."
+        )

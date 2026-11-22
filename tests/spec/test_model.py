@@ -10,7 +10,14 @@ import pytest
 
 from map_conform.spec._struct import dump
 from map_conform.spec.errors import SpecError
-from map_conform.spec.model import ColumnSpec, Defaults, Spec, parse_spec
+from map_conform.spec.model import (
+    DEFAULTS_KEYS,
+    STREAM_KEYS,
+    ColumnSpec,
+    Defaults,
+    Spec,
+    parse_spec,
+)
 from map_conform.spec.steps import CallStep, CaseStep, Chain, ExprStep, Macro
 
 FULL: dict[str, Any] = {
@@ -69,6 +76,8 @@ FULL: dict[str, Any] = {
     },
     "else": "drop",
 }
+
+STREAM_RULE_KEYS = ", ".join(sorted(STREAM_KEYS | DEFAULTS_KEYS))
 
 
 def problems(data: object) -> list[str]:
@@ -176,11 +185,7 @@ def test_every_problem_is_reported_with_its_path() -> None:
         "macros.m.steps: a chain needs at least one step",
         "macros.m.params: expected a mapping of parameter defaults",
         "udfs: expected 'package.module:function'",
-        (
-            "streams.orders.what: unknown key; allowed here: alias, boolean, columns, drop, faker, "
-            "filter, flatten, key_properties, metadata, naming, nested, on_error, order, prefix, "
-            "source, stream, timestamp, undeclared, values"
-        ),
+        f"streams.orders.what: unknown key; allowed here: {STREAM_RULE_KEYS}",
         (
             "streams.orders.columns[\"Order ID\"].type: unknown type 'decimel' at position 7 in "
             "'decimel'"
