@@ -17,3 +17,4 @@ output/
 *~
 .meltano/
 config.json
+temp_files/
