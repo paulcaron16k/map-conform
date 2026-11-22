@@ -34,7 +34,7 @@ def _rows(name: str) -> list[dict[str, str]]:
 
 
 def test_derived_fixtures_are_current(tmp_path: Path) -> None:
-    """Regenerating changes nothing; parquet is compared by content, not bytes."""
+    """Regenerating changes nothing; parquet and gzip are compared by content, not bytes."""
     written = gen.generate(tmp_path)
     stale = []
     for fresh in written:
@@ -44,6 +44,10 @@ def test_derived_fixtures_are_current(tmp_path: Path) -> None:
             stale.append(f"{rel}: missing")
         elif fresh.suffix == ".parquet":
             if not pq.read_table(fresh).equals(pq.read_table(committed), check_metadata=True):
+                stale.append(f"{rel}: content differs")
+        elif fresh.suffix == ".gz":
+            # Deflate output depends on the zlib build, so compare what decompresses.
+            if gzip.decompress(fresh.read_bytes()) != gzip.decompress(committed.read_bytes()):
                 stale.append(f"{rel}: content differs")
         elif fresh.read_bytes() != committed.read_bytes():
             stale.append(f"{rel}: bytes differ")

@@ -4,7 +4,7 @@ title: "Roadmap and WBS"
 description: "Phases P0-P6, epics E1-E12 and how they map to gh agile issues."
 resource: docs/plan-wbs.md
 tags: [management, planning, active]
-timestamp: 2026-11-22T05:00:00Z
+timestamp: 2026-11-22T06:00:00Z
 sources:
   - path: docs/plan-wbs.md
   - path: bin/create-agile-issues.py
@@ -37,5 +37,5 @@ Each phase ends with verification and an explicit approval from the owner.
 | Q1 | uuid in BATCH | Resolved: Parquet UUID logical type ([ADR-0011](../decisions/0011-uuid-in-batch.md)) |
 | Q2 | `_sdc_batched_at` | Resolved: BATCH input file mtime; RECORD mapper start |
 | Q3 | filter names | Resolved: conformed |
-| Q4 | transliteration table: vendor or dependency | Open: decide when licence restrictions are known (before WBS 3.1) |
+| Q4 | transliteration table: vendor or dependency | Resolved: bundled, generated table ([ADR-0012](../decisions/0012-bundled-transliteration-table.md)) |
 | Q5 | upstream SDK proposal for `_sdc_*` | Closed: no |

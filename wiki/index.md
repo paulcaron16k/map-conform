@@ -27,7 +27,7 @@ sources:
 |---|---|---|
 | [Architecture overview](architecture/overview.md) | architecture_doc | Layers, message handling |
 | [Survey of existing systems](concepts/existing-systems-survey.md) | concept | What the existing mappers and targets do and lack |
-| [Decisions 0001–0011](decisions/0001-name-and-licence.md) | decision_log | Planning-quiz ADRs (see the list below) |
+| [Decisions 0001–0012](decisions/0001-name-and-licence.md) | decision_log | Planning-quiz ADRs (see the list below) |
 
 Decisions:
 - [0001 Name & licence](decisions/0001-name-and-licence.md)
@@ -41,6 +41,7 @@ Decisions:
 - [0009 Undeclared columns](decisions/0009-undeclared-columns.md)
 - [0010 Stream-map superset & masking](decisions/0010-stream-map-superset.md)
 - [0011 UUID in BATCH](decisions/0011-uuid-in-batch.md)
+- [0012 Bundled transliteration table](decisions/0012-bundled-transliteration-table.md)
 
 ## Components
 

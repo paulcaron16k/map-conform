@@ -52,7 +52,7 @@ Meltano plugin `map-conform` (namespace `map_conform`). Alternatives considered:
 (weaker on the declared-contract idea). "Conform" names the job: conform names, types and
 values to a declared contract. See [ADR-0001](wiki/decisions/0001-name-and-licence.md).
 
-Licence Apache-2.0, Python ≥ 3.10, scaffolded from the Singer SDK mapper cookiecutter
+Licence Apache-2.0, Python ≥ 3.11, scaffolded from the Singer SDK mapper cookiecutter
 (hatchling + hatch-vcs, ruff, mypy, pytest, tox-uv, GitHub Actions trusted publishing).
 
 ## 3. Survey: what existing systems do
@@ -346,7 +346,7 @@ A target built against map-conform may assume all of the following.
 | # | Question | Decision |
 | -- | -- | -- |
 | 1 | Name | `map-conform` |
-| 2 | Licence / Python | Apache-2.0 / ≥ 3.10 |
+| 2 | Licence / Python | Apache-2.0 / ≥ 3.11 (amended from 3.10 after its end of life) |
 | 3 | How transforms are written | Declarative builtins with kwargs, a safe `expr` language with conditionals, and registered Python UDFs |
 | 4 | Config format | Own versioned spec, with a bridge to Zamboni `columns` and to Singer catalogs |
 | 5 | BATCH engine | pyarrow core; polars as an optional extra |
@@ -361,8 +361,10 @@ A target built against map-conform may assume all of the following.
 | 14 | UUID in BATCH | Parquet `fixed_len_byte_array(16)` with the UUID logical type (verified with pyarrow + DuckDB); string in RECORD |
 | 15 | `_sdc_batched_at` | BATCH: input file last-modified time; RECORD: mapper start time |
 | 16 | `filter` / `when` names | Conformed names |
-| 17 | Transliteration table | Deferred until licence restrictions are known |
+| 17 | Transliteration table | Bundled: generated from pinned Unicode decompositions plus a curated supplement; no GPL source ([ADR-0012](wiki/decisions/0012-bundled-transliteration-table.md)) |
 | 18 | SDK `_sdc_*` proposal | None. The Singer spec and the SDK own that behaviour |
+| 19 | Excel serial 60 | An error: Lotus's 1900-02-29 never existed; serials below 60 count from 1899-12-31 |
+| 20 | `half_up` rounding | Halves round away from zero (`-12.5` → `-13`) |
 
 ## 8. Where to go next
 

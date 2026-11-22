@@ -18,7 +18,7 @@ Parent: [Wiki Index](../index.md) · Related: [Detailed design](../../docs/detai
 ## Pipeline (defaults from [ADR-0008](../decisions/0008-naming-defaults.md))
 
 1. NFKC
-2. Transliterate to ASCII
+2. Transliterate to ASCII with the bundled table ([ADR-0012](../decisions/0012-bundled-transliteration-table.md))
 3. Split camelCase and acronyms
 4. Lowercase
 5. `[^a-z0-9_]` → `_`

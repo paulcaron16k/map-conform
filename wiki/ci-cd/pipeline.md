@@ -4,7 +4,7 @@ title: "CI/CD pipeline"
 description: "GitHub Actions workflows: lint, type, test matrix, build, publish."
 resource: .github/workflows/
 tags: [delivery, ci, active]
-timestamp: 2026-11-22T05:00:00Z
+timestamp: 2026-11-22T06:00:00Z
 sources:
   - path: .github/workflows/test.yml
   - path: .github/workflows/build.yml
@@ -18,7 +18,7 @@ Parent: [Wiki Index](../index.md)
 
 | Workflow | Trigger | Jobs |
 |---|---|---|
-| `test.yml` | every PR; push to `main`; manual | build and inspect the package; lint (ruff check and format, wiki frontmatter); typing (mypy, ty via tox); pytest on every Python classifier (3.10–3.14, fail-fast off) |
+| `test.yml` | every PR; push to `main`; manual | build and inspect the package; lint (ruff check and format, wiki frontmatter); typing (mypy, ty via tox); pytest on every Python classifier (3.11–3.14, fail-fast off) |
 | `build.yml` | tag `v*` | build the wheel and sdist; publish to PyPI by trusted publishing (gated, below) |
 | `run-zizmor.yml` | PR; push to `main` | workflow security audit, uploaded to code scanning |
 | Dependabot | weekly | uv and GitHub Actions updates, 7-day cooldown |

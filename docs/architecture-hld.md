@@ -36,7 +36,7 @@ compatibility translator ([ADR-0010](../wiki/decisions/0010-stream-map-superset.
 | BATCH throughput | ≥ 1M rows/s for an all-vectorisable stream; memory bounded by a row-group-sized chunk |
 | Safety | Expression sandbox; UDFs from module paths need an explicit opt-in; no `eval` of user strings |
 | Operability | Clear errors naming stream, column, row number and value; metrics; a `doctor` command |
-| Compatibility | Python 3.10–3.14 (the SDK's supported range); singer-sdk compatible range pinned; Meltano ≥ 3 |
+| Compatibility | Python 3.11–3.14; singer-sdk compatible range pinned; Meltano ≥ 3 |
 
 ## 3. Component view
 
@@ -117,7 +117,7 @@ Rows rejected by any column are removed with a mask and written to the reject si
 
 | Decision | Choice | ADR |
 | -- | -- | -- |
-| Name and licence | `map-conform`, Apache-2.0, Python ≥ 3.10 | [0001](../wiki/decisions/0001-name-and-licence.md) |
+| Name and licence | `map-conform`, Apache-2.0, Python ≥ 3.11 | [0001](../wiki/decisions/0001-name-and-licence.md) |
 | Transform authoring | Builtins + macros, safe `expr`, Python UDFs | [0002](../wiki/decisions/0002-transform-authoring.md) |
 | Config | Own spec file; Zamboni/catalog bridge | [0003](../wiki/decisions/0003-own-spec-with-zamboni-bridge.md) |
 | BATCH engine | pyarrow core, polars optional | [0004](../wiki/decisions/0004-batch-engine.md) |
@@ -128,6 +128,7 @@ Rows rejected by any column are removed with a mask and written to the reject si
 | Undeclared columns | Conform using tap SCHEMA; `strict` makes them an error | [0009](../wiki/decisions/0009-undeclared-columns.md) |
 | Stream maps | Superset of SDK stream maps and pipelinewise masking; SDK settings accepted unchanged | [0010](../wiki/decisions/0010-stream-map-superset.md) |
 | UUID in BATCH | Parquet FLBA(16) with UUID logical type | [0011](../wiki/decisions/0011-uuid-in-batch.md) |
+| Transliteration | Bundled table generated from pinned Unicode data plus a curated supplement | [0012](../wiki/decisions/0012-bundled-transliteration-table.md) |
 
 ## 6. Deployment in Meltano
 
