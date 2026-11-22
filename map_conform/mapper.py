@@ -169,6 +169,7 @@ class MapConformMapper(InlineMapper):
                     key_properties=tuple(message_dict.get("key_properties") or ()),
                     bookmark_properties=tuple(message_dict.get("bookmark_properties") or ()),
                     strict=self.settings.strict,
+                    config=self.settings.spec_vars,
                 )
             except SpecError as exc:
                 raise ConfigValidationError(
@@ -214,6 +215,8 @@ class MapConformMapper(InlineMapper):
                 record = executor.run(message_dict["record"], message_dict, row)
             except RowRejected as rejected:
                 self._reject(executor, rejected, message_dict["record"])
+                continue
+            if record is None:  # dropped by the stream's filter
                 continue
             executor.metrics.rows_out += 1
             out: dict[str, Any] = {"type": "RECORD", "stream": executor.plan.name, "record": record}

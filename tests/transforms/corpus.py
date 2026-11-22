@@ -7,7 +7,8 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from map_conform.plan.chain import ChainCompiler, CompiledChain, StepError
+from map_conform.plan.chain import ChainCompiler
+from map_conform.plan.ops import CompiledChain, StepError
 from map_conform.spec._struct import Issues
 from map_conform.spec.model import Defaults, parse_spec
 from map_conform.transforms.builtins import builtin_registry

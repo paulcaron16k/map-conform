@@ -60,16 +60,21 @@ _VARS = click.option(
 )
 
 
-def _load(
-    spec_path: str, variables: tuple[str, ...], catalog_path: str | None
-) -> tuple[Spec, list[CatalogStream] | None]:
-    """Load the spec (and catalog), or print every problem and exit 1."""
+def _spec_vars(variables: tuple[str, ...]) -> dict[str, Any]:
     spec_vars: dict[str, Any] = {}
     for item in variables:
         name, sep, value = item.partition("=")
         if not sep or not name:
             raise click.BadParameter(f"{item!r} is not NAME=VALUE", param_hint="--var")
         spec_vars[name] = value
+    return spec_vars
+
+
+def _load(
+    spec_path: str, variables: tuple[str, ...], catalog_path: str | None
+) -> tuple[Spec, list[CatalogStream] | None]:
+    """Load the spec (and catalog), or print every problem and exit 1."""
+    spec_vars = _spec_vars(variables)
     try:
         spec = load_spec(spec_path, spec_vars=spec_vars)
         catalog = read_catalog(catalog_path) if catalog_path else None
@@ -125,7 +130,7 @@ def spec_explain(
     report = explain(loaded, tap_stream, streams)
     entry = next((s for s in streams or [] if s.name == tap_stream), None)
     if entry is not None:
-        _add_plans(loaded, entry, report)
+        _add_plans(loaded, entry, report, _spec_vars(variables))
     if as_json:
         click.echo(json.dumps(report, indent=2, ensure_ascii=False))
     else:
@@ -134,13 +139,20 @@ def spec_explain(
         sys.exit(1)
 
 
-def _add_plans(loaded: Spec, entry: CatalogStream, report: dict[str, Any]) -> None:
+def _add_plans(
+    loaded: Spec, entry: CatalogStream, report: dict[str, Any], config: dict[str, Any]
+) -> None:
     """Compile each output stream against the catalog schema and add the plan."""
     schema = {"type": "object", "properties": dict(entry.properties)}
     for output, resolved in zip(report["outputs"], output_streams(loaded, entry.name), strict=True):
         try:
             plan = compile_stream(
-                loaded, resolved, schema, builtin_registry(), key_properties=entry.key_properties
+                loaded,
+                resolved,
+                schema,
+                builtin_registry(),
+                key_properties=entry.key_properties,
+                config=config,
             )
         except SpecError as exc:
             report["findings"].extend(str(i) for i in exc.issues)
@@ -160,6 +172,10 @@ def _render_plan(plan: dict[str, Any]) -> list[str]:
             lines.append(f"      default: {column['default']}")
         if "enum" in column:
             lines.append(f"      enum: {', '.join(column['enum'])}")
+        if "reads" in column:
+            lines.append(f"      reads: {', '.join(column['reads'])}")
+    if "filter" in plan:
+        lines.append(f"    filter: {plan['filter']}")
     return lines
 
 

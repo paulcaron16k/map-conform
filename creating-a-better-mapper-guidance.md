@@ -269,7 +269,7 @@ defaults:                          # inherited by every stream; objects merge, l
   undeclared: conform              # conform | drop | error
 
 macros:                            # named, parameterised transform chains
-  money: [{strip_chars: "$€£, "}, {parens_negative: true}, {cast: decimal}]
+  money: [{strip_chars: "$€£, "}, {cast: decimal, parens_negative: true}]
 
 udfs:                              # Python functions; module paths need allow_python_udfs: true
   fiscal_week: "my_pkg.udfs:fiscal_week"

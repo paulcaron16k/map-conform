@@ -22,6 +22,8 @@ class StreamMetrics:
     rows_out: int = 0
     rows_rejected: int = 0
     rows_nulled: int = 0
+    rows_filtered: int = 0
+    """Rows the stream's filter dropped."""
     values_kept: int = 0
     errors: Counter[tuple[str, str]] = field(default_factory=Counter)
     """Failed values by (column, rule), whatever on_error did with them."""
@@ -37,6 +39,7 @@ class StreamMetrics:
             "rows_out": self.rows_out,
             "rows_rejected": self.rows_rejected,
             "rows_nulled": self.rows_nulled,
+            "rows_filtered": self.rows_filtered,
             "values_kept": self.values_kept,
             "errors": [
                 {"column": column, "rule": rule, "count": count}

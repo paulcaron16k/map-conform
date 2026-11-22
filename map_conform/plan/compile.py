@@ -2,9 +2,11 @@
 
 A :class:`StreamPlan` holds everything the executors need, already validated: the output
 stream name, ordered :class:`ColumnPlan` objects (output name, CType, sources, compiled
-chain, nullability, on_error, default, enum), the renamed key and bookmark properties, and
-the output JSON Schema and Arrow schema. Problems are collected, each with its spec path, and
-raised together as a :class:`~map_conform.spec.errors.SpecError`.
+chain, nullability, on_error, default, enum), the order in which columns are computed (a
+column whose expressions read other columns comes after them), the compiled ``filter``, the
+renamed key and bookmark properties, and the output JSON Schema and Arrow schema. Problems are
+collected, each with its spec path, and raised together as a
+:class:`~map_conform.spec.errors.SpecError`.
 """
 
 from __future__ import annotations
@@ -17,11 +19,13 @@ from typing import TYPE_CHECKING, Any
 import pyarrow as pa
 
 from map_conform.errors import OnError
+from map_conform.expr.compiler import ExprError, Expression, Names, compile_expr
 from map_conform.naming.conform import NameConformer, NamingError
 from map_conform.naming.nested import MemberNames, conform_ctype
 from map_conform.naming.streams import stream_name
-from map_conform.plan.chain import ChainCompiler, CompiledChain, StepError
-from map_conform.spec._struct import Issues, child, thaw
+from map_conform.plan.chain import ChainCompiler
+from map_conform.plan.ops import CompiledChain, StepError
+from map_conform.spec._struct import Issues, child, freeze_mapping, thaw
 from map_conform.spec.check import Finding, OutputColumn, output_columns
 from map_conform.spec.errors import SpecError
 from map_conform.spec.load import ResolvedStream
@@ -36,7 +40,6 @@ if TYPE_CHECKING:
     from map_conform.spec.model import ColumnSpec, Spec
     from map_conform.transforms.registry import Registry
 
-_NEEDS_EXPR = "needs the expression language, which is not built yet (WBS 6.x)"
 _KEEP_KINDS = frozenset({"string", "json"})
 
 
@@ -68,6 +71,11 @@ class ColumnPlan:
         """The chain's step rules, for explain output."""
         return tuple(step.rule for step in self.chain.steps)
 
+    @property
+    def reads(self) -> frozenset[str]:
+        """Columns the chain's expressions read, by output name."""
+        return self.chain.reads
+
 
 @dataclass(frozen=True)
 class StreamPlan:
@@ -82,6 +90,10 @@ class StreamPlan:
     arrow_schema: pa.Schema
     notes: tuple[str, ...] = field(default=())
     """Lossy renames and type warnings, logged once per stream."""
+    order: tuple[int, ...] = field(default=())
+    """Indexes into ``columns`` in the order they are computed: dependencies first."""
+    filter: Expression | None = None
+    """Rows where this is falsy are dropped; it sees every column by output name."""
 
 
 def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spec context
@@ -93,6 +105,7 @@ def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spe
     key_properties: tuple[str, ...] = (),
     bookmark_properties: tuple[str, ...] = (),
     strict: bool = False,
+    config: Mapping[str, Any] | None = None,
 ) -> StreamPlan:
     """Compile the plan for one output stream from its tap SCHEMA.
 
@@ -105,8 +118,6 @@ def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spe
     path = child("streams", resolved.key or resolved.tap_stream)
     issues = Issues()
     notes: list[str] = []
-    if resolved.spec.filter is not None:
-        issues.add(child(path, "filter"), f"filter {_NEEDS_EXPR}")
     try:
         named = stream_name(resolved)
     except NamingError as exc:
@@ -119,9 +130,21 @@ def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spe
     for finding in findings:
         if finding.severity == "error":
             issues.add(finding.path, finding.message)
-    compiler = ChainCompiler(registry, resolved.settings, spec.macros, issues)
+    scope = Names(
+        columns=frozenset(c.name for c in columns),
+        constants={
+            "config": freeze_mapping(dict(config or {})),
+            "stream": named.name if named else resolved.tap_stream,
+            "source_stream": resolved.tap_stream,
+        },
+    )
+    compiler = ChainCompiler(
+        registry, resolved.settings, spec.macros, issues, scope, resolved.tap_stream
+    )
     builder = _ColumnBuilder(resolved, properties, compiler, issues, notes, path)
     plans = [plan for column in columns if (plan := builder.build(column)) is not None]
+    order = _order(plans, issues, path)
+    row_filter = _filter(resolved.spec.filter, scope, issues, path)
     renamed = _renamer(columns)
     keys = _keys(resolved, key_properties, renamed, issues, path)
     bookmarks = tuple(renamed.get(b, b) for b in bookmark_properties)
@@ -138,7 +161,49 @@ def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spe
             [pa.field(p.name, to_arrow(p.ctype), nullable=p.nullable) for p in plans]
         ),
         notes=tuple(notes),
+        order=order,
+        filter=row_filter,
     )
+
+
+def _filter(text: str | None, scope: Names, issues: Issues, path: str) -> Expression | None:
+    if text is None:
+        return None
+    try:
+        return compile_expr(text, dataclasses.replace(scope, value=False))
+    except ExprError as exc:
+        issues.add(child(path, "filter"), str(exc))
+        return None
+
+
+def _order(plans: list[ColumnPlan], issues: Issues, path: str) -> tuple[int, ...]:
+    """Column indexes with every column after the columns it reads; cycles are errors."""
+    index = {plan.name: i for i, plan in enumerate(plans)}
+    done: list[int] = []
+    state: dict[int, str] = {}
+
+    def visit(i: int, trail: tuple[int, ...]) -> bool:
+        if state.get(i) == "done":
+            return True
+        if state.get(i) == "visiting":
+            cycle = [plans[j].name for j in trail[trail.index(i) :]] + [plans[i].name]
+            issues.add(
+                child(child(path, "columns"), plans[i].key),
+                f"dependency cycle: {' -> '.join(cycle)}",
+            )
+            return False
+        state[i] = "visiting"
+        deps = sorted(index[name] for name in plans[i].reads if name in index)
+        ok = all(visit(j, (*trail, i)) for j in deps)
+        state[i] = "done"
+        if ok:
+            done.append(i)
+        return ok
+
+    for i in range(len(plans)):
+        if not visit(i, ()):
+            return tuple(range(len(plans)))
+    return tuple(done)
 
 
 @dataclass
@@ -155,7 +220,6 @@ class _ColumnBuilder:
         col_path = child(child(self.path, "columns"), column.key)
         before = len(self.issues.items)
         notes = [f"column {column.key!r} -> {column.name!r}: {n}" for n in column.notes]
-        self._refuse_unbuilt(spec, col_path)
         ctype, tap_nullable = self._ctype(column, col_path, notes)
         if ctype is None or len(self.issues.items) != before:
             return None
@@ -165,7 +229,7 @@ class _ColumnBuilder:
         except NamingError as exc:
             self.issues.add(col_path, f"nested member: {exc}")
             return None
-        chain = self.compiler.compile(spec.transform if spec else None, spec, ctype, col_path)
+        chain = self.compiler.compile_column(spec, ctype, col_path, own=column.name)
         if chain is None:
             return None
         nullable = self._nullable(spec, chain, tap_nullable=tap_nullable, col_path=col_path)
@@ -191,19 +255,6 @@ class _ColumnBuilder:
             sql_type=spec.sql_type if spec else None,
         )
 
-    def _refuse_unbuilt(self, spec: ColumnSpec | None, col_path: str) -> None:
-        if spec is None:
-            return
-        if spec.expr is not None:
-            self.issues.add(child(col_path, "expr"), f"expr {_NEEDS_EXPR}")
-        if spec.when is not None:
-            self.issues.add(child(col_path, "when"), f"when {_NEEDS_EXPR}")
-        if spec.fields is not None:
-            self.issues.add(
-                child(col_path, "fields"),
-                "nested field transforms are not built yet (WBS 12.x)",
-            )
-
     def _ctype(
         self, column: OutputColumn, col_path: str, notes: list[str]
     ) -> tuple[CType | None, bool]:
@@ -227,7 +278,7 @@ class _ColumnBuilder:
     def _nullable(
         self, spec: ColumnSpec | None, chain: CompiledChain, *, tap_nullable: bool, col_path: str
     ) -> bool:
-        forced = any(step.transform.forces_nullable for step in chain.steps)
+        forced = chain.forces_nullable
         if spec is None:
             return tap_nullable or forced
         if forced and not spec.nullable:
@@ -326,8 +377,10 @@ def plan_report(plan: StreamPlan) -> dict[str, Any]:
                 "steps": list(c.steps),
                 **({"default": to_wire(c.default, c.ctype)} if c.default is not None else {}),
                 **({"enum": sorted(map(str, c.enum))} if c.enum is not None else {}),
+                **({"reads": sorted(c.reads)} if c.reads else {}),
             }
             for c in plan.columns
         ],
+        **({"filter": plan.filter.text} if plan.filter is not None else {}),
         "notes": list(plan.notes),
     }

@@ -8,7 +8,8 @@ from typing import Any
 import pytest
 
 from map_conform.errors import StepFailed
-from map_conform.plan.chain import CastArgs, ChainCompiler, CompiledChain, StepError
+from map_conform.plan.chain import ChainCompiler
+from map_conform.plan.ops import CastArgs, CompiledChain, StepError
 from map_conform.spec._struct import Issues
 from map_conform.spec.model import ColumnSpec, Defaults, parse_spec
 from map_conform.spec.steps import Chain
@@ -214,21 +215,6 @@ def test_macro_problems() -> None:
     _, problems = compile_chain("m", macros={"m": [{"strip_chars": {"x": 1}}, "upper"]},
                                 target="string")  # fmt: skip
     assert problems == ["macros.m.steps[0].x: unknown key; allowed here: chars"]
-
-
-@pytest.mark.parametrize(
-    ("transform", "message"),
-    [
-        ({"expr": "value"}, "an expr step needs the expression language"),
-        ({"case": [{"when": "x", "then": "upper"}]}, "a case step needs the expression language"),
-        ({"upper": None, "when": "x"}, "'when' needs the expression language"),
-    ],
-)
-def test_expression_steps_wait_for_the_expression_language(transform: Any, message: str) -> None:  # noqa: ANN401
-    """expr, case and when are refused clearly until WBS 6.x."""
-    _, problems = compile_chain(transform, target="string")
-    assert len(problems) == 1
-    assert message in problems[0]
 
 
 def test_failures_name_the_step_and_nulls_pass() -> None:

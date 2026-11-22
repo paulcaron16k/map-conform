@@ -131,6 +131,7 @@ def test_metrics_file(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> Non
                 "rows_out": 3,
                 "rows_rejected": 0,
                 "rows_nulled": 2,
+                "rows_filtered": 0,
                 "values_kept": 0,
                 "errors": [
                     {"column": "amount", "rule": "cast: decimal(12,2)", "count": 2},

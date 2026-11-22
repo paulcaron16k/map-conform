@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from map_conform.plan.chain import StepError
+from map_conform.plan.ops import StepError
 from tests.transforms.test_builtins import run
 
 

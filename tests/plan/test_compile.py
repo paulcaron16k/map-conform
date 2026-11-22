@@ -146,16 +146,16 @@ def test_key_and_bookmark_properties_are_renamed() -> None:
             "columns[\"Order ID\"].enum: 'two' does not pass the column's chain",
         ),
         (
-            {"Order ID": {"expr": "1"}},
-            'columns["Order ID"].expr: expr needs the expression language',
+            {"Order ID": {"expr": "nope + 1"}},
+            "columns[\"Order ID\"].expr: unknown name 'nope'",
         ),
         (
             {"Order ID": {"when": "x"}},
-            'columns["Order ID"].when: when needs the expression language',
+            "columns[\"Order ID\"].when: unknown name 'x'",
         ),
         (
-            {"Order ID": {"type": "json", "fields": {"a": {"drop": True}}}},
-            'columns["Order ID"].fields: nested field transforms are not built yet',
+            {"Order ID": {"type": "string", "fields": {"a": {"drop": True}}}},
+            'columns["Order ID"].fields: fields needs a struct or json column, not string',
         ),
         (
             {"total": {"source": ["SKU", "Qty."]}},
@@ -170,9 +170,9 @@ def test_compile_problems(columns: dict[str, Any], message: str) -> None:
 
 
 def test_filter_and_unknown_key_property() -> None:
-    """Filter waits for expressions; an unknown key property is reported."""
+    """A filter with an unknown name and an unknown key property are both reported."""
     found = problems({"streams": {"Orders Export": {"filter": "x", "key_properties": ["nope"]}}})
-    assert 'streams["Orders Export"].filter: filter needs the expression language' in found[0]
+    assert any("streams[\"Orders Export\"].filter: unknown name 'x'" in f for f in found)
     assert any(
         "key_properties: 'nope' is neither a source nor an output column" in f for f in found
     )

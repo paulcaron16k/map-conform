@@ -226,3 +226,44 @@ def test_cli_maps_stdin_to_stdout(command: list[str], tmp_path: Path) -> None:
     out = [json.loads(line) for line in result.stdout.splitlines()]
     assert [m["type"] for m in out] == ["SCHEMA", "RECORD", "STATE"]
     assert out[1]["record"]["order_id"] == 42  # noqa: PLR2004
+
+
+def test_derived_columns_and_filter(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """A derived column reads conformed values and spec_vars; filtered rows are counted."""
+    spec = {
+        "version": 1,
+        "defaults": {"metadata": "none"},
+        "streams": {
+            "Customer Orders": {
+                "filter": "amount >= 100",
+                "columns": {
+                    "with_tax": {
+                        "type": "decimal(12,2)",
+                        "expr": "amount * to_decimal(config['tax'])",
+                    },
+                    "Order ID": {"name": "order_id", "type": "int64"},
+                    "Amount": {"type": "decimal(12,2)"},
+                },
+            }
+        },
+    }
+    small = {**RECORD, "record": {**RECORD["record"], "Amount": "$5"}}
+    metrics = tmp_path / "metrics.json"
+    out = run_mapper(
+        [SCHEMA, RECORD, small],
+        capsys,
+        spec,
+        spec_vars={"tax": "1.5"},
+        metrics_path=str(metrics),
+    )
+    records = [m["record"] for m in out if m["type"] == "RECORD"]
+    assert records == [
+        {
+            "order_id": 42,
+            "amount": "1234.50",
+            "updated_at": "2026-03-14T09:00:00.000000Z",
+            "with_tax": "1851.75",
+        }
+    ]
+    stream = json.loads(metrics.read_text())["streams"]["customer_orders"]
+    assert (stream["rows_in"], stream["rows_out"], stream["rows_filtered"]) == (2, 1, 1)

@@ -10,10 +10,11 @@ compile time: an unknown name is an error at the spec path, not a crash on the f
 2. ``value`` (alias ``self``): the value the step works on, in a column chain;
 3. ``record`` (alias ``_``): the source record, read-only; ``row_number``; ``NULL``;
 4. the compile-time constants: ``config``, ``stream``, ``source_stream`` (and the SDK names
-   ``__stream_name__``, ``__original_stream_name__``), plus any functions the caller adds;
+   ``__stream_name__``, ``__original_stream_name__``);
 5. the stream's columns, by conformed name: their conformed values (the column being
    computed is not one of them: use ``value``, or ``record[...]`` for its source);
-6. the function library and the read-only modules.
+6. the caller's functions (builtin steps, ``cast``, macros, UDFs), then the function library
+   and the read-only modules.
 
 In call position (``name(...)``) functions are looked up before columns, so a column named
 ``max`` does not hide ``max()``. ``source(name)`` reads the source record by raw name.
@@ -27,6 +28,7 @@ from __future__ import annotations
 
 import ast
 import operator
+import warnings
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
@@ -94,7 +96,10 @@ class Names:
     value: bool = True
     """Whether ``value``/``self`` are in scope (true in column chains)."""
     constants: Mapping[str, Any] = field(default_factory=lambda: MappingProxyType({}))
-    """``config``, ``stream``, ``source_stream`` and any extra functions."""
+    """``config``, ``stream`` and ``source_stream``."""
+    functions: Mapping[str, Any] = field(default_factory=lambda: MappingProxyType({}))
+    """Callables besides the library: builtin steps, ``cast``, macros and UDFs. Like the
+    library, they win over columns in call position and lose to them elsewhere."""
 
 
 @dataclass(frozen=True)
@@ -133,7 +138,12 @@ def compile_expr(text: str, names: Names | None = None) -> Expression:
     """
     names = names or Names()
     try:
-        tree = ast.parse(text.strip(), mode="eval")
+        with warnings.catch_warnings():
+            # "\d" in a non-raw string stays a backslash and a d, as in Python; no warning
+            # (a SyntaxWarning from Python 3.12, a DeprecationWarning before).
+            warnings.simplefilter("ignore", SyntaxWarning)
+            warnings.simplefilter("ignore", DeprecationWarning)
+            tree = ast.parse(text.strip(), mode="eval")
     except SyntaxError as exc:
         raise ExprError(f"syntax error: {exc.msg} (at column {exc.offset or 0})") from None
     except (ValueError, RecursionError, MemoryError) as exc:
@@ -224,8 +234,7 @@ class _Compiler:
         if constant_name in self.names.constants:
             constant = self.names.constants[constant_name]
             return lambda _f: constant
-        if call and name in FUNCTIONS:
-            fn = FUNCTIONS[name].fn
+        if call and (fn := self._function(name)) is not None:
             return lambda _f: fn
         if name == self.names.own:
             raise ExprError(
@@ -235,8 +244,7 @@ class _Compiler:
         if name in self.names.columns:
             self.reads.add(name)
             return lambda f: f.row.values.get(name)
-        if name in FUNCTIONS:
-            fn = FUNCTIONS[name].fn
+        if (fn := self._function(name)) is not None:
             return lambda _f: fn
         if name in _VALUE_NAMES:
             hint = " (no value here)"
@@ -245,6 +253,11 @@ class _Compiler:
         else:
             hint = f"; use record[{name!r}] for a source property"
         raise ExprError(f"unknown name {name!r}{hint}{_at(node)}")
+
+    def _function(self, name: str) -> object | None:
+        if name in self.names.functions:
+            return self.names.functions[name]
+        return FUNCTIONS[name].fn if name in FUNCTIONS else None
 
     # --- operators ----------------------------------------------------------------------
 
