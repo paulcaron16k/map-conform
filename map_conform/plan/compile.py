@@ -28,6 +28,7 @@ from map_conform.naming.shape import Shape
 from map_conform.naming.streams import stream_name
 from map_conform.plan.chain import ChainCompiler
 from map_conform.plan.ops import CompiledChain, StepError
+from map_conform.plan.vector import VectorChain, vector_chain
 from map_conform.spec._struct import Issues, child, freeze, freeze_mapping, thaw, thaw_mapping
 from map_conform.spec.check import Finding, OutputColumn, output_columns
 from map_conform.spec.errors import SpecError
@@ -71,6 +72,8 @@ class ColumnPlan:
     """The spec's ``columns`` key, or the source name of an undeclared column."""
     doc: str | None = None
     sql_type: str | None = None
+    vector: VectorChain | None = None
+    """The chain as Arrow ops, for the columnar executor; None runs it row by row."""
 
     @property
     def steps(self) -> tuple[str, ...]:
@@ -168,6 +171,8 @@ def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spe
     plans = [plan for column in columns if (plan := builder.build(column)) is not None]
     order = _order(plans, issues, path)
     row_filter = _filter(resolved.spec.filter, scope, issues, path)
+    read = frozenset().union(*(p.reads for p in plans), row_filter.reads if row_filter else ())
+    plans = [dataclasses.replace(p, vector=vector_chain(p, read)) for p in plans]
     renamed = _renamer(columns)
     keys = _keys(resolved, key_properties, renamed, issues, path)
     bookmarks = tuple(renamed.get(b, b) for b in bookmark_properties)

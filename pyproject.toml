@@ -156,6 +156,8 @@ allow-star-arg-any = true
   "S607",   # `gh` is resolved from PATH on purpose
   "T201",   # command-line tools print their output
 ]
+# Vector ops take each builtin's own kwargs dataclass, typed Any.
+"map_conform/transforms/vector.py" = ["ANN401"]
 "tests/**/*.py" = [
   "S101", # assert is how pytest checks
 ]

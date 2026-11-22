@@ -63,6 +63,7 @@ class RowExecutor:
         row: int,
         *,
         batched_at: str | None = None,
+        skip: frozenset[int] = frozenset(),
     ) -> dict[str, Any] | None:
         """The conformed record, ``_sdc_*`` columns included when metadata is on.
 
@@ -85,6 +86,8 @@ class RowExecutor:
         wired: dict[str, Any] = {}
         columns = plan.columns
         for i in plan.order or range(len(columns)):
+            if i in skip:  # computed by the columnar executor; nothing reads it
+                continue
             column = columns[i]
             typed, wired[column.name] = self._column(column, self._contexts[i], state, sources, row)
             state.values[column.name] = typed
@@ -94,7 +97,7 @@ class RowExecutor:
         if self.plan.filter is not None and not self._keep(self.plan.filter, state, row):
             self.metrics.rows_filtered += 1
             return None
-        out = {column.name: wired[column.name] for column in columns}
+        out = {column.name: wired[column.name] for column in columns if column.name in wired}
         if self.metadata is not None:
             deleted_at = record.get(f"{SDC_PREFIX}deleted_at")
             try:

@@ -83,3 +83,10 @@ def test_round_clamp_scale_after_the_cast() -> None:
     assert run([{"cast": "int64"}, {"scale": 100}], "12", target="int64") == 1200  # noqa: PLR2004
     with pytest.raises(StepError, match="not a whole number"):
         run([{"cast": "int64"}, {"scale": 0.5}], "3", target="int64")
+
+
+@pytest.mark.parametrize("target", ["int64", "decimal(10,2)"])
+def test_huge_exponents_are_cell_errors(target: str) -> None:
+    """1E200 is an error naming the value, not a crash (found by the parity suite)."""
+    with pytest.raises(StepError, match="too large for any numeric column"):
+        run({"cast": target.split("(", maxsplit=1)[0]}, "1E200", target=target)
