@@ -21,10 +21,11 @@ from map_conform.spec.errors import SpecError
 from map_conform.spec.jsonschema import render
 from map_conform.spec.load import load_spec, output_streams
 from map_conform.transforms.builtins import builtin_registry
+from map_conform.udfs import load_udfs, registry_with
 
 if TYPE_CHECKING:
     from map_conform.spec.model import Spec
-    from map_conform.transforms.registry import Transform
+    from map_conform.transforms.registry import Registry, Transform
 
 TOOL_COMMANDS = frozenset({"spec", "functions"})
 
@@ -117,20 +118,31 @@ def spec_validate(
 @_CATALOG
 @_VARS
 @click.option("--json", "as_json", is_flag=True, help="Print the report as JSON.")
-def spec_explain(
+@click.option(
+    "--allow-python-udfs",
+    is_flag=True,
+    help="Import the spec's module-path UDFs, as the allow_python_udfs setting does.",
+)
+def spec_explain(  # noqa: PLR0913 -- one parameter per option
     spec_path: str,
     tap_stream: str,
     catalog: str | None,
     variables: tuple[str, ...],
     *,
     as_json: bool,
+    allow_python_udfs: bool,
 ) -> None:
     """Show what SPEC does to one tap stream: rules matched, output names, columns."""
     loaded, streams = _load(spec_path, variables, catalog)
     report = explain(loaded, tap_stream, streams)
     entry = next((s for s in streams or [] if s.name == tap_stream), None)
     if entry is not None:
-        _add_plans(loaded, entry, report, _spec_vars(variables))
+        try:
+            registry = _registry(loaded, allow_python_udfs=allow_python_udfs)
+        except SpecError as exc:
+            report["findings"].extend(str(i) for i in exc.issues)
+        else:
+            _add_plans(loaded, entry, report, _spec_vars(variables), registry)
     if as_json:
         click.echo(json.dumps(report, indent=2, ensure_ascii=False))
     else:
@@ -139,8 +151,19 @@ def spec_explain(
         sys.exit(1)
 
 
+def _registry(loaded: Spec | None, *, allow_python_udfs: bool) -> Registry:
+    """The builtins plus installed UDFs (and the spec's, when allowed)."""
+    spec_udfs = loaded.udfs if loaded is not None else {}
+    udfs = load_udfs(spec_udfs, allow_python_udfs=allow_python_udfs)
+    return registry_with(builtin_registry(), udfs)
+
+
 def _add_plans(
-    loaded: Spec, entry: CatalogStream, report: dict[str, Any], config: dict[str, Any]
+    loaded: Spec,
+    entry: CatalogStream,
+    report: dict[str, Any],
+    config: dict[str, Any],
+    registry: Registry,
 ) -> None:
     """Compile each output stream against the catalog schema and add the plan."""
     schema = {"type": "object", "properties": dict(entry.properties)}
@@ -150,7 +173,7 @@ def _add_plans(
                 loaded,
                 resolved,
                 schema,
-                builtin_registry(),
+                registry,
                 key_properties=entry.key_properties,
                 config=config,
             )
@@ -230,7 +253,7 @@ def functions(*, as_json: bool) -> None:
         return
     lines = ["Builtin steps:"]
     for step in report["steps"]:
-        flags = " [vectorised]" if step["vectorised"] else ""
+        flags = (" [vectorised]" if step["vectorised"] else "") + (" [udf]" if step["udf"] else "")
         lines.append(f"  {step['name']}({step['signature']}){flags}")
         if step["doc"]:
             lines.append(f"      {step['doc']}")
@@ -246,12 +269,16 @@ def functions(*, as_json: bool) -> None:
 
 
 def functions_report() -> dict[str, Any]:
-    """Builtin steps, cast targets and expression functions, as plain data."""
-    registry = builtin_registry()
+    """Builtin steps (and installed UDFs), cast targets and expression functions."""
+    registry = _registry(None, allow_python_udfs=False)
     groups = ("predicates", "coercion", "temporal", "text", "numeric", "misc", "python", "modules")
     ordered = sorted(FUNCTIONS.values(), key=lambda f: (groups.index(f.group), f.name))
+    builtins = builtin_registry().names()
     return {
-        "steps": [_step_report(t) for _, t in sorted(registry.names().items())],
+        "steps": [
+            {**_step_report(t), "udf": name not in builtins}
+            for name, t in sorted(registry.names().items())
+        ],
         "casts": sorted(registry.casts),
         "functions": [
             {"name": f.name, "group": f.group, "signature": f.signature, "doc": f.doc}
