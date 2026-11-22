@@ -1,0 +1,73 @@
+ci:
+  autofix_prs: true
+  autofix_commit_msg: "style: pre-commit fixes"
+  autoupdate_schedule: monthly
+  autoupdate_commit_msg: "chore: pre-commit autoupdate"
+  skip:
+  - uv-audit
+  - mypy   # local hooks need the project environment
+  - wiki-frontmatter
+
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v6.0.0
+  hooks:
+  - id: check-json
+  - id: check-toml
+  - id: check-yaml
+  - id: end-of-file-fixer
+  - id: trailing-whitespace
+
+- repo: https://github.com/zizmorcore/zizmor-pre-commit
+  rev: v1.30.1
+  hooks:
+  - id: zizmor
+
+- repo: https://github.com/python-jsonschema/check-jsonschema
+  rev: 0.38.2
+  hooks:
+  - id: check-dependabot
+  - id: check-github-workflows
+  - id: check-meltano
+
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.16.10
+  hooks:
+  - id: ruff-check
+  - id: ruff-format
+
+- repo: https://github.com/astral-sh/uv-pre-commit
+  rev: 0.12.24
+  hooks:
+  - id: uv-audit
+  - id: uv-lock
+
+# The wiki has its own conventions (wiki/runbooks/wiki-maintenance.md) and its own linter
+# below, so mdformat leaves it alone.
+- repo: https://github.com/hukkin/mdformat
+  rev: 1.0.0
+  hooks:
+  - id: mdformat
+    exclude: ^wiki/
+    additional_dependencies:
+    - mdformat-gfm
+    - mdformat-frontmatter
+
+- repo: https://github.com/crate-ci/typos
+  rev: v1.51.1
+  hooks:
+  - id: typos
+
+- repo: local
+  hooks:
+  - id: mypy
+    name: mypy
+    entry: uv run --locked --group typing mypy map_conform tests
+    language: system
+    types: [python]
+    pass_filenames: false
+  - id: wiki-frontmatter
+    name: wiki frontmatter
+    entry: uv run --locked --group test bin/wiki-lint-frontmatter.py
+    language: system
+    files: ^wiki/.*\.md$

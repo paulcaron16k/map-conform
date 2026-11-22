@@ -1,0 +1,3 @@
+[default.extend-identifiers]
+# The Singer message type, pluralised. typos splits it as RECOR + Ds.
+RECORDs = "RECORDs"

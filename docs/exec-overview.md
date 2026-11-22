@@ -26,13 +26,13 @@ target.
 1. **Cleans values** while casting strings to a declared type: currency, thousands
    separators, parenthesised negatives, null tokens, non-ISO and spreadsheet-serial dates,
    epoch times, time zones, boolean words.
-2. **Conforms names** of streams, columns and nested members so they are legal in every
+1. **Conforms names** of streams, columns and nested members so they are legal in every
    target: snake_case, ASCII, 63 characters, reserved-word safe, clash-checked.
-3. **Casts to declared types**, never inferred, with precise decimals and explicit
+1. **Casts to declared types**, never inferred, with precise decimals and explicit
    timestamp-with-zone vs without.
-4. **Prefixes and aliases streams.**
-5. **Adds `_sdc_*` metadata** with the SDK's exact semantics, in one place.
-6. **Handles BATCH at columnar speed**: parquet in, Arrow transforms, parquet out. The data
+1. **Prefixes and aliases streams.**
+1. **Adds `_sdc_*` metadata** with the SDK's exact semantics, in one place.
+1. **Handles BATCH at columnar speed**: parquet in, Arrow transforms, parquet out. The data
    becomes Python objects only for the columns that need it.
 
 Behaviour is driven by a **conform spec file**. The spec is a versioned YAML/JSON file, so it
@@ -55,7 +55,7 @@ conditionals, and registered Python functions for anything else.
 ## Scope and non-goals
 
 | In | Out |
-|---|---|
+| -- | -- |
 | Name, type and value conforming; metadata; BATCH transform; everything SDK stream maps do (alias, filter, split/copy streams, drop, expressions, faker, flattening), and SDK `stream_maps` settings accepted unchanged; masking/hashing at parity with pipelinewise-transform-field | Loading, merging, deduplicating or partitioning (target concerns) |
 | Declared-schema validation and dead-letter rejects | Data-quality rule engines, cross-row checks, joins |
 | Importing from a Singer catalog; Zamboni `columns` bridge | Table maintenance (Zamboni's job) |
@@ -63,7 +63,7 @@ conditionals, and registered Python functions for anything else.
 ## Plan at a glance
 
 | Phase | Delivers | Exit |
-|---|---|---|
+| -- | -- | -- |
 | P0 Foundations | Repo scaffolded from the SDK cookiecutter, CI, wiki, docs | CI is green and the package installs |
 | P1 Spec & names | The spec model, loader, JSON Schema and CLI `spec validate`; the name conformer | Golden tests for naming |
 | P2 RECORD engine | Type system, cast builtins, the RECORD path, `_sdc_*`, on_error/reject | The CSV corpus lands clean through target-jsonl |
@@ -77,7 +77,7 @@ Details: [plan-wbs.md](plan-wbs.md).
 ## Key risks
 
 | Risk | Mitigation |
-|---|---|
+| -- | -- |
 | Stock SDK targets strip `_sdc_*` unless `add_record_metadata: true` | Documented in setup and in the contract; checked by `map-conform doctor` |
 | Expression language becomes a security hole | Sandboxed evaluator; Python UDFs from module paths need an explicit opt-in |
 | RECORD and BATCH drift apart | One compiled plan; parity tests over the whole corpus |

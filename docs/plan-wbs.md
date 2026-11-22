@@ -26,7 +26,7 @@ referenced by at least one target's review rules.
 ## Phases
 
 | Phase | Epics | Exit criteria |
-|---|---|---|
+| -- | -- | -- |
 | **P0 Foundations** | E1 | Cookiecutter scaffold committed; CI (lint, type, test, build) green on 3.10–3.14; wiki and docs in place; pre-commit and wiki lint working |
 | **P1 Spec & names** | E2, E3 | Spec loads strictly with inheritance; JSON Schema generated, with a staleness test; `spec validate/schema`; conformer passes golden and property tests |
 | **P2 RECORD engine** | E4, E5, E7 | Type system and builtins; RECORD path end to end; `_sdc_*`; on_error/reject; CSV corpus lands clean via target-jsonl |
@@ -40,7 +40,7 @@ referenced by at least one target's review rules.
 ### E1 Foundations (P0) — 1
 
 | WBS | Story | Pts | Acceptance |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | 1.1 | Scaffold from the SDK mapper cookiecutter (hatchling, hatch-vcs, ruff, mypy, pytest, tox-uv); package `map_conform`, executable `map-conform` | 3 | `uv run map-conform --about` works; generated mapper replaced with an `InlineMapper` pass-through that **also passes BATCH through** |
 | 1.2 | CI workflows: lint, type, test matrix 3.10–3.13, build, zizmor; trusted publishing configured but disabled | 3 | CI green on PR |
 | 1.3 | Pre-commit: ruff, mypy, wiki frontmatter linter (`bin/wiki-lint-frontmatter.py`), mdformat excluding `wiki/` | 2 | Hook rejects bad frontmatter |
@@ -50,7 +50,7 @@ referenced by at least one target's review rules.
 ### E2 Conform spec (P1) — 2
 
 | WBS | Story | Pts | Acceptance |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | 2.1 | Spec dataclass model (frozen) for Defaults, StreamSpec, ColumnSpec, Chain, Macro | 5 | Model round-trips; unknown keys rejected |
 | 2.2 | Loader: YAML/JSON, `${var}` / `${env:}` substitution, inheritance by presence, glob specificity | 5 | Inheritance tests (objects merge, lists replace) |
 | 2.3 | JSON Schema generator, shipped schema, staleness test | 3 | `map-conform spec schema` prints it; test fails when stale |
@@ -60,7 +60,7 @@ referenced by at least one target's review rules.
 ### E3 Name conformer (P1) — 3
 
 | WBS | Story | Pts | Acceptance |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | 3.1 | Conform pipeline steps 1–8 (NFKC, transliterate, camel split, case, replace, collapse, digit, empty) | 5 | Golden table passes |
 | 3.2 | Reserved-word data files (ANSI, Postgres, DuckDB) and policy | 2 | `select` → `select_` |
 | 3.3 | Length limit with hash truncation; collision detection (error/suffix) under case folding | 3 | Property tests: idempotent, grammar, unique |
@@ -70,7 +70,7 @@ referenced by at least one target's review rules.
 ### E4 Type system (P2) — 4
 
 | WBS | Story | Pts | Acceptance |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | 4.1 | CType parser and model (all rows of the type table, aliases, `decimal(p,s)`, struct/list) | 3 | Parse/print round-trip |
 | 4.2 | Tap SCHEMA → CType (hints, anyOf, multi-type, x-singer.decimal) | 5 | Table-driven tests over SDK-style schemas |
 | 4.3 | CType → canonical JSON Schema (contract) | 3 | Snapshot tests; decimals emitted as x-singer.decimal |
@@ -79,7 +79,7 @@ referenced by at least one target's review rules.
 ### E5 Builtins and RECORD engine (P2) — 5
 
 | WBS | Story | Pts | Acceptance |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | 5.1 | Transform protocol, registry, kwargs validation, pre/post type checking, implicit cast | 5 | Bad kwargs fail at compile with their path |
 | 5.2 | Text builtins | 3 | Corpus green |
 | 5.3 | Numeric cast grammar (currency, locales, parens, percent, rounding policies) | 5 | Corpus green; int-from-fraction errors by default |
@@ -93,7 +93,7 @@ referenced by at least one target's review rules.
 ### E6 Expressions, conditionals, macros, UDFs (P3) — 6
 
 | WBS | Story | Pts | Acceptance |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | 6.1 | Safe expression compiler (AST whitelist → closures) and SDK stream-map compatibility | 5 | SDK stream-map expression corpus passes; escape attempts rejected |
 | 6.2 | Function library (predicates, coercion, temporal, text, numeric, misc) | 5 | Documented by `map-conform functions` |
 | 6.3 | `case` step with when/then/else; ternary | 3 | Conditional examples pass |
@@ -104,7 +104,7 @@ referenced by at least one target's review rules.
 ### E7 Metadata, errors, metrics (P2) — 7
 
 | WBS | Story | Pts | Acceptance |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | 7.1 | `_sdc_*` columns, SDK-exact | 3 | Parity test against SDK `_add_sdc_metadata_to_record` |
 | 7.2 | ConformError with full context; on_error raise/null/keep | 3 | Messages name stream, column, row and value |
 | 7.3 | Reject sink (JSONL/parquet) and rate thresholds | 3 | Rejected rows written; threshold fails the run |
@@ -113,7 +113,7 @@ referenced by at least one target's review rules.
 ### E8 BATCH engine (P4) — 8
 
 | WBS | Story | Pts | Acceptance |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | 8.1 | BATCH manifest read/write over fsspec; storage settings | 3 | Local and memory-fs tests |
 | 8.2 | Parquet chunked reader/writer with declared Arrow schema | 3 | Output schema equals `to_arrow(plan)` |
 | 8.3 | JSONL reader (explicit string types) and writer | 3 | gzip and plain |
@@ -127,7 +127,7 @@ referenced by at least one target's review rules.
 ### E9 Bridges and tooling (P5) — 9
 
 | WBS | Story | Pts | Acceptance |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | 9.1 | `spec import --catalog` (drafts a spec from a catalog) | 3 | Generated spec validates |
 | 9.2 | Zamboni `columns` export/import | 3 | Round-trip with a Zamboni v2 file |
 | 9.3 | `doctor`: meltano.yml checks (`add_record_metadata`, spec path, UDF opt-in) | 3 | Flags a missing `add_record_metadata` |
@@ -135,7 +135,7 @@ referenced by at least one target's review rules.
 ### E10 Docs and release (P5) — 10
 
 | WBS | Story | Pts | Acceptance |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | 10.1 | User docs: README, spec reference, cookbook (CSV, spreadsheets, epoch, masking) | 5 | Every cookbook example is tested |
 | 10.2 | Reference Meltano project (`examples/`) with tap-csv → map-conform → target-ducklake | 3 | `meltano run` in CI |
 | 10.3 | Release 0.1.0 to PyPI (trusted publishing), changelog | 2 | `pip install map-conform` works |
@@ -144,7 +144,7 @@ referenced by at least one target's review rules.
 ### E11 Adoption: clean-landing targets (P6) — 11
 
 | WBS | Story | Pts | Acceptance |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | 11.1 | Publish the Clean-Landing Contract page and a reviewer snippet | 2 | Linked from the README |
 | 11.2 | target-ducklake: run the E2E suite with `type_source`/conforming off; list what can be removed | 3 | Report in the wiki |
 | 11.3 | Add a "trust upstream" note to the target review rules in owned targets | 1 | Rules merged |
@@ -152,7 +152,7 @@ referenced by at least one target's review rules.
 ### E12 Stream-map parity and masking (P3) — 12
 
 | WBS | Story | Pts | Acceptance |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | 12.1 | `stream_maps` translator: settings, globs, `__alias__`, `__filter__`, `__key_properties__`, `__else__`, `null`/`__NULL__`, `stream_map_config` | 5 | Translated spec equals the hand-written native spec for each feature |
 | 12.2 | SDK prefix type inference for undeclared expression columns in compatibility mode, with warnings | 2 | Output SCHEMA matches the SDK mapper's |
 | 12.3 | Stream-level `source`: split or copy a tap stream into several output streams | 3 | Copy and split examples; STATE order kept |
@@ -175,7 +175,7 @@ E1 ─▶ E2 ─▶ E3
 ## Estimate
 
 | Phase | Points |
-|---|---|
+| -- | -- |
 | P0 | 13 |
 | P1 | 32 |
 | P2 | 62 |
