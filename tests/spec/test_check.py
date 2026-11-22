@@ -44,12 +44,15 @@ def test_valid_spec(tmp_path: Path) -> None:
 
 def test_parse_errors_are_all_reported_with_paths(tmp_path: Path) -> None:
     """Strict-parse problems are listed together, each with its path."""
-    path = write(tmp_path, """\
+    path = write(
+        tmp_path,
+        """\
         version: 1
         defaults: {on_error: ignore}
         streams:
           s: {columns: {a: {type: decimel}}, bogus: 1}
-        """)  # fmt: skip
+        """,
+    )
     code, _, err = run("spec", "validate", str(path))
     assert code == 1
     assert err.splitlines() == [
@@ -117,11 +120,13 @@ def test_catalog_check_reports_every_problem_with_its_path(tmp_path: Path) -> No
 
 def test_key_property_cannot_be_dropped_and_undeclared_error() -> None:
     """Dropping a catalog key fails; undeclared: error names every undeclared column."""
-    spec = parse_spec({
-        "version": 1,
-        "defaults": {"undeclared": "error"},
-        "streams": {"Orders Export": {"columns": {"Order ID": {"drop": True}}}},
-    })  # fmt: skip
+    spec = parse_spec(
+        {
+            "version": 1,
+            "defaults": {"undeclared": "error"},
+            "streams": {"Orders Export": {"columns": {"Order ID": {"drop": True}}}},
+        }
+    )
     findings = [str(f) for f in check_spec(spec, read_catalog(ORDERS))]
     assert (
         findings[0]
@@ -132,10 +137,15 @@ def test_key_property_cannot_be_dropped_and_undeclared_error() -> None:
 
 def test_collisions_between_output_streams() -> None:
     """Two outputs with one name are an error."""
-    spec = parse_spec({
-        "version": 1,
-        "streams": {"Orders Export": {"alias": "orders"}, "orders": {"source": "Orders Export"}},
-    })  # fmt: skip
+    spec = parse_spec(
+        {
+            "version": 1,
+            "streams": {
+                "Orders Export": {"alias": "orders"},
+                "orders": {"source": "Orders Export"},
+            },
+        }
+    )
     assert [str(f) for f in check_spec(spec, read_catalog(ORDERS))] == [
         "streams.orders: output stream 'orders' is also produced by 'Orders Export'"
     ]
@@ -168,17 +178,23 @@ def test_bad_catalog_is_reported(tmp_path: Path) -> None:
 
 def test_explain_report() -> None:
     """Explain shows matched rules, output names, column sources, names, types and notes."""
-    spec = parse_spec({
-        "version": 1,
-        "defaults": {"stream": {"prefix": "raw_"}},
-        "streams": {
-            "Orders*": {"on_error": "null"},
-            "Orders Export": {"columns": {"Order ID": {"name": "order_id", "type": "int64"},
-                                         "Notes": {"drop": True},
-                                         "year": {"type": "int32", "expr": "1"}}},
-            "orders_eu": {"source": "Orders Export"},
-        },
-    })  # fmt: skip
+    spec = parse_spec(
+        {
+            "version": 1,
+            "defaults": {"stream": {"prefix": "raw_"}},
+            "streams": {
+                "Orders*": {"on_error": "null"},
+                "Orders Export": {
+                    "columns": {
+                        "Order ID": {"name": "order_id", "type": "int64"},
+                        "Notes": {"drop": True},
+                        "year": {"type": "int32", "expr": "1"},
+                    }
+                },
+                "orders_eu": {"source": "Orders Export"},
+            },
+        }
+    )
     report = explain(spec, "Orders Export", read_catalog(ORDERS))
     assert report["matched"] == ["Orders*", "Orders Export"]
     names = [o["name"] for o in report["outputs"]]
@@ -190,9 +206,13 @@ def test_explain_report() -> None:
     assert "notes" not in columns
     assert columns["order_id"]["type"] == "int64"
     assert columns["amount"] == {
-        "source": ["Amount ($)"], "name": "amount", "type": None,
-        "tap_type": ["string", "null"], "declared": False, "notes": ["dropped '$'"],
-    }  # fmt: skip
+        "source": ["Amount ($)"],
+        "name": "amount",
+        "type": None,
+        "tap_type": ["string", "null"],
+        "declared": False,
+        "notes": ["dropped '$'"],
+    }
     assert columns["year"]["source"] is None
     assert [c["name"] for c in first["columns"]][-1] == "year"
 
@@ -210,3 +230,61 @@ def test_explain_cli(tmp_path: Path) -> None:
     assert json.loads(out)["outputs"][0]["name"] == "raw_orders_export"
     code, out, _ = run("spec", "explain", str(path), "--stream", "Other", "--catalog", str(ORDERS))
     assert "(not in the catalog" in out
+
+
+def test_explain_shows_the_plan(tmp_path: Path) -> None:
+    """With a catalog, explain compiles and prints each column's plan."""
+    path = write(
+        tmp_path,
+        """\
+        version: 1
+        streams:
+          Orders Export:
+            columns:
+              Order ID: {name: order_id, type: int64, nullable: false}
+              Amount ($): {type: "decimal(12,2)", transform: [{strip_chars: "$, "}]}
+        """,
+    )
+    code, out, _ = run(
+        "spec", "explain", str(path), "--stream", "Orders Export", "--catalog", str(ORDERS)
+    )
+    assert code == 0
+    assert "  plan:" in out
+    assert "    order_id: int64 not null, on_error raise" in out
+    assert "      steps: strip_chars -> cast: decimal(12,2)" in out
+    code, out, _ = run(
+        "spec",
+        "explain",
+        str(path),
+        "--stream",
+        "Orders Export",
+        "--catalog",
+        str(ORDERS),
+        "--json",
+    )
+    plan = json.loads(out)["outputs"][0]["plan"]
+    assert plan["columns"][0] == {
+        "name": "order_id",
+        "sources": ["Order ID"],
+        "type": "int64",
+        "nullable": False,
+        "on_error": "raise",
+        "steps": ["cast: int64"],
+    }
+
+
+def test_explain_reports_plan_problems(tmp_path: Path) -> None:
+    """A plan that does not compile is reported, and explain exits 1."""
+    path = write(
+        tmp_path,
+        """\
+        version: 1
+        streams:
+          Orders Export: {columns: {Order ID: {type: int64, on_error: keep}}}
+        """,
+    )
+    code, out, _ = run(
+        "spec", "explain", str(path), "--stream", "Orders Export", "--catalog", str(ORDERS)
+    )
+    assert code == 1
+    assert "keep would put raw text in a int64 column" in out

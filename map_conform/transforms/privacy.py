@@ -102,18 +102,34 @@ def _redact_date(value: object, k: RedactDateKwargs, _ctx: Context) -> object:
 
 def register(registry: Registry) -> None:
     """Add the privacy builtins."""
-    registry.register(Transform(
-        "hash", _hash, kwargs=HashKwargs, positional="algo",
-        accepts=frozenset({ANY}), produces=lambda _stage, _k: CType("string"),
-    ))  # fmt: skip
+    registry.register(
+        Transform(
+            "hash",
+            _hash,
+            kwargs=HashKwargs,
+            positional="algo",
+            accepts=frozenset({ANY}),
+            produces=lambda _stage, _k: CType("string"),
+        )
+    )
     registry.register(
         Transform("mask", _mask, kwargs=MaskKwargs, accepts=frozenset({RAW, "string"}))
     )
-    registry.register(Transform(
-        "set_null", lambda _v, _k, _c: None, kwargs=NoKwargs, accepts=frozenset({ANY}),
-        forces_nullable=True,
-    ))  # fmt: skip
-    registry.register(Transform(
-        "redact_date", _redact_date, kwargs=RedactDateKwargs, positional="to",
-        accepts=frozenset({"date", "timestamp", "timestamptz"}),
-    ))  # fmt: skip
+    registry.register(
+        Transform(
+            "set_null",
+            lambda _v, _k, _c: None,
+            kwargs=NoKwargs,
+            accepts=frozenset({ANY}),
+            forces_nullable=True,
+        )
+    )
+    registry.register(
+        Transform(
+            "redact_date",
+            _redact_date,
+            kwargs=RedactDateKwargs,
+            positional="to",
+            accepts=frozenset({"date", "timestamp", "timestamptz"}),
+        )
+    )

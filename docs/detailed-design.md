@@ -629,6 +629,31 @@ At SCHEMA:
 1. Cache the plan by stream name. A new SCHEMA for the same stream recompiles, and the emitted
    SCHEMA changes only if the output differs.
 
+As built (`map_conform/plan/compile.py`):
+
+- **Column names** come from `spec.check.output_columns`, the same code `spec explain`
+  uses.
+- **Types.** An undeclared column takes its type from the tap SCHEMA (§4). A column built
+  from several sources needs a declared type.
+- **Nested members** are conformed. The member rename tree is applied to values *before*
+  the chain, because the struct CType carries conformed names. Struct and list casts
+  (`map_conform/transforms/nested.py`) cast members by their declared types, with neutral
+  options, and drop keys the struct does not declare.
+- **Compile-time checks:**
+  - `on_error: keep` is allowed only for string and json columns;
+  - `set_null` makes a column nullable, and an error if the column says `nullable: false`;
+  - `default` and `enum` values are cast through the column's own chain, so a bad value is
+    an error at its path.
+- **Keys and bookmarks.** Key and bookmark properties, given as source or output names,
+  are renamed to output names. `strict` turns `undeclared` into `error`.
+- **Deferred:**
+  - `expr`, `filter`, `when` and `fields` are refused until the expression language
+    (WBS 6.x) and nested field transforms (WBS 12.x) exist, so there are no derived-column
+    dependencies to order yet;
+  - the plan cache lives in the mapper (WBS 5.8).
+- `spec explain --catalog` prints the compiled plan: each column's type, nullability,
+  `on_error`, steps, default and enum.
+
 ## 10. Execution
 
 ### 10.1 Row executor

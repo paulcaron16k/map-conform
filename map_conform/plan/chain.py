@@ -154,9 +154,11 @@ class ChainCompiler:
         for i, step in enumerate(chain.steps):
             step_path = child(base, i) if many else base
             if isinstance(step, (ExprStep, CaseStep)) or step.when is not None:
-                kind = "an expr step" if isinstance(step, ExprStep) else (
-                    "a case step" if isinstance(step, CaseStep) else "'when'"
-                )  # fmt: skip
+                kind = (
+                    "an expr step"
+                    if isinstance(step, ExprStep)
+                    else ("a case step" if isinstance(step, CaseStep) else "'when'")
+                )
                 self.issues.add(step_path, f"{kind} {_NEEDS_EXPR}")
                 continue
             if step.name in self.macros:

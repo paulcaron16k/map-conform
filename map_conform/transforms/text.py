@@ -198,31 +198,52 @@ def register(registry: Registry) -> None:
     for name, fn in simple:
         registry.register(Transform(name, fn, kwargs=NoKwargs))
     registry.register(Transform("trim", _trim, kwargs=TrimKwargs, positional="chars"))
-    registry.register(Transform("null_tokens", _null_tokens, kwargs=NullTokensKwargs,
-                                positional="tokens"))  # fmt: skip
-    registry.register(Transform("strip_chars", _strip_chars, kwargs=CharsKwargs,
-                                positional="chars"))  # fmt: skip
+    registry.register(
+        Transform("null_tokens", _null_tokens, kwargs=NullTokensKwargs, positional="tokens")
+    )
+    registry.register(
+        Transform("strip_chars", _strip_chars, kwargs=CharsKwargs, positional="chars")
+    )
     registry.register(Transform("regex_replace", _regex_replace, kwargs=RegexReplaceKwargs))
-    registry.register(Transform("regex_extract", _regex_extract, kwargs=RegexExtractKwargs,
-                                positional="pattern"))  # fmt: skip
-    registry.register(Transform(
-        "normalize_unicode",
-        lambda v, k, _c: unicodedata.normalize(k.form, _text(v)),
-        kwargs=NormalizeKwargs, positional="form",
-    ))  # fmt: skip
+    registry.register(
+        Transform("regex_extract", _regex_extract, kwargs=RegexExtractKwargs, positional="pattern")
+    )
+    registry.register(
+        Transform(
+            "normalize_unicode",
+            lambda v, k, _c: unicodedata.normalize(k.form, _text(v)),
+            kwargs=NormalizeKwargs,
+            positional="form",
+        )
+    )
     registry.register(Transform("pad", _pad, kwargs=PadKwargs, positional="width"))
-    registry.register(Transform("left", lambda v, k, _c: _text(v)[: k.n], kwargs=LengthKwargs,
-                                positional="n"))  # fmt: skip
-    registry.register(Transform("right", lambda v, k, _c: _text(v)[-k.n :] if k.n else "",
-                                kwargs=LengthKwargs, positional="n"))  # fmt: skip
-    registry.register(Transform(
-        "substring",
-        lambda v, k, _c: _text(v)[k.start : None if k.length is None else k.start + k.length],
-        kwargs=SubstringKwargs,
-    ))  # fmt: skip
-    registry.register(Transform("map_values", _map_values, kwargs=MapValuesKwargs,
-                                positional="values"))  # fmt: skip
-    registry.register(Transform(
-        "split", _split, kwargs=SplitKwargs, positional="sep",
-        produces=lambda _stage, _k: CType("list", item=CType("string")),
-    ))  # fmt: skip
+    registry.register(
+        Transform("left", lambda v, k, _c: _text(v)[: k.n], kwargs=LengthKwargs, positional="n")
+    )
+    registry.register(
+        Transform(
+            "right",
+            lambda v, k, _c: _text(v)[-k.n :] if k.n else "",
+            kwargs=LengthKwargs,
+            positional="n",
+        )
+    )
+    registry.register(
+        Transform(
+            "substring",
+            lambda v, k, _c: _text(v)[k.start : None if k.length is None else k.start + k.length],
+            kwargs=SubstringKwargs,
+        )
+    )
+    registry.register(
+        Transform("map_values", _map_values, kwargs=MapValuesKwargs, positional="values")
+    )
+    registry.register(
+        Transform(
+            "split",
+            _split,
+            kwargs=SplitKwargs,
+            positional="sep",
+            produces=lambda _stage, _k: CType("list", item=CType("string")),
+        )
+    )

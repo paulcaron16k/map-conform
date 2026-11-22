@@ -240,23 +240,65 @@ def cast_json(value: object, args: CastArgs, _ctx: Context) -> object:
 
 def register(registry: Registry) -> None:
     """Add these casts."""
-    registry.register_cast({"string"}, Transform(
-        "cast", cast_string, kwargs=StringCast, defaults=_string_defaults,
-        accepts=frozenset({RAW, "string", "boolean", "int16", "int32", "int64", "float32",
-                           "float64", "decimal", "uuid"}),
-    ))  # fmt: skip
-    registry.register_cast({"boolean"}, Transform(
-        "cast", cast_boolean, kwargs=BooleanCast, defaults=_boolean_defaults,
-        accepts=frozenset({RAW, "string", "boolean"}),
-    ))  # fmt: skip
-    registry.register_cast({"uuid"}, Transform(
-        "cast", cast_uuid, kwargs=UuidCast, defaults=cleanup_defaults,
-        accepts=frozenset({RAW, "string", "uuid"}),
-    ))  # fmt: skip
-    registry.register_cast({"binary"}, Transform(
-        "cast", cast_binary, kwargs=BinaryCast, defaults=cleanup_defaults,
-        accepts=frozenset({RAW, "string", "binary"}),
-    ))  # fmt: skip
-    registry.register_cast({"json"}, Transform(
-        "cast", cast_json, kwargs=JsonCast, accepts=frozenset({RAW, "string", "json"}),
-    ))  # fmt: skip
+    registry.register_cast(
+        {"string"},
+        Transform(
+            "cast",
+            cast_string,
+            kwargs=StringCast,
+            defaults=_string_defaults,
+            accepts=frozenset(
+                {
+                    RAW,
+                    "string",
+                    "boolean",
+                    "int16",
+                    "int32",
+                    "int64",
+                    "float32",
+                    "float64",
+                    "decimal",
+                    "uuid",
+                }
+            ),
+        ),
+    )
+    registry.register_cast(
+        {"boolean"},
+        Transform(
+            "cast",
+            cast_boolean,
+            kwargs=BooleanCast,
+            defaults=_boolean_defaults,
+            accepts=frozenset({RAW, "string", "boolean"}),
+        ),
+    )
+    registry.register_cast(
+        {"uuid"},
+        Transform(
+            "cast",
+            cast_uuid,
+            kwargs=UuidCast,
+            defaults=cleanup_defaults,
+            accepts=frozenset({RAW, "string", "uuid"}),
+        ),
+    )
+    registry.register_cast(
+        {"binary"},
+        Transform(
+            "cast",
+            cast_binary,
+            kwargs=BinaryCast,
+            defaults=cleanup_defaults,
+            accepts=frozenset({RAW, "string", "binary"}),
+        ),
+    )
+    registry.register_cast(
+        {"json"},
+        Transform(
+            "cast",
+            cast_json,
+            kwargs=JsonCast,
+            accepts=frozenset({RAW, "string", "json"}),
+        ),
+    )
