@@ -27,6 +27,7 @@ from zoneinfo import ZoneInfo
 from map_conform.errors import StepFailed
 from map_conform.expr.sandbox import MAX_LENGTH, MODULES, SandboxError, safe_range
 from map_conform.transforms.temporal import TemporalCast, localize, parse_temporal
+from map_conform.types.jsontext import dumps
 
 _TRUE = frozenset({"true", "t", "yes", "y", "1", "on"})
 _FALSE = frozenset({"false", "f", "no", "n", "0", "off"})
@@ -244,19 +245,10 @@ def to_str(value: object) -> str:
     return _text(value)
 
 
-def _json_default(value: object) -> object:
-    if isinstance(value, Decimal):
-        return int(value) if value == value.to_integral_value() else float(value)
-    if isinstance(value, (dt.datetime, dt.date, dt.time, uuid.UUID)):
-        return _text(value)
-    msg = f"{type(value).__name__} is not JSON"
-    raise TypeError(msg)
-
-
 @_function("coercion", "value")
 def to_json(value: object) -> str:
     """JSON text (null becomes the text null)."""
-    return json.dumps(value, ensure_ascii=False, default=_json_default)
+    return dumps(value)
 
 
 @_function("coercion", "text")

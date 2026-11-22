@@ -289,7 +289,10 @@ def _resolve(
     merged: dict[str, Any] = {}
     for raw in raws:
         for name, value in raw.items():
-            merged[name] = deep_merge(merged[name], thaw(value)) if name in merged else thaw(value)
+            plain = thaw(value)
+            if name == "naming" and isinstance(plain, str):
+                plain = {"preset": plain}  # naming: sdk merges like {preset: sdk}
+            merged[name] = deep_merge(merged[name], plain) if name in merged else plain
     own = {k: v for k, v in merged.items() if k in STREAM_KEYS}
     overrides = {k: v for k, v in merged.items() if k in DEFAULTS_KEYS}
     issues = Issues()

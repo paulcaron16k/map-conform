@@ -40,7 +40,7 @@ def call(text: str, **columns: object) -> object:
         ("to_float('1.5'), to_decimal('1.005', 10, 2)", (1.5, Decimal("1.01"))),
         ("to_bool('Yes'), to_bool('off'), to_bool(1)", (True, False, True)),
         ("to_str(d), to_str(True), to_str(day)", ("2.50", "true", "2026-03-14")),
-        ("to_json({'a': d, 't': ts})", '{"a": 2.5, "t": "2026-03-14T09:26:53+00:00"}'),
+        ("to_json({'a': d, 't': ts})", '{"a": 2.50, "t": "2026-03-14T09:26:53+00:00"}'),
         ("from_json('{\"a\": 1.10}')['a']", Decimal("1.10")),
         # temporal
         (

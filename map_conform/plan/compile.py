@@ -21,6 +21,7 @@ import pyarrow as pa
 from map_conform.errors import OnError
 from map_conform.expr.compiler import ExprError, Expression, Names, compile_expr
 from map_conform.naming.conform import NameConformer, NamingError
+from map_conform.naming.flatten import Flattener, FlattenError
 from map_conform.naming.nested import MemberNames, conform_ctype
 from map_conform.naming.streams import stream_name
 from map_conform.plan.chain import ChainCompiler
@@ -97,6 +98,10 @@ class StreamPlan:
     """Rows where this is falsy are dropped; it sees every column by output name."""
     fake: FakeData | None = None
     """The stream's fake-data generator (created on first use)."""
+    flattener: Flattener | None = None
+    """For ``nested: flatten``: flattens each record as the SCHEMA was."""
+    flat_properties: Mapping[str, Any] = field(default_factory=dict)
+    """The flattened tap SCHEMA properties the records are flattened against."""
 
 
 def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spec context
@@ -128,6 +133,12 @@ def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spe
         named = None
     notes.extend(f"stream name: {n}" for n in (named.notes if named else ()))
     properties: Mapping[str, Any] = tap_schema.get("properties") or {}
+    flattener = _flattener(resolved) if resolved.settings.nested == "flatten" else None
+    if flattener is not None:
+        try:
+            properties = flattener.properties(properties)
+        except FlattenError as exc:
+            issues.add(child(path, "nested"), str(exc))
     findings: list[Finding] = []
     columns = output_columns(resolved, properties, findings, path)
     for finding in findings:
@@ -169,7 +180,21 @@ def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spe
         order=order,
         filter=row_filter,
         fake=fake,
+        flattener=flattener,
+        flat_properties=dict(properties) if flattener is not None else {},
     )
+
+
+def _flattener(resolved: ResolvedStream) -> Flattener:
+    """SDK flattening for the properties the spec does not name itself."""
+    named = set(resolved.spec.columns)
+    for spec in resolved.spec.columns.values():
+        if isinstance(spec.source, str):
+            named.add(spec.source)
+        elif spec.source is not None:
+            named.update(spec.source)
+    options = resolved.settings.flatten
+    return Flattener(options.separator, options.max_depth, options.max_key_length, frozenset(named))
 
 
 def _filter(text: str | None, scope: Names, issues: Issues, path: str) -> Expression | None:

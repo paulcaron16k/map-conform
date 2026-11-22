@@ -153,7 +153,7 @@ def test_json_cast() -> None:
         "b": 1,
     }
     wired = to_wire(run({"cast": "json"}, '{"a": 1.10}', target="json"), parse_ctype("json"))
-    assert wired == '{"a": "1.10"}'
+    assert wired == '{"a": 1.10}'  # an exact JSON number, as it came
 
 
 # --- privacy -------------------------------------------------------------------------------

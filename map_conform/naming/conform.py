@@ -18,6 +18,11 @@ The pipeline is pure and deterministic, and each step follows the ``naming`` def
 
 Running the pipeline on its own output changes nothing. :meth:`NameConformer.conform_all`
 also resolves names that collide under case folding within one stream or struct.
+
+The ``sdk`` preset replaces the pipeline with the Singer SDK's SQL ``conform_name``, byte for
+byte: drop everything but ASCII letters, digits, ``_``, ``-``, ``.`` and whitespace, lowercase,
+trim, turn ``.``, ``-`` and spaces into ``_``, and turn a leading digit into a letter
+(0 -> a). Nothing else is applied.
 """
 
 from __future__ import annotations
@@ -92,6 +97,8 @@ class NameConformer:
             NamingError: when the policy says to fail (e.g. ``leading_digit: error``).
         """
         naming = self.naming
+        if naming.preset == "sdk":
+            return _sdk_conform(source)
         notes: list[str] = []
         text = unicodedata.normalize("NFKC", source)
         text = self._ascii(text, notes)
@@ -233,3 +240,23 @@ class NameConformer:
 
 def _quote(chars: Iterable[str]) -> str:
     return ", ".join(repr(c) for c in dict.fromkeys(chars))
+
+
+_SDK_DROP = re.compile(r"[^a-zA-Z0-9_\-\.\s]")
+
+
+def _sdk_conform(source: str) -> Conformed:
+    """The Singer SDK's ``SQLSink.conform_name``, byte for byte.
+
+    Raises:
+        NamingError: when nothing is left, where the SDK fails with an IndexError.
+    """
+    kept = _SDK_DROP.sub("", source)
+    notes = ["characters outside [a-zA-Z0-9_-. ] dropped"] if kept != source else []
+    name = kept.lower().lstrip().rstrip().replace(".", "_").replace("-", "_").replace(" ", "_")
+    if not name:
+        raise NamingError(source, "nothing is left under naming: sdk")
+    if name[0] in "0123456789":
+        name = "abcdefghij"[int(name[0])] + name[1:]
+        notes.append("leading digit turned into a letter (SDK style)")
+    return Conformed(source, name, tuple(notes))
