@@ -15,11 +15,22 @@ any target and does the following, once, upstream:
 Targets then rely on the [Clean-Landing Contract](wiki/concepts/clean-landing-contract.md)
 and do not re-implement cleanup.
 
-> **Status: planning.** No code yet. Start with the
+> **Status: pre-alpha.** The mapper installs and passes every message through unchanged
+> (BATCH included); conforming arrives phase by phase. Start with the
 > [guidance](creating-a-better-mapper-guidance.md), then the
 > [executive overview](docs/exec-overview.md), [architecture](docs/architecture-hld.md),
 > [detailed design](docs/detailed-design.md) and [plan](docs/plan-wbs.md).
 > The knowledge base is in [wiki/](wiki/index.md).
+
+## Development
+
+```bash
+uv sync --all-groups
+uv run pytest
+uv run ruff check . && uv run ruff format --check .
+uv run mypy map_conform tests
+uvx --with tox-uv tox          # every supported Python, plus typing
+```
 
 ## Licence
 

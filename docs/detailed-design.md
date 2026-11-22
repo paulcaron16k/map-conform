@@ -411,10 +411,12 @@ transform:
 ```python
 from map_conform import udf
 
+
 @udf(name="fiscal_week", returns="int32", vectorized=False)
 def fiscal_week(value, *, start_month: int = 7, ctx=None) -> int | None: ...
 
-@udf(name="clean_sku", returns="string", vectorized=True)      # receives a pyarrow.Array
+
+@udf(name="clean_sku", returns="string", vectorized=True)  # receives a pyarrow.Array
 def clean_sku(arr, *, ctx=None): ...
 ```
 
