@@ -3,8 +3,8 @@ type: playbook
 title: "Test strategy"
 description: "Test layers, corpora, parity and contract tests, benchmarks."
 resource: tests/
-tags: [qa, testing, draft]
-timestamp: 2026-11-22T18:00:00Z
+tags: [qa, testing, active]
+timestamp: 2026-11-22T20:00:00Z
 sources:
   - path: docs/detailed-design.md
   - path: tests/fixtures/README.md
@@ -14,8 +14,8 @@ sources:
 
 Parent: [Wiki Index](../index.md)
 
-> Status: **draft**. Built so far (P0-P3): unit, property, corpus, contract round-trip,
-> SDK parity, E2E and wiki layers. Row/columnar parity and benchmarks arrive with P4.
+> Status: **active**. Every layer is built (P0–P4): unit, property, corpus, contract
+> round-trip, SDK parity, row/columnar parity, E2E, wiki and benchmarks.
 
 | Layer | What | Where |
 |---|---|---|
@@ -24,12 +24,12 @@ Parent: [Wiki Index](../index.md)
 | Expressions | sandbox escapes and exhaustion refused; every SDK test expression evaluates as the SDK's simpleeval does (differential) | `tests/expr/` (built) |
 | SDK parity | every SDK mapper test case through the SDK's `PluginMapper` and map-conform; equal up to documented differences | `tests/compat/` (built) |
 | Corpus | `input → expected \| !null \| !error` tables: dates (25+ formats), currencies, locales, null tokens, booleans, uuids, names | `tests/fixtures/corpus/*.csv` (built) |
-| Parity | every corpus case through the row and columnar executors; outputs must be equal | `tests/parity/` |
+| Parity | every corpus case, generated values, `case` and polars through the row and columnar executors; tables, rejects, errors and metrics must be equal | `tests/parity/` (built) |
 | Contract | contract SCHEMA reads back to the same CType; snapshot of every type's SCHEMA; parquet schema == `to_arrow(plan)` (P4) | `tests/types/test_type_mappings.py` (built) |
 | E2E | the messy CSV fixture through `map-conform` into the published target-jsonl (built); target-ducklake with its cleanup off (later) | `tests/e2e/` |
 | Fixtures | generated fixtures are current; streams, catalogs and BATCH files are valid and agree | `tests/test_fixtures.py` (built) |
 | Wiki | links and anchors resolve; documented modules and citations exist on active pages; no orphans; the log accounts for every page | `tests/wiki/` (built) |
-| Bench | RECORD rows/s; BATCH rows/s; regression gate | `tests/bench/` |
+| Bench | RECORD rows/s; BATCH rows/s; regression gate ([Benchmarks](benchmarks.md)) | `tests/bench/` (built) |
 
 The gates (per the owner's rules) are tests on every supported Python, ruff lint and format,
 mypy and ty, and pre-commit, all green before any phase is called done.
