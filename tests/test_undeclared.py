@@ -12,7 +12,7 @@ DECLARED = {"Order ID": {"name": "order_id", "type": "int64"}}
 
 def spec(undeclared: str | None = None) -> dict[str, object]:
     """A spec declaring only Order ID."""
-    defaults = {"metadata": "none", **({"undeclared": undeclared} if undeclared else {})}
+    defaults = {**({"undeclared": undeclared} if undeclared else {})}
     return {
         "version": 1,
         "defaults": defaults,

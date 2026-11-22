@@ -93,6 +93,11 @@ class Settings:
     metrics_path: str | None = documented(
         "Write per-stream metrics as JSON here at the end of the run.", default=None
     )
+    add_record_metadata: bool | None = documented(
+        "Add the seven Singer SDK _sdc_* columns (default false); the same as "
+        "defaults.add_record_metadata, which a stream can override.",
+        default=None,
+    )
     stream_maps: Mapping[str, Any] | None = documented(
         "Singer SDK stream maps, accepted unchanged and translated into the spec at start-up; "
         "the spec wins where both define a column.",

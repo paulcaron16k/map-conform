@@ -222,8 +222,10 @@ class Defaults:
         default="raise",
         metadata={"null_hint": _NULL_POLICY_HINT},
     )
-    metadata: Literal["sdc", "none"] = documented(
-        "Add the seven Singer SDK _sdc_* columns.", default="sdc"
+    add_record_metadata: bool = documented(
+        "Add the seven Singer SDK _sdc_* columns to SCHEMA, RECORD and BATCH output, as SDK "
+        "targets do with their setting of the same name.",
+        default=False,
     )
     undeclared: Literal["conform", "drop", "error"] = documented(
         "Columns the spec does not mention: conform them from the tap SCHEMA, drop them, or fail.",

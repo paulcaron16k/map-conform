@@ -16,7 +16,7 @@ pytestmark = pytest.mark.e2e
 
 SPEC = """\
 version: 1
-defaults: {stream: {prefix: raw_}, on_error: "null"}
+defaults: {stream: {prefix: raw_}, on_error: "null", add_record_metadata: true}
 streams:
   Orders Export:
     key_properties: [order_id]

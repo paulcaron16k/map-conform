@@ -199,7 +199,7 @@ class MapConformMapper(InlineMapper):
                 ) from exc
             for note in plan.notes:
                 self.logger.info("Stream %r: %s", tap_stream, note)
-            metadata = self._metadata if resolved.settings.metadata == "sdc" else None
+            metadata = self._metadata if resolved.settings.add_record_metadata else None
             metrics = self._metrics.setdefault(plan.name, StreamMetrics())
             self._limits[plan.name] = resolved.settings
             executors.append(RowExecutor(plan, resolved.settings, metadata, metrics))

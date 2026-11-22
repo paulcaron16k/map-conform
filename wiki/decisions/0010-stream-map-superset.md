@@ -60,11 +60,12 @@ map-conform must be a *better* stream map, and must not lose any functionality.
 
 ## Amendment (2026-11-22): compatibility defaults
 Running the SDK's own mapper tests through both mappers showed that map-conform's defaults
-(snake_case naming, conformed stream names, `_sdc_*` columns, JSON text for nested values,
-trimming and null tokens) changed the output of unchanged `stream_maps` settings. With
+(snake_case naming, conformed stream names, JSON text for nested values, trimming and null
+tokens) changed the output of unchanged `stream_maps` settings. With
 `stream_maps` set, these defaults now apply unless the spec sets them:
-`naming: sdk`, `stream.name: preserve`, `metadata: none`, `nested: keep`, and
-`values: {trim: false, null_tokens: []}`. A project moving from meltano-map-transformer
+`naming: sdk`, `stream.name: preserve`, `nested: keep`, and
+`values: {trim: false, null_tokens: []}`. The `_sdc_*` columns follow `add_record_metadata`
+alone (ADR-0005). A project moving from meltano-map-transformer
 keeps its output, and the parity suite (`tests/compat/`) checks every SDK test case.
 The remaining differences, such as canonical timestamps and exact decimals, are deliberate
 and listed in detailed design §15.

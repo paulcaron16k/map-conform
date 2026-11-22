@@ -21,7 +21,7 @@ def spec(**defaults: Any) -> dict[str, Any]:
     """Order ID as int64, Amount as decimal, with the given defaults."""
     return {
         "version": 1,
-        "defaults": {"metadata": "none", **defaults},
+        "defaults": {**defaults},
         "streams": {
             "Customer Orders": {
                 "columns": {

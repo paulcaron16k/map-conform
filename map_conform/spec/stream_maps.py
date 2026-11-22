@@ -20,6 +20,7 @@ SDK                                             native
 ``<property>: "<expr>"``                        ``{expr: ..., infer_type: sdk}``
 ``faker_config``                                ``defaults.faker``
 ``flattening_enabled`` and friends              ``defaults.nested: flatten`` and ``flatten``
+``add_record_metadata``                         ``defaults.add_record_metadata``
 ==============================================  =============================================
 
 Expressions are rewritten so that bare record names read ``record['...']``
@@ -30,8 +31,8 @@ SDK (``aliased.stream`` is a name, ``'aliased_' + __stream_name__`` an expressio
 With ``stream_maps`` set, these **compatibility defaults** apply unless the spec sets them,
 so that a project moving from meltano-map-transformer keeps its output: column names follow
 the SDK's ``conform_name`` (what an SDK SQL target creates), stream names are kept as they
-are, no ``_sdc_*`` columns are added (targets add them), nested values keep their shape, and
-text is not trimmed or nulled by tokens.
+are, nested values keep their shape, and text is not trimmed or nulled by tokens. The
+``add_record_metadata`` setting alone decides the ``_sdc_*`` columns.
 """
 
 from __future__ import annotations
@@ -53,6 +54,7 @@ SDK_SETTINGS = (
     "flattening_max_depth",
     "flattening_separator",
     "flattening_max_key_length",
+    "add_record_metadata",
 )
 """The plugin settings meltano-map-transformer takes, accepted here unchanged."""
 
@@ -63,7 +65,6 @@ SPECIAL = frozenset({"__alias__", "__source__", "__filter__", "__key_properties_
 COMPAT_DEFAULTS: Mapping[str, Any] = {
     "naming": {"preset": "sdk"},
     "stream": {"name": "preserve"},
-    "metadata": "none",
     "nested": "keep",
     "values": {"trim": False, "null_tokens": []},
 }
@@ -153,6 +154,8 @@ def _streams(stream_maps: Mapping[str, Any], issues: Issues) -> dict[str, Any]:
 def _sdk_defaults(settings: Mapping[str, Any]) -> dict[str, Any]:
     """``defaults`` from faker_config and the flattening settings."""
     defaults: dict[str, Any] = {}
+    if settings.get("add_record_metadata") is not None:
+        defaults["add_record_metadata"] = settings["add_record_metadata"]
     if faker := settings.get("faker_config"):
         defaults["faker"] = {k: faker[k] for k in ("seed", "locale") if k in faker}
     if settings.get("flattening_enabled"):

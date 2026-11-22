@@ -31,6 +31,7 @@ declares the same settings, and a test keeps the two in step.
 | `reject.storage` | string | `./.map-conform/rejects` | Where the dead-letter files go. |
 | `reject.format` | `jsonl` \| `parquet` | `jsonl` |  |
 | `metrics_path` | string | — | Write per-stream metrics as JSON at the end of the run. |
+| `add_record_metadata` | boolean | false | Add the seven `_sdc_*` columns to SCHEMA, RECORD and BATCH output. The same as `defaults.add_record_metadata`, which a stream can override. |
 | `stream_maps` | object | — | **SDK-compatible.** Accepted unchanged and translated into the spec at startup (§15). The native spec wins where both define a column. |
 | `stream_map_config` | object | — | **SDK-compatible.** Exposed as `config` in expressions; merged with `spec_vars`. |
 | `faker_config` | object | — | **SDK-compatible.** `{seed, locale}`; same as `defaults.faker`. |
@@ -132,7 +133,7 @@ defaults:
     true_values: [true, t, yes, y, "1", on]
     false_values: [false, f, no, n, "0", off]
   on_error: raise                # raise | null | keep | reject
-  metadata: sdc                  # sdc | none
+  add_record_metadata: false     # add the seven _sdc_* columns (RECORD and BATCH)
   undeclared: conform            # conform | drop | error
   nested: json                   # json | flatten | keep   (for undeclared object/array)
   flatten: {separator: "__", max_depth: 1, max_key_length: 255}   # SDK flattening semantics
@@ -868,8 +869,11 @@ SDK's own `Sink._add_sdc_metadata_to_record` and `_add_sdc_metadata_to_schema`:
 - the property schemas are `{"type": ["null","string"], "format": "date-time"}` and
   `{"type": ["null","integer"]}`.
 
-The tap's own `_sdc_*` properties feed these columns, and are not conformed as ordinary
-columns, while `metadata: sdc`.
+The columns are added only with `add_record_metadata: true` (default false; the plugin
+setting of the same name, or `defaults.add_record_metadata`, which a stream can override),
+to SCHEMA, RECORD and BATCH alike (decided 2026-11-22). The tap's own `_sdc_*` properties are
+never ordinary columns: with the flag they feed these columns, without it they are left out,
+as SDK targets leave them out.
 
 **Downstream.** An SDK target must set `add_record_metadata: true`, otherwise it strips these
 columns. `map-conform doctor` checks for this. With the flag on, the target overwrites the
@@ -1001,7 +1005,6 @@ As built (`map_conform/spec/stream_maps.py`, `map_conform/spec/importer.py`, `ma
   project moving from meltano-map-transformer keeps its output:
   - `naming: sdk`: the names an SDK SQL target creates;
   - `stream.name: preserve`;
-  - `metadata: none`: targets add `_sdc_*`;
   - `nested: keep`;
   - `values: {trim: false, null_tokens: []}`.
 - **Types** (WBS 12.2). An expression column gets `infer_type: sdk`: the SDK's prefix rules

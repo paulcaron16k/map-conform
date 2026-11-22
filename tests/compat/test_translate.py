@@ -141,7 +141,7 @@ def test_record_column_is_the_records_struct() -> None:
 def test_native_spec_wins_column_by_column(capsys: pytest.CaptureFixture[str]) -> None:
     """A native column overrides the translated one key by key; compat defaults yield too."""
     stream_maps = {"mystream": {"fixed": "int(count-1)", "__else__": None}}
-    spec = {"version": 1, "defaults": {"metadata": "sdc"},
+    spec = {"version": 1, "defaults": {"add_record_metadata": True},
             "streams": {"mystream": {"columns": {"fixed": {"type": "string"}}}}}  # fmt: skip
     out = ours_run(MYSTREAM, stream_maps, {"spec": spec})
     schema = next(m[2] for m in out if m[0] == "SCHEMA")

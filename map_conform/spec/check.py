@@ -117,8 +117,9 @@ def output_columns(
     ``undeclared`` and references are checked. Without them, only the spec's columns are
     known. Problems are appended to ``findings``.
     """
-    if properties is not None and resolved.settings.metadata == "sdc":
-        # The tap's own _sdc_* columns feed the metadata columns, not ordinary ones.
+    if properties is not None:
+        # The tap's own _sdc_* columns are never ordinary columns: with add_record_metadata
+        # they feed the metadata columns; without it they are left out, as SDK targets do.
         properties = {k: v for k, v in properties.items() if not k.startswith("_sdc_")}
     conformer = NameConformer(resolved.settings.naming)
     entries = _column_entries(resolved, properties, findings, path, key_properties)

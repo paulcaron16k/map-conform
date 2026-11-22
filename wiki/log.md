@@ -72,3 +72,6 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-22T18:00:00Z | UPDATED | decisions/0007-wire-encoding | Amended: decimals inside JSON text are exact numbers |
 | 2026-11-22T18:00:00Z | UPDATED | decisions/0010-stream-map-superset | Amended: compatibility defaults for stream_maps |
 | 2026-11-22T18:00:00Z | UPDATED | components/name-conformer | naming: sdk preset and flattening built (P3) |
+| 2026-11-22T19:00:00Z | UPDATED | decisions/0005-sdc-metadata | Amended: add_record_metadata, default false, for RECORD and BATCH |
+| 2026-11-22T19:00:00Z | UPDATED | decisions/0010-stream-map-superset | Compatibility defaults no longer set metadata |
+| 2026-11-22T19:00:00Z | UPDATED | components/metadata-and-errors | _sdc_* columns follow add_record_metadata (default false) |

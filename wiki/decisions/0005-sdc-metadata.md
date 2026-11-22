@@ -4,7 +4,7 @@ title: "Decision 0005 — Emit SDK _sdc_* exactly; document target requirement"
 description: "Emit the seven _sdc_* columns with SDK names and values; SDK targets must set add_record_metadata: true."
 resource: creating-a-better-mapper-guidance.md
 tags: [architecture, decision, active]
-timestamp: 2026-11-21T00:00:00Z
+timestamp: 2026-11-22T19:00:00Z
 sources:
   - path: creating-a-better-mapper-guidance.md
 ---
@@ -13,7 +13,7 @@ sources:
 
 Parent: [Wiki Index](../index.md) · Related: [Architecture overview](../architecture/overview.md)
 
-Status: **Accepted** (2026-11-21, planning quiz)
+Status: **Accepted** (2026-11-21, planning quiz). **Amended** 2026-11-22: off unless `add_record_metadata`.
 
 ## Context
 - These columns should be added once, upstream, and also for BATCH.
@@ -37,3 +37,10 @@ Status: **Accepted** (2026-11-21, planning quiz)
 - `map-conform doctor` warns when a downstream SDK target lacks the flag.
 - BATCH files carry the columns too. The SDK target BATCH path neither strips nor adds them,
   but the SCHEMA it holds will have them removed unless the flag is set.
+
+## Amendment (2026-11-22): `add_record_metadata`, default false
+The owner decided that the columns follow one switch, named like the SDK targets' setting:
+`add_record_metadata` (default **false**), for RECORD and BATCH alike. It replaces
+`defaults.metadata: sdc | none` (which defaulted to adding them), can be set as a plugin
+setting or per stream in the spec, and is not changed by `stream_maps`. Without it the tap's
+own `_sdc_*` properties are left out too, as SDK targets do.

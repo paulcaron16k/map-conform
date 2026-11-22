@@ -44,7 +44,7 @@ def conform(
     """Compile stream s with the installed (and allowed spec) UDFs and conform records."""
     spec = parse_spec({
         "version": 1,
-        "defaults": {"metadata": "none"},
+        "defaults": {},
         "udfs": udfs or {},
         "streams": {"s": {"columns": columns}},
     })  # fmt: skip
@@ -166,7 +166,7 @@ def test_mapper_loads_udfs(capsys: pytest.CaptureFixture[str]) -> None:
     """The mapper registers UDFs at start-up, and refuses spec udfs without the setting."""
     spec = {
         "version": 1,
-        "defaults": {"metadata": "none"},
+        "defaults": {},
         "udfs": {"where_from": "project_udfs:where_from"},
         "streams": {"s": {"columns": {"c": {"type": "string", "transform": "where_from"}}}},
     }
