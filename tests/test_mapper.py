@@ -188,18 +188,6 @@ def test_add_record_metadata_setting(capsys: pytest.CaptureFixture[str]) -> None
     assert "_sdc_batched_at" in schema["schema"]["properties"]
 
 
-def test_batch_is_refused_until_p4(capsys: pytest.CaptureFixture[str]) -> None:
-    """BATCH stops with a clear message rather than passing unconformed files."""
-    batch = {
-        "type": "BATCH",
-        "stream": "Customer Orders",
-        "encoding": {"format": "jsonl"},
-        "manifest": [],
-    }
-    with pytest.raises(NotImplementedError, match="conformed from phase P4"):
-        run_mapper([SCHEMA, batch], capsys)
-
-
 def test_plan_problems_are_config_errors(capsys: pytest.CaptureFixture[str]) -> None:
     """A spec that does not fit the tap SCHEMA fails at the SCHEMA, with paths."""
     spec = {

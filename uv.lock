@@ -933,6 +933,7 @@ wheels = [
 name = "map-conform"
 source = { editable = "." }
 dependencies = [
+    { name = "fsspec" },
     { name = "pyarrow" },
     { name = "pyyaml" },
     { name = "singer-sdk" },
@@ -981,6 +982,7 @@ typing = [
 
 [package.metadata]
 requires-dist = [
+    { name = "fsspec", specifier = ">=2024.2" },
     { name = "pyarrow", specifier = ">=18" },
     { name = "pyyaml", specifier = ">=6" },
     { name = "s3fs", marker = "extra == 's3'", specifier = ">=2026.1.0" },

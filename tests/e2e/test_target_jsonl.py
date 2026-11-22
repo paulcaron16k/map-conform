@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.paths import FIXTURES
+from tests.fixtures.paths import FIXTURES, messages
 
 pytestmark = pytest.mark.e2e
 
@@ -79,3 +79,31 @@ def test_orders_export_lands_clean_in_target_jsonl(tmp_path: Path) -> None:
     assert uncleanable["amount"] is None  # "abc" under on_error: null
     assert first["_sdc_table_version"] == 1773489600000  # noqa: PLR2004
     assert first["_sdc_extracted_at"] == "2026-03-14T12:00:00.000000+00:00"
+
+
+@pytest.mark.skipif(shutil.which("uvx") is None, reason="needs uvx to run target-jsonl")
+def test_batch_input_reaches_a_record_only_target(tmp_path: Path) -> None:
+    """batch_output.mode: record turns BATCH files into RECORDs for a target without BATCH."""
+    (tmp_path / "conform.yml").write_text(SPEC, encoding="utf-8")
+    config = {"spec_path": str(tmp_path / "conform.yml"), "batch_output": {"mode": "record"}}
+    (tmp_path / "mapper.json").write_text(json.dumps(config))
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    (tmp_path / "target.json").write_text(json.dumps({"destination_path": str(out_dir)}))
+    source = tmp_path / "batch.singer.jsonl"
+    source.write_text("".join(json.dumps(m) + "\n" for m in messages(
+        "orders_export.batch-parquet.singer.jsonl")))  # fmt: skip
+    executable = str(Path(sys.executable).with_name("map-conform"))
+    mapper = subprocess.run(  # noqa: S603 -- fixed argv: the installed console script
+        [executable, "--config", str(tmp_path / "mapper.json"), "--input", str(source)],
+        capture_output=True, text=True, check=True, timeout=120,
+    )  # fmt: skip
+    target = ["uvx", "--from", "target-jsonl", "target-jsonl"]
+    subprocess.run(  # noqa: S603 -- fixed argv: uvx runs the published target
+        [*target, "--config", str(tmp_path / "target.json")],
+        input=mapper.stdout, capture_output=True, text=True, check=True, timeout=300,
+    )  # fmt: skip
+    (written,) = out_dir.glob("raw_orders_export*.jsonl")
+    rows = [json.loads(line) for line in written.read_text().splitlines()]
+    assert len(rows) == 12  # noqa: PLR2004
+    assert rows[0]["order_id"] == 1001  # noqa: PLR2004
