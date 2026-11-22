@@ -104,6 +104,10 @@ warn_unused_ignores = true
 module = [ "fsspec", "simpleeval" ]
 ignore_missing_imports = true
 
+[tool.ty.src]
+# examples/ is a Meltano project; its script runs with duckdb from its own environment.
+exclude = [ "examples" ]
+
 [tool.ty.rules]
 missing-override-decorator = "error"
 unused-type-ignore-comment = "ignore"
