@@ -31,6 +31,7 @@ from map_conform.spec.errors import SpecError
 from map_conform.spec.load import load_spec, output_streams
 from map_conform.spec.model import Defaults, Spec, parse_spec
 from map_conform.transforms.builtins import builtin_registry
+from map_conform.udfs import load_udfs, registry_with
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -117,6 +118,8 @@ class MapConformMapper(InlineMapper):
         try:
             self.settings: Settings = parse_settings(self.config)
             self.spec: Spec = self._load_spec(self.settings)
+            udfs = load_udfs(self.spec.udfs, allow_python_udfs=self.settings.allow_python_udfs)
+            self.registry = registry_with(builtin_registry(), udfs)
         except SpecError as exc:
             raise ConfigValidationError(
                 f"Invalid {exc.source or 'configuration'}",
@@ -165,7 +168,7 @@ class MapConformMapper(InlineMapper):
                     self.spec,
                     resolved,
                     message_dict["schema"],
-                    builtin_registry(),
+                    self.registry,
                     key_properties=tuple(message_dict.get("key_properties") or ()),
                     bookmark_properties=tuple(message_dict.get("bookmark_properties") or ()),
                     strict=self.settings.strict,

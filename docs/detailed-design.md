@@ -668,6 +668,29 @@ def clean_sku(arr, *, ctx=None): ...
 **Security note.** A UDF is arbitrary Python, like a DB UDF. The sandbox protects expressions,
 not UDFs.
 
+As built (`map_conform/udfs.py`):
+
+- **`@udf(name=, returns=, vectorized=, null_safe=, doc=)`** marks a function and returns it
+  unchanged. A plain function works too, with the defaults: untyped result, not null-safe,
+  doc from its docstring.
+- **Signature.** The value comes first; options must be keyword-only and become a kwargs
+  dataclass, checked by the spec's strict parser at compile time. Unknown or missing
+  options are errors at the step's path. `int`, `str`, `float`, `bool` and `Literal`
+  hints are type-checked; other hints accept any value. A `ctx` parameter receives the step
+  context (stream, column, settings, target type).
+- **Types.** `returns` sets the step's output type, so the chain's checks see it. Without
+  it the result is untyped and the column's implicit cast follows.
+- **Failures.** An exception in a UDF becomes a cell error naming the step, and follows
+  `on_error`.
+- **Vectorized UDFs** run on one-element arrays in the row executor; BATCH (P4) will pass
+  whole arrays.
+- **Names.** Spec module paths override entry points of the same name. A UDF may not take
+  the name of a builtin step or a library function.
+- **Loading.** Module paths import with the current directory (the Meltano project root)
+  on `sys.path`. Problems are reported at `udfs.<name>`, before any data flows.
+- **CLI.** `spec explain --allow-python-udfs` loads module-path UDFs, as the setting does.
+  `map-conform functions` lists installed UDFs with `[udf]`.
+
 ## 9. Plan compilation
 
 At SCHEMA:

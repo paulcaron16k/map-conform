@@ -1,0 +1,4 @@
+[map_conform.functions]
+fiscal_week = sample_udfs:fiscal_week
+clean_sku = sample_udfs:clean_sku
+shout = sample_udfs:shout
