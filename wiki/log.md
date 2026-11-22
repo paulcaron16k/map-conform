@@ -14,7 +14,15 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-21T00:00:00Z | CREATED | components/metadata-and-errors | Planned component |
 | 2026-11-21T00:00:00Z | CREATED | concepts/clean-landing-contract | The contract targets rely on |
 | 2026-11-21T00:00:00Z | CREATED | concepts/existing-systems-survey | Survey conclusions |
-| 2026-11-21T00:00:00Z | CREATED | decisions/0001-0009 | Planning quiz decisions |
+| 2026-11-21T00:00:00Z | CREATED | decisions/0001-name-and-licence | Planning quiz decisions |
+| 2026-11-21T00:00:00Z | CREATED | decisions/0002-transform-authoring | Planning quiz decisions |
+| 2026-11-21T00:00:00Z | CREATED | decisions/0003-own-spec-with-zamboni-bridge | Planning quiz decisions |
+| 2026-11-21T00:00:00Z | CREATED | decisions/0004-batch-engine | Planning quiz decisions |
+| 2026-11-21T00:00:00Z | CREATED | decisions/0005-sdc-metadata | Planning quiz decisions |
+| 2026-11-21T00:00:00Z | CREATED | decisions/0006-error-policy | Planning quiz decisions |
+| 2026-11-21T00:00:00Z | CREATED | decisions/0007-wire-encoding | Planning quiz decisions |
+| 2026-11-21T00:00:00Z | CREATED | decisions/0008-naming-defaults | Planning quiz decisions |
+| 2026-11-21T00:00:00Z | CREATED | decisions/0009-undeclared-columns | Planning quiz decisions |
 | 2026-11-21T00:00:00Z | CREATED | schemas/conform-spec | Spec grammar |
 | 2026-11-21T00:00:00Z | CREATED | schemas/plugin-settings | Plugin settings |
 | 2026-11-21T00:00:00Z | CREATED | plans/roadmap | Phases and WBS pointer |
