@@ -198,11 +198,19 @@ def test_plan_problems_are_config_errors(capsys: pytest.CaptureFixture[str]) -> 
     ]
 
 
-def test_about_lists_only_implemented_capabilities() -> None:
-    """--about does not advertise stream maps or flattening before they exist."""
+def test_about_lists_the_implemented_capabilities() -> None:
+    """--about advertises stream maps and flattening, with our own setting descriptions."""
     result = CliRunner().invoke(MapConformMapper.cli, ["--about", "--format", "json"])
     assert result.exit_code == 0, result.output
-    assert json.loads(result.output)["capabilities"] == ["about", "structured-logging"]
+    about = json.loads(result.output)
+    assert about["capabilities"] == [
+        "about",
+        "structured-logging",
+        "stream-maps",
+        "schema-flattening",
+    ]
+    stream_maps = about["settings"]["properties"]["stream_maps"]
+    assert "translated into the spec" in stream_maps["description"]
 
 
 @pytest.mark.parametrize(

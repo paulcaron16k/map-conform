@@ -93,6 +93,30 @@ class Settings:
     metrics_path: str | None = documented(
         "Write per-stream metrics as JSON here at the end of the run.", default=None
     )
+    stream_maps: Mapping[str, Any] | None = documented(
+        "Singer SDK stream maps, accepted unchanged and translated into the spec at start-up; "
+        "the spec wins where both define a column.",
+        default=None,
+    )
+    stream_map_config: Mapping[str, Any] = documented(
+        "SDK stream-map config: config in expressions, merged under spec_vars.",
+        default_factory=empty_mapping,
+    )
+    faker_config: Mapping[str, Any] | None = documented(
+        "SDK Faker config ({seed, locale}); the same as defaults.faker.", default=None
+    )
+    flattening_enabled: bool | None = documented(
+        "SDK flattening: the same as defaults.nested: flatten.", default=None
+    )
+    flattening_max_depth: int | None = documented(
+        "SDK flattening depth: defaults.flatten.max_depth.", default=None
+    )
+    flattening_separator: str | None = documented(
+        "SDK flattening separator: defaults.flatten.separator.", default=None
+    )
+    flattening_max_key_length: int | None = documented(
+        "SDK flattened key length: defaults.flatten.max_key_length.", default=None
+    )
 
 
 def parse_settings(config: Mapping[str, Any]) -> Settings:

@@ -27,9 +27,11 @@ from map_conform.plan.compile import compile_stream
 from map_conform.plan.row import RowExecutor
 from map_conform.rejects import RejectSink
 from map_conform.settings import Settings, parse_settings, settings_jsonschema
+from map_conform.spec._struct import Issues
 from map_conform.spec.errors import SpecError
 from map_conform.spec.load import load_spec, output_streams
 from map_conform.spec.model import Defaults, Spec, parse_spec
+from map_conform.spec.stream_maps import SDK_SETTINGS, translate
 from map_conform.transforms.builtins import builtin_registry
 from map_conform.udfs import load_udfs, registry_with
 
@@ -76,11 +78,12 @@ class MapConformMapper(InlineMapper):
 
     name = "map-conform"
 
-    # Only what is implemented is advertised: ``stream-maps`` and ``flattening`` return with
-    # the stream-map compatibility layer (WBS 12.x).
+    # SDK stream maps and flattening are accepted and translated into the spec (§15).
     capabilities: ClassVar[list[CapabilitiesEnum]] = [
         PluginCapabilities.ABOUT,
         PluginCapabilities.STRUCTURED_LOGGING,
+        PluginCapabilities.STREAM_MAPS,
+        PluginCapabilities.FLATTENING,
     ]
 
     config_jsonschema = settings_jsonschema()
@@ -127,16 +130,32 @@ class MapConformMapper(InlineMapper):
             ) from exc
 
     def _load_spec(self, settings: Settings) -> Spec:
-        if settings.spec_path is None and settings.spec is None:
+        issues = Issues()
+        sdk = {name: getattr(settings, name) for name in SDK_SETTINGS}
+        base = translate(sdk, issues)
+        if issues:
+            raise SpecError(issues.items, "the stream_maps settings")
+        if base is not None and settings.stream_maps is not None:
+            self.logger.info(
+                "Translated %d SDK stream map(s) into the spec, with the compatibility "
+                "defaults (SDK column naming, stream names kept, no _sdc_* columns).",
+                len(settings.stream_maps),
+            )
+        if settings.spec_path is None and settings.spec is None and base is None:
             self.logger.info("No spec_path or spec set; conforming with the default rules.")
             return parse_spec({"version": 1}, "the default spec")
-        spec = load_spec(settings.spec_path, settings.spec, settings.spec_vars)
+        spec = load_spec(settings.spec_path, settings.spec, settings.spec_vars, base=base)
         self.logger.info(
             "Loaded the conform spec from %s (%d stream rule(s)).",
-            settings.spec_path or "the spec setting",
+            settings.spec_path or ("the spec setting" if settings.spec else "stream_maps"),
             len(spec.streams),
         )
         return spec
+
+    @property
+    def expression_config(self) -> dict[str, Any]:
+        """``config`` in expressions: stream_map_config, with spec_vars over it."""
+        return {**self.settings.stream_map_config, **self.settings.spec_vars}
 
     # --- message handling ---------------------------------------------------------------
 
@@ -172,7 +191,7 @@ class MapConformMapper(InlineMapper):
                     key_properties=tuple(message_dict.get("key_properties") or ()),
                     bookmark_properties=tuple(message_dict.get("bookmark_properties") or ()),
                     strict=self.settings.strict,
-                    config=self.settings.spec_vars,
+                    config=self.expression_config,
                 )
             except SpecError as exc:
                 raise ConfigValidationError(

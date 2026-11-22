@@ -9,15 +9,18 @@ from __future__ import annotations
 import dataclasses
 import json
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import click
+import yaml
 
 from map_conform.expr.functions import FUNCTIONS
 from map_conform.mapper import MapConformMapper
 from map_conform.plan.compile import compile_stream, plan_report
 from map_conform.spec.check import CatalogStream, check_spec, explain, read_catalog
 from map_conform.spec.errors import SpecError
+from map_conform.spec.importer import import_stream_maps
 from map_conform.spec.jsonschema import render
 from map_conform.spec.load import load_spec, output_streams
 from map_conform.transforms.builtins import builtin_registry
@@ -110,6 +113,46 @@ def spec_validate(
         sys.exit(1)
     checked = f", checked against {len(streams)} catalog stream(s)" if streams else ""
     click.echo(f"{spec_path}: valid ({len(loaded.streams)} stream rule(s){checked})")
+
+
+@spec.command(name="import")
+@click.option(
+    "--stream-maps",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False),
+    help="A plugin config (JSON) with SDK stream_maps and flattening settings.",
+)
+@_CATALOG
+@click.option(
+    "-o", "--output", type=click.Path(dir_okay=False), help="Write the spec here, not stdout."
+)
+def spec_import(config_path: str | None, catalog: str | None, output: str | None) -> None:
+    """Write SDK stream_maps settings as a native spec, with inferred types made explicit.
+
+    With --catalog, column types the SDK takes from tap properties are written out too.
+    """
+    if config_path is None:
+        raise click.UsageError(
+            "give --stream-maps CONFIG.json (spec import --catalog alone arrives with WBS 9.1)"
+        )
+    try:
+        config = json.loads(Path(config_path).read_text(encoding="utf-8"))
+        streams = read_catalog(catalog) if catalog else None
+        native, notes = import_stream_maps(config, streams)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise click.ClickException(f"cannot read {config_path}: {exc}") from exc
+    except SpecError as exc:
+        click.echo(f"{exc.source}: {len(exc.issues)} problem(s)", err=True)
+        for issue in exc.issues:
+            click.echo(f"  {issue}", err=True)
+        sys.exit(1)
+    text = yaml.safe_dump(native, sort_keys=False, allow_unicode=True, width=100)
+    if output:
+        Path(output).write_text(text, encoding="utf-8")
+    else:
+        click.echo(text, nl=False)
+    for note in notes:
+        click.echo(f"note: {note}", err=True)
 
 
 @spec.command(name="explain")

@@ -4,7 +4,7 @@ title: "Decision 0010 — A superset of SDK stream maps, including masking"
 description: "Everything SDK stream maps and pipelinewise-transform-field can do has a native equivalent; SDK stream_maps settings are accepted unchanged."
 resource: docs/detailed-design.md
 tags: [architecture, decision, active]
-timestamp: 2026-11-21T00:00:00Z
+timestamp: 2026-11-22T16:00:00Z
 sources:
   - path: docs/detailed-design.md
 ---
@@ -13,7 +13,7 @@ sources:
 
 Parent: [Wiki Index](../index.md) · Related: [Architecture overview](../architecture/overview.md)
 
-Status: **Accepted** (2026-11-21, planning review)
+Status: **Accepted** (2026-11-21, planning review). **Amended** 2026-11-22: compatibility defaults.
 
 ## Context
 The first draft of the plan replaced stream maps rather than extending them. It dropped
@@ -57,3 +57,14 @@ map-conform must be a *better* stream map, and must not lose any functionality.
   - single-digit `n` only;
   - ACTIVATE_VERSION dropped.
 - A parity test suite runs the SDK's stream-map cases.
+
+## Amendment (2026-11-22): compatibility defaults
+Running the SDK's own mapper tests through both mappers showed that map-conform's defaults
+(snake_case naming, conformed stream names, `_sdc_*` columns, JSON text for nested values,
+trimming and null tokens) changed the output of unchanged `stream_maps` settings. With
+`stream_maps` set, these defaults now apply unless the spec sets them:
+`naming: sdk`, `stream.name: preserve`, `metadata: none`, `nested: keep`, and
+`values: {trim: false, null_tokens: []}`. A project moving from meltano-map-transformer
+keeps its output, and the parity suite (`tests/compat/`) checks every SDK test case.
+The remaining differences, such as canonical timestamps and exact decimals, are deliberate
+and listed in detailed design §15.

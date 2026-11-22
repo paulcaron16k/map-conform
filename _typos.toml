@@ -1,6 +1,7 @@
 [default.extend-identifiers]
 # The Singer message type, pluralised. typos splits it as RECOR + Ds.
 RECORDs = "RECORDs"
+SCHEMAs = "SCHEMAs"
 
 [default.extend-words]
 # "Café%" under naming: sdk loses the é and the %, as the SDK's conform_name does.

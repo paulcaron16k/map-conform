@@ -29,6 +29,7 @@ plugins:
     capabilities:
     - about
     - structured-logging
+    - stream-maps
     settings:
     - name: spec_path
       kind: string
@@ -105,6 +106,31 @@ plugins:
       kind: string
       label: Metrics path
       description: Write per-stream metrics as JSON here at the end of the run.
+    - name: stream_maps
+      kind: object
+      label: Stream maps
+      description: Singer SDK stream maps, translated into the spec; the spec wins per column.
+    - name: stream_map_config
+      kind: object
+      label: Stream map config
+      description: SDK stream-map config, config in expressions; merged under spec_vars.
+    - name: faker_config
+      kind: object
+      label: Faker config
+      description: SDK Faker config ({seed, locale}); the same as defaults.faker.
+    - name: flattening_enabled
+      kind: boolean
+      label: Flattening enabled
+      description: SDK flattening; the same as defaults.nested flatten.
+    - name: flattening_max_depth
+      kind: integer
+      label: Flattening max depth
+    - name: flattening_separator
+      kind: string
+      label: Flattening separator
+    - name: flattening_max_key_length
+      kind: integer
+      label: Flattening max key length
     mappings:
     - name: map-conform
       config:
