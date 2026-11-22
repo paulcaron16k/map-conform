@@ -15,8 +15,9 @@ any target and does the following, once, upstream:
 Targets then rely on the [Clean-Landing Contract](wiki/concepts/clean-landing-contract.md)
 and do not re-implement cleanup.
 
-> **Status: pre-alpha.** The mapper installs and passes every message through unchanged
-> (BATCH included); conforming arrives phase by phase. Start with the
+> **Status: pre-alpha.** The mapper conforms RECORD streams: names, declared types, value
+> cleanup and `_sdc_*` metadata. BATCH, expressions and SDK stream-map compatibility arrive in
+> later phases. Start with the
 > [guidance](creating-a-better-mapper-guidance.md), then the
 > [executive overview](docs/exec-overview.md), [architecture](docs/architecture-hld.md),
 > [detailed design](docs/detailed-design.md) and [plan](docs/plan-wbs.md).

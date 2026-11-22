@@ -110,6 +110,9 @@ strict = true
 testpaths = [
     "tests",
 ]
+markers = [
+    "e2e: runs the real mapper into a real Singer target (needs uvx and network)",
+]
 
 [tool.ruff]
 line-length = 100

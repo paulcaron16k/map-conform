@@ -9,7 +9,8 @@ unions, ``tuple[T, ...]``, ``Mapping[str, T]``, dataclasses, and classes that im
 :class:`Custom`.
 
 Field metadata keys: ``key`` (the spec spelling, e.g. ``else`` for ``else_``), ``doc``
-(becomes the schema ``description``) and ``check`` (``value -> problem | None``).
+(becomes the schema ``description``), ``check`` (``value -> problem | None``) and
+``null_hint`` (the message for an explicit null, where YAML's bare ``null`` is a trap).
 """
 
 from __future__ import annotations
@@ -349,6 +350,10 @@ def parse_dataclass(cls: type[DC], data: object, path: str, issues: Issues) -> D
             if not _has_default(field):
                 issues.add(child(path, key), "required")
                 ok = False
+            continue
+        if data[key] is None and (hint := field.metadata.get("null_hint")):
+            issues.add(child(path, key), hint)
+            ok = False
             continue
         value = _parse_field(field, tp, data[key], child(path, key), issues)
         if value is INVALID:

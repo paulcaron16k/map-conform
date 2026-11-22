@@ -635,6 +635,8 @@ As built (`map_conform/plan/compile.py`):
   uses.
 - **Types.** An undeclared column takes its type from the tap SCHEMA (§4). A column built
   from several sources needs a declared type.
+- **Consumed sources.** A source property that a column reads, alone or in a coalesced
+  `source` list, is not also emitted as an undeclared column.
 - **Nested members** are conformed. The member rename tree is applied to values *before*
   the chain, because the struct CType carries conformed names. Struct and list casts
   (`map_conform/transforms/nested.py`) cast members by their declared types, with neutral
@@ -665,6 +667,29 @@ As built (`map_conform/plan/compile.py`):
 - Output dict in plan order, then `_sdc_*` (§11).
 - `filter` is evaluated on the **conformed** record, after the column plans and before
   `_sdc_*`, so it sees conformed names and cast values.
+
+As built (`map_conform/plan/row.py`, `map_conform/mapper.py`):
+
+- **Per column**, in order:
+  - take the first non-null source value;
+  - decode JSON text and rename nested members;
+  - run the chain;
+  - apply the default;
+  - enforce `nullable: false` (always an error, even under `on_error: null`) and `enum`;
+  - encode the result for the wire.
+- **Failures.** A failed value follows the column's `on_error`. `reject` removes the row from
+  the output and logs it. The reject sink is WBS 7.3.
+- **Messages.**
+  - SCHEMA compiles a plan for each output stream and emits its conformed SCHEMA, with
+    `_sdc_*` declared.
+  - RECORD keeps `version` and `time_extracted` unchanged.
+  - STATE passes through in order.
+  - ACTIVATE_VERSION is emitted once per output stream, under the conformed name.
+  - A new SCHEMA for a stream recompiles its plans.
+- **BATCH** is refused with a clear message until the columnar engine exists (phase P4).
+  Passing BATCH files through unconformed would contradict the conformed SCHEMA.
+- **Not yet built.** The fast path that skips a cast and the orjson I/O are performance work
+  for later.
 
 ### 10.2 Columnar executor
 
@@ -706,6 +731,16 @@ As built (`map_conform/plan/compile.py`):
 | `_sdc_sequence` | `round(time.time()*1000)` (SDK-identical; not unique) |
 | `_sdc_table_version` | the message `version` |
 | `_sdc_sync_started_at` | mapper start, epoch ms |
+
+Values and schema are the SDK's (`map_conform/metadata.py`), and a parity test calls the
+SDK's own `Sink._add_sdc_metadata_to_record` and `_add_sdc_metadata_to_schema`:
+
+- the timestamps are Python `isoformat()` strings with `+00:00`;
+- the property schemas are `{"type": ["null","string"], "format": "date-time"}` and
+  `{"type": ["null","integer"]}`.
+
+The tap's own `_sdc_*` properties feed these columns, and are not conformed as ordinary
+columns, while `metadata: sdc`.
 
 **Downstream.** An SDK target must set `add_record_metadata: true`, otherwise it strips these
 columns. `map-conform doctor` checks for this. With the flag on, the target overwrites the
