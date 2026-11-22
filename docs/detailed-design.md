@@ -366,7 +366,10 @@ are marked ✓.
   cast, then a CType. Each step lists the stages it accepts, so a step that cannot take the
   current stage is an error at its path.
 - **Arguments.** A scalar step argument fills the builtin's positional kwarg
-  (`{strip_chars: "$, "}` → `chars`). Kwargs are validated by the spec's strict parser.
+  (`{strip_chars: "$, "}` → `chars`). A mapping argument is keyword arguments
+  (`{hash: {algo: md5}}`), except that it fills a mapping-typed positional kwarg when its keys
+  are not all kwarg names (`{map_values: {Y: yes}}`). Kwargs are validated by the spec's
+  strict parser.
 - **Implicit cast.** A chain with no `cast` gets one. Its options layer, lowest to highest:
   stream defaults, column overrides (`trim`, `null_tokens`, …), the column's `parse`, then
   the step's own kwargs. `{cast: decimal}` on a `decimal(18,2)` column means that column's
@@ -453,6 +456,21 @@ instants, such as `%m/%d` and `%d/%m` both listed, is allowed. The first match w
 
 The plan compiler checks each masking step against the declared type, and the emitted SCHEMA
 always matches the values. A masking failure follows `on_error`; it is never swallowed.
+
+Details pinned by the implementation (`map_conform/transforms/casts.py`, `privacy.py`):
+
+- **Value cleanup.** Every cast from a raw value first trims and applies the null tokens
+  (column overrides win). For a string column, `""` follows `empty_string_for_string`, not
+  the null tokens.
+- **String casts.** A string cast turns scalars into their text and refuses objects and
+  arrays (declare json). It enforces `string(n)` or `max_length`; `on_overflow: truncate`
+  cuts instead of failing.
+- **JSON casts.** A JSON cast decodes text that is already JSON (`parse_strings` is true by
+  default) and keeps decimals exact.
+- **`hash`** reads a typed value in a canonical text form: ISO dates and plain decimals.
+- **`mask`** masks a value too short to show both kept ends entirely, rather than revealing
+  it.
+- **Wire forms.** Values are encoded for RECORD messages by `map_conform/types/wire.py`.
 
 ## 7. Expression language
 

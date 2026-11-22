@@ -63,6 +63,8 @@ class Transform:
     """True when the step must see nulls; otherwise nulls pass through untouched."""
     defaults: Callable[[Defaults, ColumnSpec | None], dict[str, Any]] | None = None
     """For casts: kwargs taken from the stream defaults and column overrides."""
+    forces_nullable: bool = False
+    """The step can produce null whatever the input (set_null), so the column is nullable."""
 
     @property
     def vectorised(self) -> bool:
@@ -108,7 +110,3 @@ class Registry:
     def names(self) -> Mapping[str, Transform]:
         """Every registered builtin."""
         return self.transforms
-
-
-REGISTRY = Registry()
-"""The builtins. Modules under ``map_conform.transforms`` register themselves on import."""
