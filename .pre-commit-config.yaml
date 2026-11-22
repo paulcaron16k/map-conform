@@ -51,7 +51,8 @@ repos:
   rev: 1.0.0
   hooks:
   - id: mdformat
-    exclude: ^wiki/
+    # The spec reference is generated (and checked by a test), so its text is the generator's.
+    exclude: ^(wiki/|docs/spec-reference\.md$)
     additional_dependencies:
     - mdformat-gfm
     - mdformat-frontmatter
