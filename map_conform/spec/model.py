@@ -36,6 +36,9 @@ from map_conform.types.canonical import ctype_problem
 OnError = Literal["raise", "null", "keep", "reject"]
 Dialect = Literal["postgres", "duckdb", "snowflake", "ansi"]
 
+_NULL_POLICY_HINT = (
+    "YAML reads a bare null as 'no value'; to choose the null policy, quote it: on_error: \"null\""
+)
 _UDF_TARGET = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
 
 
@@ -190,6 +193,7 @@ class Defaults:
         "What a failed cast or transform does: raise, null, keep the raw value, or reject the "
         "row to the dead-letter sink.",
         default="raise",
+        metadata={"null_hint": _NULL_POLICY_HINT},
     )
     metadata: Literal["sdc", "none"] = documented(
         "Add the seven Singer SDK _sdc_* columns.", default="sdc"
@@ -257,7 +261,9 @@ class ColumnSpec:
     )
     null_tokens: tuple[str, ...] | None = documented("Overrides values.null_tokens.", default=None)
     trim: bool | None = documented("Overrides values.trim.", default=None)
-    on_error: OnError | None = documented("Overrides on_error.", default=None)
+    on_error: OnError | None = documented(
+        "Overrides on_error.", default=None, metadata={"null_hint": _NULL_POLICY_HINT}
+    )
     max_length: int | None = documented(
         "Longest string allowed.", default=None, metadata={"check": positive}
     )
