@@ -64,3 +64,11 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-22T12:00:00Z | UPDATED | concepts/clean-landing-contract | Delivered by the RECORD path as of P2 |
 | 2026-11-22T12:00:00Z | UPDATED | qa/test-strategy | Layers built through P2 |
 | 2026-11-22T12:00:00Z | UPDATED | plans/roadmap | P2 done |
+| 2026-11-22T18:00:00Z | UPDATED | components/type-system-and-builtins | P3 built: expressions, case/when/fields, UDFs, masking, Faker, stream-map compatibility; draft → active |
+| 2026-11-22T18:00:00Z | UPDATED | components/metadata-and-errors | rows_filtered metric built (P3) |
+| 2026-11-22T18:00:00Z | UPDATED | components/execution-engines | P3 status: derived-column order, filter, flattening |
+| 2026-11-22T18:00:00Z | UPDATED | qa/test-strategy | Expression and SDK parity layers built (P3) |
+| 2026-11-22T18:00:00Z | UPDATED | plans/roadmap | P3 done |
+| 2026-11-22T18:00:00Z | UPDATED | decisions/0007-wire-encoding | Amended: decimals inside JSON text are exact numbers |
+| 2026-11-22T18:00:00Z | UPDATED | decisions/0010-stream-map-superset | Amended: compatibility defaults for stream_maps |
+| 2026-11-22T18:00:00Z | UPDATED | components/name-conformer | naming: sdk preset and flattening built (P3) |

@@ -4,7 +4,7 @@ title: "Execution engines and BATCH I/O"
 description: "Plan compiler, row executor, columnar (Arrow/polars) executor, BATCH manifest and file I/O."
 resource: map_conform/plan/
 tags: [engineering, performance, draft]
-timestamp: 2026-11-22T12:00:00Z
+timestamp: 2026-11-22T18:00:00Z
 sources:
   - path: docs/detailed-design.md
 ---
@@ -17,6 +17,8 @@ Parent: [Wiki Index](../index.md) · Related: [Detailed design](../../docs/detai
 >
 > - **Built (P2):** the plan compiler (`map_conform/plan/compile.py`) and the row executor
 >   (`map_conform/plan/row.py`), wired into the mapper. RECORD streams are conformed end to end.
+> - **Built (P3):** derived columns computed in dependency order, the stream `filter`, and
+>   SDK flattening of records (`map_conform/naming/flatten.py`).
 > - **Not yet:** the columnar BATCH executor (P4). BATCH messages are refused with a clear
 >   message until then.
 

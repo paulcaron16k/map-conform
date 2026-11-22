@@ -3,8 +3,8 @@ type: component
 title: "Type system, builtins, expressions and UDFs"
 description: "Canonical CType vocabulary, builtin transform catalogue, expression language and UDF registry."
 resource: map_conform/types/
-tags: [engineering, types, draft]
-timestamp: 2026-11-22T12:00:00Z
+tags: [engineering, types, active]
+timestamp: 2026-11-22T18:00:00Z
 sources:
   - path: docs/detailed-design.md
 ---
@@ -13,12 +13,14 @@ sources:
 
 Parent: [Wiki Index](../index.md) · Related: [Detailed design](../../docs/detailed-design.md)
 
-> Status: **draft**.
+> Status: **active**.
 >
 > - **Built (P2):** the CType system (`map_conform/types/`), every builtin and cast
 >   (`map_conform/transforms/`), macros, and the chain compiler (`map_conform/plan/chain.py`).
-> - **Not yet:** `expr`, `case`, `when` and UDFs (P3), stream-map compatibility (P3), and
->   `mask_number`, `mask_hidden`, `tokenize`, `fake` and nested `fields` (E12).
+> - **Built (P3):** the expression language (`map_conform/expr/`), `case`, `when` and
+>   `fields` (`map_conform/plan/ops.py`), UDFs (`map_conform/udfs.py`), masking parity and
+>   Faker, and stream-map compatibility (`map_conform/spec/stream_maps.py`).
+> - **Not yet:** the Arrow implementations of the vectorisable builtins (P4).
 
 ## Canonical types
 
@@ -42,9 +44,11 @@ The full table is in detailed design §4.
    (detailed design §6). Each declares kwargs, type constraints, and a scalar implementation
    plus an optional Arrow one.
 2. **Macros.** Named, parameterised chains of steps.
-3. **`expr`.** An AST-whitelisted Python subset, a superset of SDK stream-map expressions.
-   It provides predicates (`is_string`, `is_datetime`, …), coercions and temporal helpers,
-   with `case` when/then/else.
+3. **`expr`.** An AST-whitelisted Python subset, compiled to closures, a superset of SDK
+   stream-map expressions. Names resolve at compile time; columns are their conformed values.
+   The library has predicates (`is_string`, `is_datetime`, …), coercions, temporal and text
+   helpers (`map-conform functions` lists them), with `case` when/then/else. The sandbox
+   (`map_conform/expr/sandbox.py`) bounds attributes, modules and sizes.
 4. **UDFs.** Registered with `@udf`, by entry point `map_conform.functions`, or by module path
    behind `allow_python_udfs`.
 
@@ -61,12 +65,17 @@ The full table is in detailed design §4.
 | `tokenize`, `fake` | none (`fake` is in SDK stream maps) |
 
 A `when` expression on a column or step applies masking conditionally. `fields` reaches nested
-paths.
+paths. Every pipelinewise type has a test, including where pipelinewise is buggy
+(`tests/transforms/test_masking.py`).
 
 ## Stream-map compatibility
 
-`map_conform/compat/` translates the SDK settings (`stream_maps`, `stream_map_config`,
-`faker_config`, `flattening_*`) into the spec. The full table is in detailed design §15.
+`map_conform/spec/stream_maps.py` translates the SDK settings (`stream_maps`,
+`stream_map_config`, `faker_config`, `flattening_*`) into the spec, with compatibility
+defaults that keep meltano-map-transformer's output ([ADR-0010](../decisions/0010-stream-map-superset.md)).
+Every case of the SDK's own mapper tests passes through both mappers with the same result,
+up to documented differences (`tests/compat/`). The full table is in detailed design §15.
 
 **The implicit cast.** Every chain ends with a cast to the declared type, so `expr` results
-are coerced. Nothing is inferred from an expression's prefix.
+are coerced. Only translated stream maps infer a type from an expression's prefix
+(`infer_type: sdk`), as the SDK does.

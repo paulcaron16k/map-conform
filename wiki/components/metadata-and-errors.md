@@ -4,7 +4,7 @@ title: "Metadata, errors and metrics"
 description: "SDK-exact _sdc_* columns, ConformError and on_error policies, reject sink, rate thresholds, metrics."
 resource: map_conform/metadata.py
 tags: [engineering, observability, active]
-timestamp: 2026-11-22T12:00:00Z
+timestamp: 2026-11-22T18:00:00Z
 sources:
   - path: map_conform/metadata.py
   - path: map_conform/errors.py
@@ -52,8 +52,8 @@ Parent: [Wiki Index](../index.md) · Related: [Detailed design](../../docs/detai
 ## Metrics
 
 `map_conform/metrics.py` keeps per-output-stream counters:
-- `rows_in`, `rows_out`, `rows_rejected`, `rows_nulled`, `values_kept`;
+- `rows_in`, `rows_out`, `rows_rejected`, `rows_nulled`, `rows_filtered`, `values_kept`;
 - `errors` by (column, rule).
 
-They are logged at the end of the run, and written to `metrics_path` when set. Filtered rows
-(P3) and row-wise BATCH columns (P4) are added with those features.
+They are logged at the end of the run, and written to `metrics_path` when set. Row-wise BATCH
+columns (P4) are added with that feature.

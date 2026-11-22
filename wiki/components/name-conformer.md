@@ -4,7 +4,7 @@ title: "Name conformer"
 description: "Deterministic pipeline that makes stream, column and nested names legal in every target."
 resource: map_conform/naming/
 tags: [engineering, naming, active]
-timestamp: 2026-11-22T10:00:00Z
+timestamp: 2026-11-22T18:00:00Z
 sources:
   - path: map_conform/naming/conform.py
   - path: map_conform/naming/translit.py
@@ -75,7 +75,14 @@ folding: an error, or `_2`, `_3`, … Genuine names win.
 - Conforming is idempotent under randomised configurations.
 - The output is unique per stream, or an error is raised.
 
-## Planned
+## The `naming: sdk` preset
 
-- Preset `naming: sdk`, reproducing the SDK's SQL `conform_name` byte for byte for
-  migrations (WBS 12.10).
+`naming: sdk` (short for `{preset: sdk}`) reproduces the SDK's SQL `conform_name` byte for
+byte, for migrations. Only `on_collision` still applies. It is checked against the SDK's own
+function on the golden names and on generated names (`tests/naming/test_sdk_preset.py`).
+Translated `stream_maps` use it by default.
+
+## Flattening
+
+`nested: flatten` re-implements the SDK's flattening, key shortening included
+(`map_conform/naming/flatten.py`). The flattened keys are then conformed like any name.
