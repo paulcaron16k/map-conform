@@ -39,6 +39,14 @@ Dialect = Literal["postgres", "duckdb", "snowflake", "ansi"]
 _UDF_TARGET = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
 
 
+MIN_NAME_LENGTH = 8
+"""Room for at least one character, '_' and a 6-hex hash suffix."""
+
+
+def _name_length(value: int) -> str | None:
+    return None if value >= MIN_NAME_LENGTH else f"must be at least {MIN_NAME_LENGTH}"
+
+
 def _udf_problem(target: str) -> str | None:
     return None if _UDF_TARGET.match(target) else "expected 'package.module:function'"
 
@@ -69,9 +77,9 @@ class NamingDefaults:
         "prefix '_', letter (SDK style: 0 -> a), or error.", default="prefix"
     )
     max_length: int = documented(
-        "Longer names are truncated (see truncate).",
+        "Longer names are truncated (see truncate). At least 8, room for a hash suffix.",
         default=63,
-        metadata={"check": positive},
+        metadata={"check": _name_length},
     )
     truncate: Literal["hash", "error"] = documented(
         "hash keeps the head plus '_' and 6 hex digits of a hash of the full name.",

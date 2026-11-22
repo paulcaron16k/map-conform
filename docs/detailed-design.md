@@ -285,7 +285,19 @@ Details of steps 2–8 (`map_conform/naming/conform.py`):
   separators: replacing them is not a loss. Dropping any other character (`%`, `$`, `#`, `€`)
   or transliterating is a lossy change, and is recorded.
 - `leading_digit: letter` replaces the first digit as the Singer SDK does (`0`→`a` …
-  `9`→`j`).
+  `9`→`j`). A digit-like character with no digit value, which `ascii: keep` can let
+  through, is prefixed instead.
+- **Truncation** keeps the head, then `_`, then the first 6 hex digits of the SHA-256 of the
+  whole conformed name. A trailing `_` is trimmed from the head first. `max_length` is at
+  least 8. The `col_<n>` placeholder, the hash and the letter all follow `case`.
+- **Fixed point.** Steps 6–10 repeat until the name stops changing, because truncation can
+  produce something an earlier step would change again (e.g. a prefixed `_0…` cut back to
+  `_` plus the hash). This is what makes conforming idempotent. Property tests check it for
+  arbitrary Unicode input under randomised configurations.
+- **Collisions** are checked within a stream (and within a struct) under case folding.
+  First occurrences claim their names before any suffix is chosen, so a source genuinely
+  named `order_id_2` keeps that name. Later duplicates get the next free `_2`, `_3`, …,
+  shortened to fit `max_length`.
 
 Every lossy rename (dropped characters, transliteration) is logged once per stream. The mapping
 from source to conformed name is available from `spec explain` and is written to metrics.

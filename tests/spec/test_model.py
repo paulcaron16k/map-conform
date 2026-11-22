@@ -202,7 +202,7 @@ def test_every_problem_is_reported_with_its_path() -> None:
         ({}, "version: required"),
         ([], "<root>: expected a mapping, got a list"),
         ({"version": 1, "defaults": {"naming": {"max_length": 0}}},
-         "defaults.naming.max_length: must be at least 1"),
+         "defaults.naming.max_length: must be at least 8"),
         ({"version": 1, "defaults": {"naming": {"max_length": 63.0}}},
          "defaults.naming.max_length: expected an integer, got a number"),
         ({"version": 1, "streams": {"s": {"columns": {"x": {"max_length": True}}}}},
