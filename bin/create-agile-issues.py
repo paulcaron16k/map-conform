@@ -32,6 +32,8 @@ ROW_RE = re.compile(r"^\| (\d+\.\d+) \| (.+?) \| (\d+) \| (.+?) \|\s*$")
 
 @dataclass
 class Story:
+    """One story row of a WBS table."""
+
     wbs: str
     title: str
     points: int
@@ -40,6 +42,8 @@ class Story:
 
 @dataclass
 class Epic:
+    """One `### E<n>` epic heading and the stories under it."""
+
     code: str
     number: int
     name: str
@@ -48,6 +52,7 @@ class Epic:
 
     @property
     def title(self) -> str:
+        """The issue title: `E<n> <name> [P<k>]`."""
         return f"{self.code} {self.name} [{self.phase}]"
 
 
@@ -63,9 +68,7 @@ def parse_plan(text: str) -> tuple[str, str, list[Epic]]:
         if m := EPIC_RE.match(line):
             epics.append(Epic(m.group(1), int(m.group(2)), m.group(3), m.group(4)))
         elif (m := ROW_RE.match(line)) and epics:
-            epics[-1].stories.append(
-                Story(m.group(1), m.group(2), int(m.group(3)), m.group(4))
-            )
+            epics[-1].stories.append(Story(m.group(1), m.group(2), int(m.group(3)), m.group(4)))
     if not epics:
         sys.exit("plan-wbs.md: no epics parsed")
     for e in epics:
@@ -78,6 +81,7 @@ def parse_plan(text: str) -> tuple[str, str, list[Epic]]:
 
 
 def existing_titles() -> dict[str, int]:
+    """Map every issue title in the repo, key prefix stripped, to its number."""
     out = subprocess.run(
         [
             "gh",
@@ -97,9 +101,7 @@ def existing_titles() -> dict[str, int]:
         text=True,
     ).stdout
     # Strip a "MAPC-n " title prefix the profile may add, so lookups match plain titles.
-    return {
-        re.sub(r"^[A-Z]+-\d+\s+", "", i["title"]): i["number"] for i in json.loads(out)
-    }
+    return {re.sub(r"^[A-Z]+-\d+\s+", "", i["title"]): i["number"] for i in json.loads(out)}
 
 
 def run(cmd: list[str]) -> int:
@@ -112,12 +114,11 @@ def run(cmd: list[str]) -> int:
 
 
 def main() -> None:
+    """Parse the plan and print, or with --apply file, the missing issues."""
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ap.add_argument(
-        "--apply", action="store_true", help="create issues (default: dry run)"
-    )
+    ap.add_argument("--apply", action="store_true", help="create issues (default: dry run)")
     args = ap.parse_args()
 
     intent, acceptance, epics = parse_plan(PLAN.read_text())

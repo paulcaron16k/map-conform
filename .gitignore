@@ -15,3 +15,5 @@ htmlcov/
 output/
 *.swp
 *~
+.meltano/
+config.json

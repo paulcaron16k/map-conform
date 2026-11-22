@@ -27,7 +27,7 @@ referenced by at least one target's review rules.
 
 | Phase | Epics | Exit criteria |
 |---|---|---|
-| **P0 Foundations** | E1 | Cookiecutter scaffold committed; CI (lint, type, test, build) green on 3.10–3.13; wiki and docs in place; pre-commit and wiki lint working |
+| **P0 Foundations** | E1 | Cookiecutter scaffold committed; CI (lint, type, test, build) green on 3.10–3.14; wiki and docs in place; pre-commit and wiki lint working |
 | **P1 Spec & names** | E2, E3 | Spec loads strictly with inheritance; JSON Schema generated, with a staleness test; `spec validate/schema`; conformer passes golden and property tests |
 | **P2 RECORD engine** | E4, E5, E7 | Type system and builtins; RECORD path end to end; `_sdc_*`; on_error/reject; CSV corpus lands clean via target-jsonl |
 | **P3 Expressions, UDFs & stream-map parity** | E6, E12 | Safe expr, `case`, macros, UDF registry; SDK `stream_maps` settings accepted unchanged; SDK stream-map test cases pass in compatibility mode; pipelinewise masking parity |

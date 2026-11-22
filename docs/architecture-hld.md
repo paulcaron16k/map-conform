@@ -36,7 +36,7 @@ compatibility translator ([ADR-0010](../wiki/decisions/0010-stream-map-superset.
 | BATCH throughput | ≥ 1M rows/s for an all-vectorisable stream; memory bounded by a row-group-sized chunk |
 | Safety | Expression sandbox; UDFs from module paths need an explicit opt-in; no `eval` of user strings |
 | Operability | Clear errors naming stream, column, row number and value; metrics; a `doctor` command |
-| Compatibility | Python 3.10–3.13; singer-sdk compatible range pinned; Meltano ≥ 3 |
+| Compatibility | Python 3.10–3.14 (the SDK's supported range); singer-sdk compatible range pinned; Meltano ≥ 3 |
 
 ## 3. Component view
 

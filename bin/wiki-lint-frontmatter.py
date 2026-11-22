@@ -66,6 +66,7 @@ REQUIRED = ("type", "title", "description", "resource", "tags", "timestamp", "so
 
 
 def lint(path: Path) -> list[str]:
+    """Return the frontmatter problems in one wiki page."""
     text = path.read_text(encoding="utf-8")
     if not text.startswith("---\n"):
         return ["missing frontmatter"]
@@ -92,6 +93,7 @@ def lint(path: Path) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
+    """Lint the given pages, or every wiki page; return the exit code."""
     files = [Path(a) for a in argv] or sorted((ROOT / "wiki").rglob("*.md"))
     files = [f for f in files if f.name != "log.md"]
     bad = 0
