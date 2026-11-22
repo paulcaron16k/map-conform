@@ -8,6 +8,7 @@ the way by map-conform with the spec in `conform.yml`. CI runs it on every chang
 ```bash
 cd examples
 meltano install            # tap-csv, map-conform (from this checkout) and target-ducklake
+mkdir -p output            # where the lake goes (SQLite catalog and data files)
 meltano run load           # tap-csv conform target-ducklake
 map-conform doctor         # checks the project, e.g. that the target keeps _sdc_* columns
 ```

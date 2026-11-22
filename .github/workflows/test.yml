@@ -117,7 +117,9 @@ jobs:
         run: uvx --python 3.12 meltano==4.4.1 install
       - name: meltano run
         working-directory: examples
-        run: uvx --python 3.12 meltano==4.4.1 run load
+        run: |
+          mkdir -p output  # the SQLite catalog's directory
+          uvx --python 3.12 meltano==4.4.1 run load
       - name: Check the lake
         working-directory: examples
         run: uv run --no-project --with duckdb==1.5.2 python check_lake.py
