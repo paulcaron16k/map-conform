@@ -53,3 +53,8 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-22T06:00:00Z | UPDATED | runbooks/dev-environment | Python 3.11–3.14 |
 | 2026-11-22T06:00:00Z | UPDATED | ci-cd/pipeline | Python 3.11–3.14 |
 | 2026-11-22T08:00:00Z | UPDATED | decisions/0008-naming-defaults | Amended: default reserved dialects postgres, duckdb, snowflake; ansi opt-in |
+| 2026-11-22T10:00:00Z | UPDATED | components/spec-loader | P1 built: modules and behaviour as merged; draft → active |
+| 2026-11-22T10:00:00Z | UPDATED | components/name-conformer | P1 built: pipeline, streams, nested, properties; naming: sdk planned (WBS 12.10); draft → active |
+| 2026-11-22T10:00:00Z | UPDATED | schemas/plugin-settings | P1 built: settings as merged; SDK-compatible settings planned (E12); draft → active |
+| 2026-11-22T10:00:00Z | UPDATED | schemas/conform-spec | P1 built: generated schema, YAML 1.2, step rule; draft → active |
+| 2026-11-22T10:00:00Z | UPDATED | plans/roadmap | P1 done; P3 is 53 points with WBS 12.10 |

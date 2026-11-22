@@ -3,9 +3,14 @@ type: component
 title: "Name conformer"
 description: "Deterministic pipeline that makes stream, column and nested names legal in every target."
 resource: map_conform/naming/
-tags: [engineering, naming, draft]
-timestamp: 2026-11-21T00:00:00Z
+tags: [engineering, naming, active]
+timestamp: 2026-11-22T10:00:00Z
 sources:
+  - path: map_conform/naming/conform.py
+  - path: map_conform/naming/translit.py
+  - path: map_conform/naming/reserved.py
+  - path: map_conform/naming/streams.py
+  - path: map_conform/naming/nested.py
   - path: docs/detailed-design.md
 ---
 
@@ -13,23 +18,46 @@ sources:
 
 Parent: [Wiki Index](../index.md) · Related: [Detailed design](../../docs/detailed-design.md)
 
-> Status: **draft**. This describes the designed system. No code exists yet.
-
 ## Pipeline (defaults from [ADR-0008](../decisions/0008-naming-defaults.md))
 
-1. NFKC
-2. Transliterate to ASCII with the bundled table ([ADR-0012](../decisions/0012-bundled-transliteration-table.md))
-3. Split camelCase and acronyms
-4. Lowercase
-5. `[^a-z0-9_]` → `_`
-6. Collapse `_` and trim it from the ends
-7. Leading digit → `_` prefix
-8. Empty → `col_<n>`
-9. Reserved word → `_` suffix
-10. Longer than 63 → head + `_` + 6-hex hash
-11. Collision check under case folding
+`map_conform/naming/conform.py`:
+
+1. NFKC.
+2. ASCII:
+   - transliterate with the bundled table ([ADR-0012](../decisions/0012-bundled-transliteration-table.md),
+     `map_conform/naming/translit.py`, Unicode 16.0.0, Latin/Greek/Cyrillic);
+   - multi-letter capitals are title-cased, or all caps beside another capital (`ΑΡΙΘΜΟΣ` →
+     `arithmos`);
+   - characters outside the table are dropped.
+3. Split camelCase and acronyms (snake only). A plural acronym stays whole: `customerIDs` →
+   `customer_ids`.
+4. Case: snake/lower, upper or preserve.
+5. Characters outside the allowed set → `_`. Separators are not losses; `%`, `$` and `#` are.
+6. Collapse `_` and trim it from the ends.
+7. Leading digit: `_` prefix, SDK letter (`0`→`a`), or error.
+8. Empty → `col_<n>`.
+9. Reserved word → `_` suffix (`map_conform/naming/reserved.py`). The default lists are
+   PostgreSQL, DuckDB and Snowflake; `ansi` is opt-in.
+10. Longer than `max_length` (63, at least 8) → head + `_` + 6 hex digits of the SHA-256 of
+    the whole name.
+
+Steps 6–10 repeat until the name is a fixed point. `conform_all` checks collisions under case
+folding: an error, or `_2`, `_3`, … Genuine names win.
+
+## Streams and nested members
+
+- `map_conform/naming/streams.py`:
+  - an alias is checked, never silently conformed;
+  - otherwise the source key or tap name, split, conformed, then prefixed.
+- `map_conform/naming/nested.py`:
+  - struct members (CTypes and tap-schema objects) are conformed at every depth, through
+    lists;
+  - collisions are checked per struct;
+  - `rename_value` renames record values.
 
 ## Golden cases
+
+`tests/fixtures/corpus/names.csv` has 38 cases, including every design §5 example:
 
 | Source | Output |
 |---|---|
@@ -39,14 +67,15 @@ Parent: [Wiki Index](../index.md) · Related: [Detailed design](../../docs/detai
 | `2023 Revenue` | `_2023_revenue` |
 | `Ünïcode Näme` | `unicode_name` |
 | `select` | `select_` |
-
-## Preset `naming: sdk`
-
-Reproduces the SDK's SQL `conform_name` byte for byte: strip, lowercase, `.`/`-`/space → `_`,
-leading digit → letter. It exists for migrating tables that were already loaded that way.
+| `ΑΡΙΘΜΟΣ` | `arithmos` |
 
 ## Properties (tested with Hypothesis)
 
-- idempotent: `conform(conform(x)) == conform(x)`;
-- the output always matches the grammar;
-- the output is unique per stream, or an error is raised.
+- The output always matches the grammar.
+- Conforming is idempotent under randomised configurations.
+- The output is unique per stream, or an error is raised.
+
+## Planned
+
+- Preset `naming: sdk`, reproducing the SDK's SQL `conform_name` byte for byte for
+  migrations (WBS 12.10).

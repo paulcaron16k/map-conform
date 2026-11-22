@@ -162,6 +162,7 @@ referenced by at least one target's review rules.
 | 12.7 | SDK flattening semantics, including `max_key_length` key shortening | 3 | Matches SDK flattening output |
 | 12.8 | `spec import --stream-maps` migration with explicit inferred types | 2 | Round trip: import, then run, gives the same output |
 | 12.9 | SDK stream-map parity suite (the SDK's own mapper test cases) | 3 | Green in CI |
+| 12.10 | SDK naming preset (`naming: sdk`) reproducing the SDK's `conform_name` (ADR-0008) | 2 | Byte-for-byte equal to the SDK on the golden names and on generated names |
 
 ## Dependencies
 
@@ -179,11 +180,11 @@ E1 ─▶ E2 ─▶ E3
 | P0 | 13 |
 | P1 | 32 |
 | P2 | 62 |
-| P3 | 51 |
+| P3 | 53 |
 | P4 | 35 |
 | P5 | 21 |
 | P6 | 6 |
-| **Total** | **220** |
+| **Total** | **222** |
 
 At ~20 points per 2-week sprint this is about 11 sprints. A first usable alpha, RECORD only
 (P0–P2), comes after about 6 sprints.

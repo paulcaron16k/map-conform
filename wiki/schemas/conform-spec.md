@@ -3,20 +3,21 @@ type: schema
 title: "Conform spec (v1)"
 description: "Grammar of the map-conform conform spec file: top level, defaults, streams, columns, chains, macros, UDFs."
 resource: map_conform/spec/model.py
-tags: [config, interface, draft]
-timestamp: 2026-11-21T00:00:00Z
+tags: [config, interface, active]
+timestamp: 2026-11-22T10:00:00Z
 sources:
   - path: docs/detailed-design.md
+  - path: map_conform/spec/model.py
 ---
 
 # Conform spec (v1)
 
 Parent: [Wiki Index](../index.md)
 
-> Status: **draft**. This describes the designed system. No code exists yet.
-
-The authoritative reference is detailed design §3 (path:docs/detailed-design.md). Once the
-JSON Schema is generated from code, it will be `map_conform/map-conform-spec.schema.json`.
+The model is `map_conform/spec/model.py`, and the JSON Schema generated from it is
+`map_conform/map-conform-spec.schema.json`; editors can use it for completion. `map-conform
+spec validate` is the authority, since it also checks CType grammar and step forms. Detailed
+design §3 is the reference (path:docs/detailed-design.md).
 
 ## Top level
 
@@ -81,7 +82,9 @@ SDK `stream_maps` settings are also accepted and translated (detailed design §1
 
 ## Rules
 
-- Unknown keys are errors.
+- Unknown keys are errors; every problem is reported with its path.
+- YAML is read with YAML 1.2 scalars: only `true`/`false` are booleans.
+- In a mapping step, the first key other than `when` names the step.
 - Objects merge and lists replace.
 - The most specific glob wins.
 - An implicit cast to the declared `type` ends every chain.
