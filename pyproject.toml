@@ -19,7 +19,7 @@ keywords = [
     "data cleaning",
 ]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Topic :: Database",
     "Operating System :: OS Independent",
@@ -54,6 +54,7 @@ s3 = [
 Homepage = "https://github.com/paulcaron16k/map-conform"
 Documentation = "https://github.com/paulcaron16k/map-conform/tree/main/docs"
 Issues = "https://github.com/paulcaron16k/map-conform/issues"
+Changelog = "https://github.com/paulcaron16k/map-conform/blob/main/CHANGELOG.md"
 
 [project.scripts]
 map-conform = "map_conform.cli:main"
