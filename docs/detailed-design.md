@@ -916,7 +916,19 @@ As built (`map_conform/transforms/vector.py`, `map_conform/plan/vector.py`,
   comparison are left to the scalar path, where Python raises. A condition that reads
   another column, or uses anything else, keeps the case row-wise.
 
-- **Not yet:** polars (8.7).
+- **The polars engine** (`map_conform/transforms/polars_vector.py`, WBS 8.7, the `polars`
+  extra). `defaults.engine: polars`, or a column's `engine: polars`, uses polars vector
+  ops where they exist and the Arrow ones elsewhere. Without the extra it is a compile
+  error naming it. polars adds what Arrow does not vectorise, under the same claiming rule:
+
+  - `regex_replace` and `regex_extract` claim printable-ASCII rows without line breaks,
+    for patterns that compile in polars and cannot match the empty string, with the `i`
+    flag at most; Python replacement references (`\1`, `\g<name>`) are translated;
+  - temporal casts whose first format is a strptime pattern of `%Y %m %d %H %M %S` and
+    literals claim rows that parse and print back to the same text, so Python's padding
+    leniency stays on the scalar path.
+
+  Parity tests cover generated text and dates through each.
 
 ### 10.3 BATCH message I/O
 

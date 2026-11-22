@@ -257,6 +257,15 @@
           "description": "Flatten this column into parent__child columns (from its shape when it has one). Unset: follow nested: flatten.",
           "default": null
         },
+        "engine": {
+          "enum": [
+            "arrow",
+            "polars",
+            null
+          ],
+          "description": "Overrides engine for this column.",
+          "default": null
+        },
         "infer_type": {
           "enum": [
             "sdk",
@@ -413,6 +422,14 @@
             "seed": null,
             "locale": null
           }
+        },
+        "engine": {
+          "enum": [
+            "arrow",
+            "polars"
+          ],
+          "description": "Vectorised BATCH engine: Arrow, or polars (the polars extra), which also vectorises regular expressions and strptime date formats.",
+          "default": "arrow"
         },
         "max_reject_rate": {
           "type": [
@@ -741,6 +758,7 @@
               "seed": null,
               "locale": null
             },
+            "engine": "arrow",
             "max_reject_rate": null,
             "max_null_rate": null
           }
@@ -1007,6 +1025,13 @@
         "faker": {
           "$ref": "#/$defs/FakerDefaults",
           "description": "Fake data settings."
+        },
+        "engine": {
+          "enum": [
+            "arrow",
+            "polars"
+          ],
+          "description": "Vectorised BATCH engine: Arrow, or polars (the polars extra), which also vectorises regular expressions and strptime date formats."
         },
         "max_reject_rate": {
           "type": [

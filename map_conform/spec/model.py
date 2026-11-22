@@ -237,6 +237,11 @@ class Defaults:
     )
     flatten: FlattenDefaults = documented("Flattening settings.", default_factory=FlattenDefaults)
     faker: FakerDefaults = documented("Fake data settings.", default_factory=FakerDefaults)
+    engine: Literal["arrow", "polars"] = documented(
+        "Vectorised BATCH engine: Arrow, or polars (the polars extra), which also vectorises "
+        "regular expressions and strptime date formats.",
+        default="arrow",
+    )
     max_reject_rate: float | None = documented(
         "Fail the run when more than this fraction of a stream's rows is rejected (0-1).",
         default=None,
@@ -336,6 +341,9 @@ class ColumnSpec:
         "Flatten this column into parent__child columns (from its shape when it has one). "
         "Unset: follow nested: flatten.",
         default=None,
+    )
+    engine: Literal["arrow", "polars"] | None = documented(
+        "Overrides engine for this column.", default=None
     )
     infer_type: Literal["sdk"] | None = documented(
         "Without type: infer it from expr as the Singer SDK mapper does (int(...) is an "
