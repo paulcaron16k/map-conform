@@ -75,3 +75,4 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-22T19:00:00Z | UPDATED | decisions/0005-sdc-metadata | Amended: add_record_metadata, default false, for RECORD and BATCH |
 | 2026-11-22T19:00:00Z | UPDATED | decisions/0010-stream-map-superset | Compatibility defaults no longer set metadata |
 | 2026-11-22T19:00:00Z | UPDATED | components/metadata-and-errors | _sdc_* columns follow add_record_metadata (default false) |
+| 2026-11-22T19:30:00Z | UPDATED | plans/roadmap | Added WBS 7.5 (done) and 8.10 (first in P4) |

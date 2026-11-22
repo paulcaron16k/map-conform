@@ -109,6 +109,7 @@ referenced by at least one target's review rules.
 | 7.2 | ConformError with full context; on_error raise/null/keep | 3 | Messages name stream, column, row and value |
 | 7.3 | Reject sink (JSONL/parquet) and rate thresholds | 3 | Rejected rows written; threshold fails the run |
 | 7.4 | Metrics (log lines + `metrics_path`) | 2 | Counters asserted in tests |
+| 7.5 | `add_record_metadata` (default false) replaces `defaults.metadata`, for RECORD and BATCH (added 2026-11-22, done in #114) | 2 | No `_sdc_*` by default; per-stream override; `stream_maps` does not change it |
 
 ### E8 BATCH engine (P4) — 8
 
@@ -123,6 +124,7 @@ referenced by at least one target's review rules.
 | 8.7 | `[polars]` extra and engine selection | 5 | Parity with the polars engine |
 | 8.8 | `batch_output.mode: record` fallback; `delete_input` | 2 | E2E with a non-BATCH target |
 | 8.9 | Benchmarks and CI regression gate | 3 | Baseline recorded in the wiki |
+| 8.10 | Flattening from a declared JSON spec: stable SCHEMA and types; missing or empty members as `null`, `{}` or `[]` (JSON Schema `default`); undeclared members dropped, counted and logged (added 2026-11-22; first in P4) | 5 | Tap schema drift leaves the output SCHEMA unchanged; each empty-value form tested in RECORD and BATCH |
 
 ### E9 Bridges and tooling (P5) — 9
 
@@ -179,12 +181,12 @@ E1 ─▶ E2 ─▶ E3
 | -- | -- |
 | P0 | 13 |
 | P1 | 32 |
-| P2 | 62 |
+| P2 | 64 |
 | P3 | 53 |
-| P4 | 35 |
+| P4 | 40 |
 | P5 | 21 |
 | P6 | 6 |
-| **Total** | **222** |
+| **Total** | **229** |
 
 At ~20 points per 2-week sprint this is about 11 sprints. A first usable alpha, RECORD only
 (P0–P2), comes after about 6 sprints.
