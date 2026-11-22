@@ -25,6 +25,8 @@ class StreamMetrics:
     rows_filtered: int = 0
     """Rows the stream's filter dropped."""
     values_kept: int = 0
+    members_dropped: Counter[tuple[str, str]] = field(default_factory=Counter)
+    """Nested members a declared shape does not declare, by (column, member path)."""
     errors: Counter[tuple[str, str]] = field(default_factory=Counter)
     """Failed values by (column, rule), whatever on_error did with them."""
 
@@ -41,6 +43,10 @@ class StreamMetrics:
             "rows_nulled": self.rows_nulled,
             "rows_filtered": self.rows_filtered,
             "values_kept": self.values_kept,
+            "members_dropped": [
+                {"column": column, "member": member, "count": count}
+                for (column, member), count in sorted(self.members_dropped.items())
+            ],
             "errors": [
                 {"column": column, "rule": rule, "count": count}
                 for (column, rule), count in sorted(self.errors.items())

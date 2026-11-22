@@ -325,6 +325,18 @@ class ColumnSpec:
         "Transforms on nested members of struct and json columns, by dotted path.",
         default=None,
     )
+    shape: Mapping[str, Any] | None = documented(
+        "JSON Schema of the column's object or array value, inline or as a path to a .json "
+        "file (relative to the spec file). It alone decides the column's type, or its "
+        "flattened columns; members it does not declare are dropped, counted and logged; a "
+        "member's default (null, {}, []) is used when it is missing or empty.",
+        default=None,
+    )
+    flatten: bool | None = documented(
+        "Flatten this column into parent__child columns (from its shape when it has one). "
+        "Unset: follow nested: flatten.",
+        default=None,
+    )
     infer_type: Literal["sdk"] | None = documented(
         "Without type: infer it from expr as the Singer SDK mapper does (int(...) is an "
         "integer, and so on). Set by stream_maps translation; declaring type is clearer.",

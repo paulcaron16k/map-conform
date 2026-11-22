@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 from map_conform.errors import CellError, StepFailed
 from map_conform.expr.compiler import Expression, Row
+from map_conform.naming.shape import Shape
 from map_conform.transforms.registry import Transform
 from map_conform.types.canonical import CType
 
@@ -221,6 +222,26 @@ class CaseOp:
         if self.otherwise is None:
             return value
         return self.otherwise.run(value, ctx, row)
+
+
+@dataclass(frozen=True)
+class ShapeOp:
+    """A declared shape applied to the source value: undeclared members dropped, defaults set."""
+
+    shape: Shape
+    column: str
+    null_safe = True
+    forces_nullable = False
+    reads: frozenset[str] = frozenset()
+
+    @property
+    def rule(self) -> str:
+        """``shape``."""
+        return "shape"
+
+    def apply(self, value: object, _ctx: Context, row: Row) -> object:
+        """Conform the value to the shape, reporting dropped members on the row."""
+        return self.shape.conform(value, "", lambda p: row.dropped.append((self.column, p)))
 
 
 # --- nested fields --------------------------------------------------------------------------

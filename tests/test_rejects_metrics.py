@@ -133,6 +133,7 @@ def test_metrics_file(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> Non
                 "rows_nulled": 2,
                 "rows_filtered": 0,
                 "values_kept": 0,
+                "members_dropped": [],
                 "errors": [
                     {"column": "amount", "rule": "cast: decimal(12,2)", "count": 2},
                     {"column": "order_id", "rule": "cast: int64", "count": 1},

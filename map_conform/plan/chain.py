@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING, Any
 from map_conform.errors import StepFailed
 from map_conform.expr.compiler import ExprError, Expression, Names, compile_expr
 from map_conform.expr.functions import FUNCTIONS
+from map_conform.naming.shape import Shape
 from map_conform.plan.ops import (
     CaseOp,
     CastArgs,
@@ -41,6 +42,7 @@ from map_conform.plan.ops import (
     FieldsOp,
     GuardedOp,
     Op,
+    ShapeOp,
     StepError,
     path_segments,
 )
@@ -141,6 +143,9 @@ class ChainCompiler:
             fields = self._fields(spec, target, path, own)
             if full is not None and fields is not None:
                 full = CompiledChain((*full.steps, fields), target)
+        if spec.shape is not None and full is not None:  # first, on the source value
+            shape = ShapeOp(Shape.of(thaw_mapping(spec.shape)), own or path)
+            full = CompiledChain((shape, *full.steps), target)
         if full is None or len(self.issues.items) != before:
             return None
         if spec.when is None:

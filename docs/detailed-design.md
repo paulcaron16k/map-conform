@@ -185,6 +185,8 @@ streams:
 | `doc` | string | Copied to the SCHEMA `description` and to the Zamboni export. |
 | `sql_type` | string | Overrides the `x-sql-datatype` hint that is emitted (rarely needed). |
 | `when` | expr | Apply the whole chain only to rows where this is truthy; other rows keep the cast value. Sees conformed names. (pipelinewise `when`: `equals` → `col == x`, `regex_match` → `matches(re, col)`; a falsy literal such as `0` is compared correctly.) |
+| `shape` | JSON Schema \| path | The column's object or array value, declared (inline, or a `.json` file relative to the spec file). It alone decides the column's type, or its flattened columns, so the output SCHEMA does not follow tap schema drift. Members it does not declare are dropped, counted (`members_dropped`) and logged once per stream; a member's `default` (`null`, `{}`, `[]`) is used when it is missing, null or empty (WBS 8.10, decided 2026-11-22). |
+| `flatten` | bool | Flatten this column into `parent__child` columns, from its `shape` when it has one. Unset: follows `nested: flatten`. |
 | `fields` | `{path: ColumnSpec-lite}` | For `struct` and `json` columns: transforms on nested members by dotted path (`address.zip`, `items[*].sku`), e.g. masking a nested field. Only `transform`, `when` and `drop` are allowed. (pipelinewise `field_paths`.) |
 
 ### 3.4 Chains, steps and macros
@@ -344,33 +346,42 @@ Details of steps 2–8 (`map_conform/naming/conform.py`):
 
 - **Camel split** applies only with `case: snake` and `split_camel: true`, on ASCII text. A
   plural acronym stays whole: `customerIDs` → `customer_ids`, `APIs` → `apis`.
+
 - **Transliteration** uses the bundled table. A capital that becomes several letters is
   title-cased (`Θεός` → `Theos`), but in all caps beside another capital (`ΘΕΑ` → `THEA`),
   so the camel split does not cut all-caps words apart. Characters outside the table are
   dropped.
+
 - **Allowed characters** depend on `case`: `[a-z0-9_]` for snake and lower, `[A-Z0-9_]` for
   upper, `[A-Za-z0-9_]` for preserve, and any Unicode word character with `ascii: keep`.
+
 - **Separators versus losses.** Whitespace and `- _ . ( ) [ ] { } / \ : , ; ' "` are
   separators: replacing them is not a loss. Dropping any other character (`%`, `$`, `#`, `€`)
   or transliterating is a lossy change, and is recorded.
+
 - `leading_digit: letter` replaces the first digit as the Singer SDK does (`0`→`a` …
   `9`→`j`). A digit-like character with no digit value, which `ascii: keep` can let
   through, is prefixed instead.
+
 - **Truncation** keeps the head, then `_`, then the first 6 hex digits of the SHA-256 of the
   whole conformed name. A trailing `_` is trimmed from the head first. `max_length` is at
   least 8. The `col_<n>` placeholder, the hash and the letter all follow `case`.
+
 - **Fixed point.** Steps 6–10 repeat until the name stops changing, because truncation can
   produce something an earlier step would change again (e.g. a prefixed `_0…` cut back to
   `_` plus the hash). This is what makes conforming idempotent. Property tests check it for
   arbitrary Unicode input under randomised configurations.
+
 - **Collisions** are checked within a stream (and within a struct) under case folding.
   First occurrences claim their names before any suffix is chosen, so a source genuinely
   named `order_id_2` keeps that name. Later duplicates get the next free `_2`, `_3`, …,
   shortened to fit `max_length`.
+
 - **Nested members** (`naming.nested: true`, `map_conform/naming/nested.py`) of declared
   `struct<…>` types and of tap-schema objects are conformed at every depth, through lists,
   with collisions checked per struct. `required` lists follow their properties. A name tree
   renames the keys of record values at run time; keys it does not know are kept.
+
 - **`naming: sdk`** (short for `{preset: sdk}`) replaces steps 1–10 with the Singer SDK's
   SQL `conform_name`, byte for byte. It drops everything but ASCII letters, digits, `_`,
   `-`, `.` and whitespace, lowercases, trims, turns `.`, `-` and spaces into `_`, and turns
@@ -379,8 +390,10 @@ Details of steps 2–8 (`map_conform/naming/conform.py`):
   crashes, is an error. Tests compare it with the SDK's own function on the golden names and
   on generated names. A stream's naming options merge into the preset:
   `{preset: sdk, on_collision: suffix}`.
+
 - **`nested: flatten`** (`map_conform/naming/flatten.py`) is the SDK's flattening,
   re-implemented and tested against the SDK's functions:
+
   - Undeclared object properties become `parent__child` columns down to `flatten.max_depth`,
     with the SDK's key shortening at `flatten.max_key_length`.
   - Objects and arrays below the limit become JSON text (compact, exact decimals).
@@ -390,6 +403,15 @@ Details of steps 2–8 (`map_conform/naming/conform.py`):
   - The flattened keys are then conformed like any name. The default naming collapses `__`
     to `_`; use `naming: sdk` or `collapse: false` to keep it.
   - Two paths giving the same key is an error at `streams.<s>.nested`.
+
+- **Declared shapes** (`map_conform/naming/shape.py`, WBS 8.10). A flattened column with a
+  `shape` is replaced at plan time by its leaf columns, typed from the shape: arrays stay
+  `list<…>`, objects without properties are `json`, objects past `max_depth` are structs.
+  The tap's nested schema is never read for it. A leaf may have its own column spec (a
+  transform, a default); its type still comes from the shape unless declared. At run time
+  the value is conformed to the shape (undeclared members dropped, defaults applied, empty
+  containers normalised to the default) before it is flattened. An unflattened column with
+  a `shape` is typed by it, and the same conforming runs as its first step.
 
 Every lossy rename (dropped characters, transliteration) is logged once per stream. The mapping
 from source to conformed name is available from `spec explain` and is written to metrics.
@@ -927,7 +949,8 @@ Emitted as SDK-style metric log lines, and optionally to `metrics_path`.
 As built (`map_conform/metrics.py`):
 
 - **Counters**, per output stream: `rows_in`, `rows_out`, `rows_rejected`, `rows_nulled`,
-  `rows_filtered`, `values_kept`, and `errors` by (column, rule), whatever `on_error` did
+  `rows_filtered`, `values_kept`, `members_dropped` by (column, member path) for members
+  a declared shape does not declare, and `errors` by (column, rule), whatever `on_error` did
   with them.
 - **Output.** One `Metrics for '<stream>': {...}` log line per stream at the end of the run,
   and `metrics_path` as `{"streams": {name: counters}}`.
