@@ -12,7 +12,7 @@ from map_conform.naming.conform import NameConformer, NamingError
 from map_conform.spec.model import NamingDefaults
 from tests.fixtures.paths import FIXTURES
 
-RESERVED_CASES = {"golden_reserved", "reserved_order", "reserved_user"}  # WBS 3.2
+RESERVED_CASES = {"golden_reserved", "reserved_order", "reserved_user"}
 
 
 def golden() -> list[dict[str, str]]:
@@ -29,16 +29,12 @@ def conformer(**overrides: object) -> NameConformer:
 @pytest.mark.parametrize("row", golden(), ids=lambda r: r["case"])
 def test_golden_table(row: dict[str, str]) -> None:
     """Every golden case conforms to its expected name with the defaults."""
-    if row["case"] in RESERVED_CASES:
-        pytest.skip("reserved words arrive with WBS 3.2")
     assert conformer().conform(row["source"]).name == row["expected"]
 
 
 @pytest.mark.parametrize("row", golden(), ids=lambda r: r["case"])
 def test_conforming_is_idempotent(row: dict[str, str]) -> None:
     """A conformed name conforms to itself, losslessly."""
-    if row["case"] in RESERVED_CASES:
-        pytest.skip("reserved words arrive with WBS 3.2")
     once = conformer().conform(row["source"]).name
     twice = conformer().conform(once)
     assert twice.name == once
