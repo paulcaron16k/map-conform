@@ -28,7 +28,6 @@ customer data or credentials** in code, docs, commits, issues or PRs.
 - Git identity is set in `.git/config` (`user.email = paulcaron16k@yahoo.com`).
 - Push only to the `fork`/`origin` remote of `paulcaron16k`. Never create `tasks/` files in an
   upstream fork.
-- Before calling work done: `uv run pytest`, `uv run ruff check . && uv run ruff format
-  --check .`, `uv run mypy map_conform`, `bin/wiki-lint-frontmatter.py`.
+- Before calling work done: `uv run pytest`, `uv run ruff check . && uv run ruff format --check .`, `uv run mypy map_conform`, `bin/wiki-lint-frontmatter.py`.
 - Wiki content syncs happen on `main` after a merge (see the maintenance runbook), with a
   `wiki/log.md` row for each page change.

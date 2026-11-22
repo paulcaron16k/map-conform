@@ -1,0 +1,6 @@
+# Keep authored line breaks; compact tables keep diffs small and keep
+# bin/create-agile-issues.py able to parse the WBS rows.
+wrap = "keep"
+
+[plugin.tables]
+compact_tables = true

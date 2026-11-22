@@ -30,7 +30,7 @@ compatibility translator ([ADR-0010](../wiki/decisions/0010-stream-map-superset.
 ## 2. Quality attributes
 
 | Attribute | Target |
-|---|---|
+| -- | -- |
 | Correctness | Same output for RECORD and BATCH; output always valid against the emitted SCHEMA |
 | RECORD throughput | ≥ 50k rows/s for a 20-column all-builtin stream on one core (orjson I/O) |
 | BATCH throughput | ≥ 1M rows/s for an all-vectorisable stream; memory bounded by a row-group-sized chunk |
@@ -84,10 +84,10 @@ map_conform/
 ## 4. Message flow
 
 | Message | Handling |
-|---|---|
+| -- | -- |
 | **SCHEMA** | Resolve the StreamSpec (by glob), then compile a StreamPlan: conform names, decide each column's CType (spec, or tap SCHEMA when undeclared), bind transforms, and check the plan (clashes, unknown functions, type-incompatible transforms). Emit the conformed SCHEMA with canonical types, `_sdc_*` and renamed `key_properties`/`bookmark_properties`. Cache the plan per stream. |
 | **RECORD** | `plan.row(record)`, then the metadata. Emit the record with `time_extracted` and `version` preserved. `on_error` decides what happens on a failure: raise, null, keep or reject. Rows dropped by `filter` are counted. |
-| **BATCH** | For each manifest file: read in chunks (parquet `iter_batches`, JSONL by line blocks), run `plan.columnar(batch)`, and write a new file with the declared Arrow schema to `batch_output.storage`. Emit one BATCH with the new manifest. Optionally (`batch_output.mode: record`) emit RECORDs instead, for targets without BATCH support. |
+| **BATCH** | For each manifest file: read in chunks (parquet `iter_batches`, JSONL by line blocks), run `plan.columnar(batch)`, and write a new file with the declared Arrow schema to `batch_output.storage`. Emit one BATCH with the new manifest. Optionally (`batch_output.mode: record`) emit RECORDDs instead, for targets without BATCH support. |
 | **STATE** | Pass through unchanged and in order (bookmarks stay keyed by tap names). Flushed only after every preceding output message is written. |
 | **ACTIVATE_VERSION** | Rename the stream and pass through. |
 
@@ -116,7 +116,7 @@ Rows rejected by any column are removed with a mask and written to the reject si
 ## 5. Key design decisions
 
 | Decision | Choice | ADR |
-|---|---|---|
+| -- | -- | -- |
 | Name and licence | `map-conform`, Apache-2.0, Python ≥ 3.10 | [0001](../wiki/decisions/0001-name-and-licence.md) |
 | Transform authoring | Builtins + macros, safe `expr`, Python UDFs | [0002](../wiki/decisions/0002-transform-authoring.md) |
 | Config | Own spec file; Zamboni/catalog bridge | [0003](../wiki/decisions/0003-own-spec-with-zamboni-bridge.md) |
@@ -156,7 +156,7 @@ plugins:
 ## 7. Interfaces
 
 | Interface | Direction | Contract |
-|---|---|---|
+| -- | -- | -- |
 | Singer messages in | tap → mapper | Singer spec + SDK BATCH manifest |
 | Singer messages out | mapper → target | [Clean-Landing Contract](../wiki/concepts/clean-landing-contract.md) |
 | Conform spec | user → mapper | [conform-spec schema](../wiki/schemas/conform-spec.md), JSON Schema shipped in the package |

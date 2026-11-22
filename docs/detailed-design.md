@@ -8,7 +8,7 @@ The plugin settings are kept small on purpose. The real configuration is in the 
 so Meltano's ~128 KiB-per-environment-variable limit never applies to it.
 
 | Setting | Type | Default | Meaning |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | `spec_path` | string | — | Path to the conform spec file (YAML or JSON). Relative paths resolve against the current directory, which is the project root under Meltano. |
 | `spec` | object | — | An inline spec for small cases. If both are given, `spec` is deep-merged over `spec_path`. |
 | `spec_vars` | object | `{}` | Values for `${var}` substitution in the spec, e.g. `prefix`. Environment variables are also visible as `${env:NAME}`. |
@@ -16,18 +16,18 @@ so Meltano's ~128 KiB-per-environment-variable limit never applies to it.
 | `allow_python_udfs` | boolean | false | Allows `udfs:` entries given as module paths. Entry-point UDFs from installed packages are always allowed. |
 | `batch_output.mode` | `batch` \| `record` | `batch` | Whether BATCH input is written out as new files (`batch`) or as RECORD messages (`record`). |
 | `batch_output.format` | `parquet` \| `jsonl` | `parquet` | Output encoding for BATCH. |
-| `batch_output.compression` | `zstd` \| `snappy` \| `gzip` \| `none` | `zstd` (parquet), `gzip` (jsonl) | |
+| `batch_output.compression` | `zstd` \| `snappy` \| `gzip` \| `none` | `zstd` (parquet), `gzip` (jsonl) |  |
 | `batch_output.storage.root` | string | input file's directory | Where output files go: an fsspec URL (`file://`, `s3://`, …). |
 | `batch_output.storage.params` | object | `{}` | fsspec storage options. |
 | `batch_output.delete_input` | boolean | false | Delete each input file after its output is written. |
 | `batch_output.row_group_size` | integer | 131072 | Rows per parquet row group, which is also the size of each processing chunk. |
 | `reject.storage` | string | `./.map-conform/rejects` | Where the dead-letter files go. |
-| `reject.format` | `jsonl` \| `parquet` | `jsonl` | |
+| `reject.format` | `jsonl` \| `parquet` | `jsonl` |  |
 | `metrics_path` | string | — | Write per-stream metrics as JSON at the end of the run. |
 | `stream_maps` | object | — | **SDK-compatible.** Accepted unchanged and translated into the spec at startup (§15). The native spec wins where both define a column. |
 | `stream_map_config` | object | — | **SDK-compatible.** Exposed as `config` in expressions; merged with `spec_vars`. |
 | `faker_config` | object | — | **SDK-compatible.** `{seed, locale}`; same as `defaults.faker`. |
-| `flattening_enabled` / `flattening_max_depth` / `flattening_separator` / `flattening_max_key_length` | | — | **SDK-compatible.** Same as `defaults.nested: flatten` plus `defaults.flatten.*`. |
+| `flattening_enabled` / `flattening_max_depth` / `flattening_separator` / `flattening_max_key_length` |  | — | **SDK-compatible.** Same as `defaults.nested: flatten` plus `defaults.flatten.*`. |
 
 ## 2. CLI
 
@@ -48,15 +48,16 @@ map-conform functions [--json]                       # list builtins, kwargs, ve
 ### 3.1 Top level
 
 | Key | Type | Required | Meaning |
-|---|---|---|---|
+| -- | -- | -- | -- |
 | `version` | `1` | ✓ | The spec version. Pinned with `const`. |
-| `defaults` | Defaults | | Inherited by every stream. |
-| `macros` | `{name: Chain}` | | Named, parameterised transform chains. |
-| `udfs` | `{name: "module:attr"}` | | Python functions, each made available as a transform and an expression function. |
-| `streams` | `{glob: StreamSpec}` | | Per-stream rules. A key is an fnmatch glob over the **tap's** stream name, or, when the StreamSpec has `source`, the name of a new output stream (§3.2). |
-| `else` | `keep` \| `drop` | | What happens to tap streams that match no key. Default `keep`, which conforms them with the defaults. SDK equivalent: `stream_maps.__else__: null` → `drop`. |
+| `defaults` | Defaults |  | Inherited by every stream. |
+| `macros` | `{name: Chain}` |  | Named, parameterised transform chains. |
+| `udfs` | `{name: "module:attr"}` |  | Python functions, each made available as a transform and an expression function. |
+| `streams` | `{glob: StreamSpec}` |  | Per-stream rules. A key is an fnmatch glob over the **tap's** stream name, or, when the StreamSpec has `source`, the name of a new output stream (§3.2). |
+| `else` | `keep` \| `drop` |  | What happens to tap streams that match no key. Default `keep`, which conforms them with the defaults. SDK equivalent: `stream_maps.__else__: null` → `drop`. |
 
 Parsing rules (the Zamboni pattern):
+
 - Unknown keys are an error everywhere.
 - `null` is allowed only where documented.
 - **Inheritance is by presence.** Objects merge key by key, and lists replace whole. Resolution
@@ -124,7 +125,7 @@ streams:
 ### 3.3 ColumnSpec
 
 | Key | Type | Meaning |
-|---|---|---|
+| -- | -- | -- |
 | `name` | string | Output name. It is still checked: an illegal name is an error, never silently conformed. |
 | `type` | CType string | The declared output type (§4). Taken from the tap SCHEMA if absent. |
 | `nullable` | bool | Default true. If false, a null becomes an error under `on_error`. |
@@ -133,7 +134,7 @@ streams:
 | `default` | literal | Used when the value is missing or null after transforms. |
 | `transform` | Chain | Steps run before/around the cast (§3.4). |
 | `parse` | object | Shorthand for the cast's kwargs, e.g. `{formats: [...], tz: ...}`. |
-| `true_values` / `false_values` / `null_tokens` / `trim` / `on_error` | | Column-level overrides of the defaults. |
+| `true_values` / `false_values` / `null_tokens` / `trim` / `on_error` |  | Column-level overrides of the defaults. |
 | `max_length` | int | For strings: `truncate` \| `error` via `on_overflow`. |
 | `enum` | list | Allowed values, checked after the cast. |
 | `drop` | bool | Remove the column. Dropping a key property is an error. |
@@ -147,7 +148,7 @@ streams:
 A **chain** is one step or a list of steps. A **step** is one of:
 
 | Form | Example |
-|---|---|
+| -- | -- |
 | bare name | `trim` |
 | name with kwargs | `{strip_chars: "$, "}` / `{cast: decimal, rounding: half_even}` |
 | macro reference | `money` or `{money: {currency: "€"}}` |
@@ -180,7 +181,7 @@ macros:
 ## 4. Canonical type system (CType)
 
 | CType | Aliases | JSON Schema emitted (contract) | Arrow | Zamboni `columns` |
-|---|---|---|---|---|
+| -- | -- | -- | -- | -- |
 | `boolean` | bool | `{"type":["boolean","null"]}` | bool | boolean |
 | `int16` | smallint | integer, min −32768, max 32767, `x-sql-datatype: smallint` | int16 | int |
 | `int32` | int, integer | integer, int32 bounds, `x-sql-datatype: integer` | int32 | int |
@@ -189,17 +190,18 @@ macros:
 | `float64` | double | number, `x-sql-datatype: double precision` | float64 | double |
 | `decimal(p,s)` | numeric(p,s) | `{"type":["string","null"],"format":"x-singer.decimal","precision":p,"scale":s}` | decimal128(p,s) (decimal256 if p > 38) | decimal(p,s) |
 | `string` / `string(n)` | text, varchar(n) | string (+ `maxLength`) | string (large_string if needed) | string |
-| `date` | | string, `format: date` | date32 | date |
-| `time` | | string, `format: time` | time64[us] | time |
+| `date` |  | string, `format: date` | date32 | date |
+| `time` |  | string, `format: time` | time64[us] | time |
 | `timestamp` | timestamp_ntz | string, `format: date-time`, `x-sql-datatype: timestamp` | timestamp[us] | timestamp |
 | `timestamptz` | timestamp_tz | string, `format: date-time`, `x-sql-datatype: timestamptz` | timestamp[us, UTC] | timestamptz |
-| `uuid` | | string, `format: uuid` | `arrow.uuid` extension, which parquet stores as `fixed_len_byte_array(16)` with the UUID logical type; `uuid_as: string` is an option | uuid |
+| `uuid` |  | string, `format: uuid` | `arrow.uuid` extension, which parquet stores as `fixed_len_byte_array(16)` with the UUID logical type; `uuid_as: string` is an option | uuid |
 | `binary` | bytes, blob | string, `contentEncoding: base64` | binary | binary |
 | `json` | variant | string, `x-sql-datatype: json` (the value is JSON **text**) | string | string |
-| `struct<a: T, …>` | | object with `properties`, `required` for non-nullable members | struct | struct<…> |
-| `list<T>` | array<T> | array with `items` | list | list<…> |
+| `struct<a: T, …>` |  | object with `properties`, `required` for non-nullable members | struct | struct\<…> |
+| `list<T>` | array<T> | array with `items` | list | list\<…> |
 
 **From a tap SCHEMA (undeclared columns).**
+
 - `integer` becomes int64, or narrower when `minimum`/`maximum` fit.
 - `number` becomes float64, unless the tap gives `x-singer.decimal` or `precision`/`scale`,
   which give decimal.
@@ -220,23 +222,23 @@ macros:
 The pipeline is pure and deterministic, and each step can be configured:
 
 1. Unicode NFKC normalisation.
-2. Transliterate to ASCII (`unidecode`-style table, vendored subset) or strip.
-3. Split camelCase (`aB` → `a_B`) and acronym boundaries (`ABc` → `A_Bc`), so that
+1. Transliterate to ASCII (`unidecode`-style table, vendored subset) or strip.
+1. Split camelCase (`aB` → `a_B`) and acronym boundaries (`ABc` → `A_Bc`), so that
    `customerID` → `customer_ID` and `HTTPServer` → `HTTP_Server`.
-4. Apply the case.
-5. Replace characters outside `[a-z0-9_]` with `_`.
-6. Collapse repeated `_` and trim `_` from both ends.
-7. Leading digit: prefix `_`.
-8. Empty result: `col_<n>`, where n is the source ordinal. Logged.
-9. Reserved word: append `_`.
-10. Longer than `max_length`: truncate with a hash suffix.
-11. Within a stream (and within each struct), check for collisions under case folding: error,
-    or `_2`, `_3` suffixes.
+1. Apply the case.
+1. Replace characters outside `[a-z0-9_]` with `_`.
+1. Collapse repeated `_` and trim `_` from both ends.
+1. Leading digit: prefix `_`.
+1. Empty result: `col_<n>`, where n is the source ordinal. Logged.
+1. Reserved word: append `_`.
+1. Longer than `max_length`: truncate with a hash suffix.
+1. Within a stream (and within each struct), check for collisions under case folding: error,
+   or `_2`, `_3` suffixes.
 
 Golden examples:
 
 | Source | Output |
-|---|---|
+| -- | -- |
 | `Order Date (UTC)` | `order_date_utc` |
 | `customerID` | `customer_id` |
 | `HTTPServerURL` | `http_server_url` |
@@ -252,6 +254,7 @@ from source to conformed name is available from `spec explain` and is written to
 ## 6. Builtin transforms
 
 Each builtin is a `Transform`:
+
 - a name;
 - a kwargs dataclass, validated at plan compile time;
 - input/output CType constraints;
@@ -264,24 +267,24 @@ are marked ✓.
 ### 6.1 Text (pre-cast)
 
 | Builtin | Kwargs | Vec |
-|---|---|---|
+| -- | -- | -- |
 | `trim` | `chars=None` | ✓ |
 | `null_tokens` | `tokens`, `case_sensitive` | ✓ |
 | `strip_chars` | `chars` | ✓ |
 | `regex_replace` | `pattern`, `repl`, `flags` | ✓ (RE2 subset; otherwise row-wise) |
 | `regex_extract` | `pattern`, `group=1` | ✓ |
-| `lower` / `upper` / `title` | | ✓ |
+| `lower` / `upper` / `title` |  | ✓ |
 | `normalize_unicode` | `form=NFKC` | row |
 | `normalize_whitespace` | collapse internal runs | ✓ |
-| `remove_control_chars` | | ✓ |
-| `pad` / `left` / `right` / `substring` | | ✓ |
+| `remove_control_chars` |  | ✓ |
+| `pad` / `left` / `right` / `substring` |  | ✓ |
 | `map_values` | `{from: to}`, `default` | ✓ |
 | `split` | `sep` → list<string> | ✓ |
 
 ### 6.2 Numeric
 
 | Builtin | Kwargs / grammar | Vec |
-|---|---|---|
+| -- | -- | -- |
 | `cast: int*` / `cast: float*` / `cast: decimal` | The default grammar accepts: surrounding whitespace; a sign; one currency symbol or ISO-4217 code before or after; thousands separators in valid groups (`thousands=","`, `decimal_point="."`, locale presets `us`, `eu`, `ch`); an exponent; `(x)` as negative when `parens_negative`; a trailing `-` when `trailing_minus`; `%` when `percent: divide`. | ✓ (a regex validate + pyarrow cast; failures go row-wise for the error path) |
 | `rounding` (on cast) | `half_up` (default), `half_even`, `down`, `error`. Also controls int-from-fraction: `error` default. `"12.0"` → 12 is always allowed. | ✓ |
 | `round` | `ndigits` | ✓ |
@@ -292,7 +295,7 @@ are marked ✓.
 ### 6.3 Temporal
 
 | Builtin | Kwargs | Vec |
-|---|---|---|
+| -- | -- | -- |
 | `cast: timestamptz` / `timestamp` / `date` / `time` | `formats`: tried in order, each one of: a `strftime` pattern; `iso` (fromisoformat with a lenient `Z`/`z`/space separator); `excel_serial` (1900 system, with the Lotus leap bug handled; `excel_serial_1904`); `epoch_s` / `epoch_ms` / `epoch_us` / `epoch_ns`; `epoch_auto` (by magnitude, opt-in only); `rfc2822`. Also `tz` (source zone for naive input), `ambiguous: error \| earliest \| latest` and `nonexistent: error \| shift`, `dayfirst` (only for `auto`), `min_year` / `max_year` sanity bounds. | ✓ for strptime and ISO via `pyarrow.compute.strptime` / `cast`; serial and epoch via arithmetic; otherwise row-wise |
 | `to_utc` | timestamptz is always UTC on output; this is explicit for clarity | ✓ |
 | `assume_tz` | `tz` | ✓ |
@@ -301,13 +304,12 @@ are marked ✓.
 | `date_from_timestamp` | `tz` | ✓ |
 
 **Ambiguity rule.** A pattern list that could parse the same string to two different
-instants, such as `%m/%d` and `%d/%m` both listed, is allowed. The first match wins. `spec
-explain` warns about it.
+instants, such as `%m/%d` and `%d/%m` both listed, is allowed. The first match wins. `spec explain` warns about it.
 
 ### 6.4 Boolean, JSON, binary, privacy
 
 | Builtin | Kwargs | Vec |
-|---|---|---|
+| -- | -- | -- |
 | `cast: boolean` | `true_values`, `false_values`, `case_sensitive=false`; numbers: only 0 and 1 are allowed (otherwise an error) | ✓ |
 | `cast: json` | `parse_strings` (decode text that is already JSON instead of double-encoding), `sort_keys`, `ensure_ascii=false`, decimals kept exact | row |
 | `json_get` | `path` (JSONPath subset) | row |
@@ -325,7 +327,7 @@ explain` warns about it.
 **pipelinewise-transform-field parity** (each one is a builtin, minus pipelinewise's bugs):
 
 | pipelinewise type | map-conform step |
-|---|---|
+| -- | -- |
 | `SET-NULL` | `set_null` |
 | `HASH` | `hash` |
 | `HASH-SKIP-FIRST-n` | `{hash: {skip_first: n}}` |
@@ -343,7 +345,7 @@ always matches the values. A masking failure follows `on_error`; it is never swa
 dialect accepts, so existing stream-map expressions run unchanged.
 
 | Allowed | Not allowed |
-|---|---|
+| -- | -- |
 | Literals, arithmetic, comparisons, boolean ops | Assignment, lambdas, imports |
 | `x if c else y`, comprehensions | Dunder or underscore attribute access |
 | Subscripts and slices | `exec`, `eval`, `open`, `getattr` |
@@ -353,7 +355,7 @@ dialect accepts, so existing stream-map expressions run unchanged.
 **Names in scope.**
 
 | Name | Meaning |
-|---|---|
+| -- | -- |
 | `value` (alias `self`) | The current value, in a column chain |
 | Every column by **conformed** name | Values of the record |
 | `record` / `_` | The source record |
@@ -366,7 +368,7 @@ dialect accepts, so existing stream-map expressions run unchanged.
 **Functions.**
 
 | Group | Functions |
-|---|---|
+| -- | -- |
 | predicates | `is_null`, `is_string`, `is_number`, `is_int`, `is_decimal`, `is_bool`, `is_datetime`, `is_date`, `is_list`, `is_dict`, `is_blank`, `matches(re, s)` |
 | coercion | `to_int`, `to_float`, `to_decimal(v, p, s)`, `to_bool`, `to_str`, `to_json`, `from_json` |
 | temporal | `parse_datetime(v, *formats, tz=)`, `ensure_utc(v, assume=)`, `to_tz`, `now_utc`, `date_trunc`, `excel_date(n)`, `from_epoch(n, unit)` |
@@ -395,6 +397,7 @@ transform:
 ```
 
 **Implementation.**
+
 - Parse with `ast.parse(mode="eval")`, then a whitelist visitor compiles the tree to Python
   closures once per column.
 - This is not simpleeval at runtime: it is faster, has the same safety envelope, and its
@@ -421,11 +424,13 @@ def clean_sku(arr, *, ctx=None): ...
 ```
 
 **Registration.**
+
 - **Entry points** (group `map_conform.functions`) in any installed package. Always allowed.
 - **Spec `udfs: {name: "module:attr"}`**. Needs `allow_python_udfs: true`, because the module
   is imported from the project.
 
 **Contract.**
+
 - A UDF may be used as a step `{fiscal_week: {start_month: 4}}` or in an expr
   `fiscal_week(order_date, start_month=4)`.
 - Kwargs are validated against the signature at compile time.
@@ -437,26 +442,28 @@ not UDFs.
 ## 9. Plan compilation
 
 At SCHEMA:
+
 1. Resolve the StreamSpec.
-2. Conform the stream name.
-3. For each source property and each derived column, build a `ColumnPlan`:
+1. Conform the stream name.
+1. For each source property and each derived column, build a `ColumnPlan`:
    - output name and CType;
    - source accessor(s);
    - steps with kwargs already bound;
    - flags: `vectorised` and the `reads` dependency set;
    - `on_error`, `nullable`, `default`.
-4. Check the plan:
+1. Check the plan:
    - collisions;
    - unknown sources;
    - step type-compatibility;
    - a dependency cycle among derived columns, which is an error. Topological order is used.
-5. Build the output SCHEMA via `to_jsonschema` and the Arrow schema via `to_arrow`.
-6. Cache the plan by stream name. A new SCHEMA for the same stream recompiles, and the emitted
+1. Build the output SCHEMA via `to_jsonschema` and the Arrow schema via `to_arrow`.
+1. Cache the plan by stream name. A new SCHEMA for the same stream recompiles, and the emitted
    SCHEMA changes only if the output differs.
 
 ## 10. Execution
 
 ### 10.1 Row executor
+
 - The input is the SDK-decoded record (`Decimal` for numbers). I/O uses orjson where it is
   safe; numbers that need exact Decimal go through the SDK decoder path.
 - Each ColumnPlan is one composed closure. A fast path skips the cast when the value already
@@ -466,6 +473,7 @@ At SCHEMA:
   `_sdc_*`, so it sees conformed names and cast values.
 
 ### 10.2 Columnar executor
+
 - Input: a `pyarrow.RecordBatch` with any schema. JSONL is read in line blocks with
   `pyarrow.json.read_json`, with explicit `string` types for declared columns so nothing is
   inferred, or through the row decoder when nested shapes are irregular.
@@ -483,6 +491,7 @@ At SCHEMA:
   identical when converted to the canonical JSON form.
 
 ### 10.3 BATCH message I/O
+
 - Read the manifest URIs with fsspec (`batch_config.storage.params`-compatible), with
   streaming reads.
 - Write output named `<root>/<stream>/<run-id>-<n>.parquet`, then emit
@@ -495,7 +504,7 @@ At SCHEMA:
 ## 11. `_sdc_*` metadata (SDK-exact)
 
 | Column | Value |
-|---|---|
+| -- | -- |
 | `_sdc_extracted_at` | `time_extracted` of the input message |
 | `_sdc_received_at` | now (UTC ISO) when the message is processed |
 | `_sdc_batched_at` | BATCH: the input file's last-modified time. RECORD: the mapper start time, as an ISO timestamp (the run is the batch) |
@@ -511,13 +520,14 @@ values with near-identical ones, which is defined SDK behaviour.
 ## 12. Errors and rejects
 
 `ConformError` carries:
+
 - `stream`, `column`, `source_column`, `row_number`;
 - `value` (repr, truncated);
 - `rule` (step name + kwargs);
 - `message`.
 
 | on_error | Effect |
-|---|---|
+| -- | -- |
 | `raise` (default) | Stop with a precise message and the first N similar errors in the batch. |
 | `null` | Write null (an error if the column is non-nullable). Counted. |
 | `keep` | Keep the source value. Allowed only when the declared type is string or json. |
@@ -529,6 +539,7 @@ into a failure when a source goes bad.
 ## 13. Metrics and logging
 
 Per stream:
+
 - rows in and out;
 - filtered, rejected;
 - nulls produced by each column and rule;
@@ -559,7 +570,7 @@ that works there is lost. Every feature has a native spec equivalent, and the SD
 also accepted unchanged ([ADR-0010](../wiki/decisions/0010-stream-map-superset.md)).
 
 | SDK stream-map feature | Native spec |
-|---|---|
+| -- | -- |
 | `stream_maps.<stream>` (fnmatch globs) | `streams.<glob>` |
 | `__alias__` (expr over `__stream_name__`) | `alias` (string, `${vars}`, or `{expr: ...}` with `stream`) |
 | `__filter__` | `filter` |
@@ -576,15 +587,16 @@ also accepted unchanged ([ADR-0010](../wiki/decisions/0010-stream-map-superset.m
 | `flattening_enabled`, `_max_depth`, `_separator`, `_max_key_length` | `nested: flatten`, `flatten.{max_depth, separator, max_key_length}`, with the same key-shortening algorithm |
 
 **Compatibility mode.** When `stream_maps` is set:
+
 1. It is translated into an in-memory spec, merged *under* the native spec. The native spec
    wins column by column.
-2. A translated expression column with no declared `type` gets the **SDK's prefix-based
+1. A translated expression column with no declared `type` gets the **SDK's prefix-based
    inference** (`int(` → integer, `float(` → number, …, otherwise the existing type or
    string), so output types match the SDK mapper. A warning per column suggests declaring a
    type.
-3. Unlike the SDK, the implicit cast still applies, so values always match the SCHEMA, and a
+1. Unlike the SDK, the implicit cast still applies, so values always match the SCHEMA, and a
    runtime error follows `on_error` instead of crashing without context.
-4. Defects of meltano-map-transformer are *not* reproduced: `time_extracted` is preserved and
+1. Defects of meltano-map-transformer are *not* reproduced: `time_extracted` is preserved and
    `bookmark_properties` are passed through (renamed).
 
 `map-conform spec import --stream-maps` writes the translation out as a native spec, with the
@@ -593,7 +605,7 @@ inferred types written explicitly, so a project can migrate in one step.
 ## 16. Open questions
 
 | # | Question | Status |
-|---|---|---|
+| -- | -- | -- |
 | Q1 | uuid in BATCH | **Resolved:** `arrow.uuid` → parquet FLBA(16) with UUID logical type (checked with pyarrow 26 and DuckDB); RECORD stays canonical string |
 | Q2 | `_sdc_batched_at` | **Resolved:** BATCH = input file last-modified; RECORD = mapper start |
 | Q3 | `filter` names | **Resolved:** conformed names |

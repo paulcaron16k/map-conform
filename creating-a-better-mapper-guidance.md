@@ -21,7 +21,7 @@ tap ──SCHEMA/RECORD/BATCH──▶ map-conform ──clean SCHEMA/RECORD/BAT
 The mapper does five jobs, in one place:
 
 | # | Job | Example |
-|---|-----|---------|
+| -- | -- | -- |
 | a | **Value cleanup** while casting from string to a declared type | `" $1,234.50 "` → `1234.50`; `"3/7/24 4:05 PM"` → `2024-03-07T16:05:00Z`; `"#N/A"` → null |
 | b | **Name conforming** of streams and columns, legal in every target | `Order Date (UTC)` → `order_date_utc`; `customerID` → `customer_id` |
 | c | **Type casting and coercion** to a declared, not inferred, type | `"1"`/`"yes"`/`"Y"` → `true`; `"00123"` → `123` (int64) |
@@ -64,7 +64,7 @@ private code or names are reproduced.
 ### 3.1 Systems surveyed
 
 | System | Kind | Public |
-|---|---|---|
+| -- | -- | -- |
 | Singer SDK `InlineMapper` / `PluginMapper` (stream maps, flattening) | library | yes |
 | `meltano-map-transformer` | mapper (thin wrapper over SDK stream maps) | yes |
 | `pipelinewise-transform-field` | mapper (masking/hashing) | yes |
@@ -76,7 +76,7 @@ private code or names are reproduced.
 ### 3.2 Name conforming
 
 | Behaviour | SDK SQL `conform_name` | lowercase-keys mapper | target-ducklake | Iceberg target |
-|---|---|---|---|---|
+| -- | -- | -- | -- | -- |
 | Default on? | in SQL sinks | yes | **no** (opt-in `conform_column_names`) | yes |
 | Lowercase | ✓ | ✓ (only this) | ✓ | ✓ |
 | Strip chars outside `[A-Za-z0-9_\-.\s]` (drops non-ASCII) | ✓ | – | ✓ | ✓ |
@@ -96,7 +96,7 @@ member names, and the private mapper silently merges `Id` and `ID`.
 ### 3.3 Type mapping (JSON Schema → storage type)
 
 | JSON Schema | target-ducklake | Iceberg target |
-|---|---|---|
+| -- | -- | -- |
 | `integer` | INTEGER if bounds fit int32, else BIGINT | long (int via hints or bounds) |
 | `number` | DECIMAL(38,9) default; honours non-standard `precision`/`scale` | double (float via hints) |
 | `string` + `x-singer.decimal` + p,s | DECIMAL(p,s); else VARCHAR | decimal(p,s); invalid → string |
@@ -116,7 +116,7 @@ JSON-Schema rendering removes the guessing.
 ### 3.4 Value cleanup and coercion on RECORD
 
 | Cleanup | SDK target base | target-ducklake | Iceberg target | Mappers |
-|---|---|---|---|---|
+| -- | -- | -- | -- | -- |
 | ISO timestamp parse (`fromisoformat`), top-level only | ✓ (error on failure) | via SDK | via SDK | – |
 | Non-ISO timestamp formats (`strptime`) | – | opt-in `type_source` + `x-parse-format` | opt-in `type_source` | – |
 | Epoch → timestamp | – | – (never loads) | – | – |
@@ -135,7 +135,7 @@ JSON-Schema rendering removes the guessing.
 | object/array → JSON text | – | ✓ (keeps all digits) | ✓ (`default=str`) | SDK flattening |
 | base64 strict decode | – | ✓ | ✓ | – |
 | `on_error` policy | ERROR/MAX/NULL for dates | raise/null/string | raise/null/string | **pipelinewise swallows errors** |
-| Masking / hashing | – | – | – | pipelinewise (SET-NULL, HASH, MASK-*) |
+| Masking / hashing | – | – | – | pipelinewise (SET-NULL, HASH, MASK-\*) |
 | Undeclared fields | kept | kept | **silently dropped** | – |
 
 **Takeaway.** Two targets each built a `type_source` coercion layer, with different number
@@ -145,7 +145,7 @@ this project removes.
 ### 3.5 `_sdc_*` metadata
 
 | Column | JSON type | Value (SDK) |
-|---|---|---|
+| -- | -- | -- |
 | `_sdc_extracted_at` | date-time | message `time_extracted` |
 | `_sdc_received_at` | date-time | now (UTC) |
 | `_sdc_batched_at` | date-time | batch start, else now |
@@ -168,7 +168,7 @@ equal. This is documented, not worked around.
 ### 3.6 BATCH
 
 | System | BATCH behaviour |
-|---|---|
+| -- | -- |
 | SDK `InlineMapper` | `map_batch_message` raises `NotImplementedError` |
 | meltano-map-transformer | inherits the raise, so **any BATCH crashes the pipeline** |
 | pipelinewise-transform-field | unknown message type, so it crashes |
@@ -185,8 +185,7 @@ first: Arrow in, Arrow out, declared schema.
 
 - meltano-map-transformer overwrites `time_extracted` with `now()`, which corrupts
   `_sdc_extracted_at`, and drops `bookmark_properties` (it reads `bookmark_keys`).
-- SDK stream-map type inference is by **expression prefix** (`int(` → integer); `int(x) if x
-  else None` is typed string, and values are never coerced to the inferred type.
+- SDK stream-map type inference is by **expression prefix** (`int(` → integer); `int(x) if x else None` is typed string, and values are never coerced to the inferred type.
 - SDK stream-map runtime errors (`None.split`) crash the run; there is no per-record policy.
 - There is no "apply to every column" operator, so per-column conforming is impossible
   through stream maps.
@@ -215,7 +214,7 @@ narrower one ([ADR-0010](wiki/decisions/0010-stream-map-superset.md); the full m
 in [detailed design §15](docs/detailed-design.md#15-stream-map-compatibility)).
 
 | Feature | Source | map-conform |
-|---|---|---|
+| -- | -- | -- |
 | Stream alias, filter, key override, glob matching | SDK stream maps | `alias`, `filter`, `key_properties`, glob keys |
 | Split or copy a stream (`__source__`) | SDK stream maps | `source` on a new output-stream key |
 | Drop streams or properties, `__else__` | SDK stream maps | `drop`, top-level `else`, `undeclared: drop` |
@@ -236,21 +235,21 @@ config to a native spec.
 
 1. **Declared, not inferred.** Every output column has one declared type. If the spec does not
    declare it, the tap's SCHEMA is the declaration. Nothing is guessed from values.
-2. **Clean once, upstream.** Any cleanup a target would need is a bug in this project.
-3. **Fail loud by default.** `on_error: raise`. A data engineer fixes the cleanup or drops the
+1. **Clean once, upstream.** Any cleanup a target would need is a bug in this project.
+1. **Fail loud by default.** `on_error: raise`. A data engineer fixes the cleanup or drops the
    column. Opt-in alternatives are `null`, `keep` (when the declared type is string) and
    `reject` (rows go to a dead-letter file).
-4. **Builtins first, expressions second, Python third.** Most columns need one short
+1. **Builtins first, expressions second, Python third.** Most columns need one short
    declarative cleanup. Expressions cover the ad-hoc cases, and registered Python functions
    (UDFs) cover the rest.
-5. **Columnar when it can be, row-wise only where it must.** BATCH stays Arrow. A
+1. **Columnar when it can be, row-wise only where it must.** BATCH stays Arrow. A
    non-vectorisable column is computed row-wise and spliced back into the Arrow table.
-6. **The same plan for both paths.** RECORD and BATCH execute the same compiled plan, so they
+1. **The same plan for both paths.** RECORD and BATCH execute the same compiled plan, so they
    give the same result. A test suite enforces this (parity tests).
-7. **Config by file.** Meltano passes plugin config through the environment, with a ~128 KiB
+1. **Config by file.** Meltano passes plugin config through the environment, with a ~128 KiB
    per-variable limit. The spec is a YAML/JSON file referenced by path (`spec_path`), with
    `spec` inline only for small cases.
-8. **Strict, versioned, self-describing spec.** Unknown keys are rejected, and the JSON Schema
+1. **Strict, versioned, self-describing spec.** Unknown keys are rejected, and the JSON Schema
    is generated from code. `map-conform spec validate|explain|export` lets users check it.
 
 ## 5. The conform spec (summary)
@@ -345,7 +344,7 @@ A target built against map-conform may assume all of the following.
 ## 7. Decisions taken in planning (quiz record)
 
 | # | Question | Decision |
-|---|---|---|
+| -- | -- | -- |
 | 1 | Name | `map-conform` |
 | 2 | Licence / Python | Apache-2.0 / ≥ 3.10 |
 | 3 | How transforms are written | Declarative builtins with kwargs, a safe `expr` language with conditionals, and registered Python UDFs |

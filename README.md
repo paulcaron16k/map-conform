@@ -30,6 +30,7 @@ uv run pytest
 uv run ruff check . && uv run ruff format --check .
 uv run mypy map_conform tests
 uvx --with tox-uv tox          # every supported Python, plus typing
+uvx pre-commit install         # once: hooks for ruff, mypy, mdformat, typos, wiki frontmatter
 ```
 
 ## Licence
