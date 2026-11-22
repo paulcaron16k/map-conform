@@ -9,12 +9,13 @@ that fails follows the column's ``on_error``; ``reject`` raises
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from map_conform.errors import ConformError, StepFailed, apply_policy
 from map_conform.metadata import SDC_PREFIX, Metadata
+from map_conform.metrics import StreamMetrics
 from map_conform.naming.nested import rename_value
 from map_conform.plan.chain import StepError
 from map_conform.plan.compile import StreamPlan
@@ -33,9 +34,11 @@ class RowExecutor:
     plan: StreamPlan
     settings: Defaults
     metadata: Metadata | None = None
+    metrics: StreamMetrics = field(default_factory=StreamMetrics)
 
     def __post_init__(self) -> None:
         """Build each column's context once."""
+        self._nulled = False
         self._contexts = [
             Context(self.plan.tap_stream, column.name, self.settings, column.ctype)
             for column in self.plan.columns
@@ -48,9 +51,13 @@ class RowExecutor:
             ConformError: a value failed under ``on_error: raise``.
             RowRejected: a value failed under ``on_error: reject``.
         """
+        self.metrics.rows_in += 1
+        self._nulled = False
         out: dict[str, Any] = {}
         for column, ctx in zip(self.plan.columns, self._contexts, strict=True):
             out[column.name] = self._column(column, ctx, record, row)
+        if self._nulled:
+            self.metrics.rows_nulled += 1
         if self.metadata is not None:
             deleted_at = record.get(f"{SDC_PREFIX}deleted_at")
             try:
@@ -72,7 +79,7 @@ class RowExecutor:
             error = self._error(row, column.name, raw, exc.cell.rule, exc.cell.reason)
             if column.on_error == "null" and not column.nullable:
                 raise error from exc
-            return apply_policy(column.on_error, error, raw)
+            return self._handle(column, error, raw)
         if value is None:
             value = column.default
         if value is None:
@@ -82,8 +89,17 @@ class RowExecutor:
         wired = to_wire(value, column.ctype)
         if column.enum is not None and wired not in column.enum:
             error = self._error(row, column.name, raw, "enum", f"{wired!r} is not allowed")
-            return apply_policy(column.on_error, error, raw)
+            return self._handle(column, error, raw)
         return wired
+
+    def _handle(self, column: ColumnPlan, error: ConformError, raw: object) -> object:
+        """Count a failed value and apply the column's on_error."""
+        self.metrics.errors[(column.name, error.rule)] += 1
+        if column.on_error == "null":
+            self._nulled = True
+        elif column.on_error == "keep":
+            self.metrics.values_kept += 1
+        return apply_policy(column.on_error, error, raw)
 
     def _error(self, row: int, column: str, value: object, rule: str, reason: str) -> ConformError:
         return ConformError(

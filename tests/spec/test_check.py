@@ -11,13 +11,15 @@ from click.testing import CliRunner
 from map_conform.cli import tools
 from map_conform.spec.check import check_spec, explain, read_catalog
 from map_conform.spec.load import load_spec
-from map_conform.spec.model import parse_spec
+from map_conform.spec.model import DEFAULTS_KEYS, STREAM_KEYS, parse_spec
 from tests.fixtures.paths import FIXTURES
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 ORDERS = FIXTURES / "catalogs" / "orders_export.catalog.json"
+
+STREAM_RULE_KEYS = ", ".join(sorted(STREAM_KEYS | DEFAULTS_KEYS))
 
 
 def write(tmp_path: Path, text: str) -> Path:
@@ -58,11 +60,7 @@ def test_parse_errors_are_all_reported_with_paths(tmp_path: Path) -> None:
     assert err.splitlines() == [
         f"{path}: 3 problem(s)",
         "  defaults.on_error: expected one of 'raise', 'null', 'keep', 'reject', got 'ignore'",
-        (
-            "  streams.s.bogus: unknown key; allowed here: alias, boolean, columns, drop, faker, "
-            "filter, flatten, key_properties, metadata, naming, nested, on_error, order, prefix, "
-            "source, stream, timestamp, undeclared, values"
-        ),
+        f"  streams.s.bogus: unknown key; allowed here: {STREAM_RULE_KEYS}",
         "  streams.s.columns.a.type: unknown type 'decimel' at position 7 in 'decimel'",
     ]
 

@@ -765,6 +765,20 @@ values with near-identical ones, which is defined SDK behaviour.
 **Thresholds.** `max_reject_rate` and `max_null_rate` per stream turn a lenient policy back
 into a failure when a source goes bad.
 
+As built (`map_conform/errors.py`, `map_conform/rejects.py`):
+
+- **The reject sink** writes `<reject.storage>/<output stream>/<run id>.jsonl` (or
+  `.parquet`). Each row has `stream`, `row_number`, `column`, `rule`, `error`, `value` (JSON
+  text), `record` (the whole raw record, as JSON text) and `rejected_at`. The file paths are
+  logged at the end of the run.
+- **Thresholds** are Defaults keys, so they can be set per stream. Each is a fraction (0–1)
+  of the stream's rows in: rejected rows, or rows where `on_error: null` replaced a value.
+  They are checked **before each STATE is passed on**, so a target never commits a bookmark
+  past rows a bad source spoiled, and again at the end of input. Going over a limit fails
+  the run, with the stream, the counts and the rate in the message.
+- **Not built yet:** "the first N similar errors" for `raise`. The run stops at the first
+  error.
+
 ## 13. Metrics and logging
 
 Per stream:
@@ -776,6 +790,15 @@ Per stream:
 - columns run row-wise in BATCH, and why.
 
 Emitted as SDK-style metric log lines, and optionally to `metrics_path`.
+
+As built (`map_conform/metrics.py`):
+
+- **Counters**, per output stream: `rows_in`, `rows_out`, `rows_rejected`, `rows_nulled`,
+  `values_kept`, and `errors` by (column, rule), whatever `on_error` did with them.
+- **Output.** One `Metrics for '<stream>': {...}` log line per stream at the end of the run,
+  and `metrics_path` as `{"streams": {name: counters}}`.
+- **Later:** filtered rows (with `filter`, WBS 6.x) and row-wise BATCH columns (WBS 8.x).
+  Lossy renames are logged once per stream, when its SCHEMA compiles.
 
 ## 14. Testing strategy (summary — see [wiki/qa/test-strategy.md](../wiki/qa/test-strategy.md))
 
