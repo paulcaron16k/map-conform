@@ -38,7 +38,7 @@ def _type(tp: Any) -> str:  # noqa: ANN401, PLR0911 -- one branch per annotation
     if tp is NoneType:
         return "null"
     if origin is Literal:
-        return " \\| ".join(f"`{a}`" for a in get_args(tp))
+        return " | ".join(f"`{a}`" for a in get_args(tp))
     if origin in (UnionType, typing.Union):
         return " or ".join(_type(a) for a in get_args(tp))
     if origin is tuple:
@@ -52,6 +52,11 @@ def _type(tp: Any) -> str:  # noqa: ANN401, PLR0911 -- one branch per annotation
     if dataclasses.is_dataclass(tp):
         return "object"
     return str(tp)
+
+
+def _row(*cells: str) -> str:
+    """A table row; a ``|`` in a cell, even in code, is escaped so it cannot split the row."""
+    return "| " + " | ".join(cell.replace("|", "\\|") for cell in cells) + " |"
 
 
 def _default(field: dataclasses.Field[Any]) -> str:
@@ -73,11 +78,11 @@ def _rows(cls: type[Any], prefix: str = "", *, expand: bool = True) -> list[str]
     rows: list[str] = []
     for field, tp in fields_of(cls):
         key = f"{prefix}{spec_key(field)}"
-        doc = " ".join(str(field.metadata.get("doc", "")).split()).replace("|", "\\|")
+        doc = " ".join(str(field.metadata.get("doc", "")).split())
         if expand and dataclasses.is_dataclass(tp) and isinstance(tp, type):
             rows.extend(_rows(tp, f"{key}."))
             continue
-        rows.append(f"| `{key}` | {_type(tp)} | {_default(field)} | {doc} |")
+        rows.append(_row(f"`{key}`", _type(tp), _default(field), doc))
     return rows
 
 
@@ -91,16 +96,16 @@ def _steps() -> list[str]:
     registry = builtin_registry()
     for name, transform in sorted(registry.names().items()):
         options = ", ".join(f"`{f.name}`" for f in dataclasses.fields(transform.kwargs)) or "none"
-        lines.append(f"| `{name}` | {options} | {transform.doc} |")
+        lines.append(_row(f"`{name}`", options, transform.doc))
     kinds = ", ".join(f"`{k}`" for k in sorted(registry.casts))
-    lines.append(f"| `cast` | per target type | Casts to any of {kinds}. |")
+    lines.append(_row("`cast`", "per target type", f"Casts to any of {kinds}."))
     return lines
 
 
 def _functions() -> list[str]:
     lines = ["| Function | Group | Meaning |", "| -- | -- | -- |"]
     ordered = sorted(FUNCTIONS.values(), key=lambda f: (_GROUPS.index(f.group), f.name))
-    lines.extend(f"| `{f.signature}` | {f.group} | {f.doc} |" for f in ordered)
+    lines.extend(_row(f"`{f.signature}`", f.group, f.doc) for f in ordered)
     return lines
 
 
