@@ -82,3 +82,10 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-22T21:00:00Z | UPDATED | concepts/clean-landing-contract | BATCH delivers the contract as of P4; _sdc_* follow add_record_metadata |
 | 2026-11-22T21:00:00Z | UPDATED | qa/benchmarks | CI's first benchmark numbers |
 | 2026-11-22T21:00:00Z | UPDATED | plans/roadmap | P4 done |
+| 2026-11-23T14:00:00Z | UPDATED | components/spec-loader | spec validate compiles every plan (MAPC-128) |
+| 2026-11-23T14:30:00Z | UPDATED | runbooks/dev-environment | e2e and bench are opt-in test runs (MAPC-130) |
+| 2026-11-23T15:00:00Z | UPDATED | components/execution-engines | engine: row, route logging, option guard (MAPC-132) |
+| 2026-11-23T16:00:00Z | UPDATED | concepts/existing-systems-survey | Specific findings kept to public systems (MAPC-138) |
+| 2026-11-23T16:00:00Z | UPDATED | concepts/clean-landing-contract | uuid_as is not a setting in 0.1.0 (MAPC-138) |
+| 2026-11-23T16:00:00Z | UPDATED | decisions/0011-uuid-in-batch | uuid_as recorded as planned, not built (MAPC-138) |
+| 2026-11-23T16:00:00Z | UPDATED | runbooks/dev-environment | Personal git identity removed (MAPC-138) |

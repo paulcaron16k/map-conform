@@ -1,10 +1,11 @@
 """The SDK's own stream-map test cases give the SDK's output through map-conform (WBS 12.9).
 
-Every case from the Singer SDK's ``tests/core/test_mapper.py`` (except the BATCH one, which
-waits for P4) runs through the SDK's ``PluginMapper`` and through the map-conform mapper,
-given the same SCHEMA and RECORD messages and the same settings. Stream names, key
-properties, column names, the type family of each column and every value must agree, up to
-the deliberate differences listed in :mod:`tests.compat.compare`.
+Every case from the Singer SDK's ``tests/core/test_mapper.py``, except the BATCH one (the
+SDK's inline mapper does not map BATCH, so there is nothing to compare with), runs through
+the SDK's ``PluginMapper`` and through the map-conform mapper, given the same SCHEMA and
+RECORD messages and the same settings. Stream names, key properties, column names, the type
+family of each column and every value must agree, up to the deliberate differences listed
+in :mod:`tests.compat.compare`.
 """
 
 from __future__ import annotations

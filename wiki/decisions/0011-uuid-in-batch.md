@@ -4,7 +4,7 @@ title: "Decision 0011 — UUID as Parquet UUID logical type in BATCH"
 description: "uuid columns are written to parquet as fixed_len_byte_array(16) with the UUID logical type; RECORD keeps the canonical string."
 resource: docs/detailed-design.md
 tags: [architecture, decision, active]
-timestamp: 2026-11-21T00:00:00Z
+timestamp: 2026-11-23T16:00:00Z
 sources:
   - path: docs/detailed-design.md
 ---
@@ -24,7 +24,8 @@ as `fixed_len_byte_array(16) (UUID)`, and DuckDB reads it back as `UUID`.
 - In BATCH, a `uuid` column is `arrow.uuid` in memory and parquet FLBA(16) with the UUID
   logical type on disk.
 - RECORD (JSON) keeps the canonical lowercase dashed string with `format: uuid`.
-- `uuid_as: string` is an option, for readers without UUID logical-type support.
+- A string encoding for readers without UUID logical-type support was planned as `uuid_as:
+  string`; in 0.1.0 it exists only inside `to_arrow` and is not a setting.
 
 ## Consequences
 - Files are 16 bytes per value instead of 36, and sort and compare natively.

@@ -3,6 +3,8 @@
 Related: [exec overview](exec-overview.md) · [detailed design](detailed-design.md) ·
 [plan](plan-wbs.md) · [guidance](../creating-a-better-mapper-guidance.md)
 
+Status: describes 0.1.0 as built.
+
 ## 1. Context
 
 ```
@@ -27,67 +29,98 @@ stream maps: every stream-map feature has a native equivalent, and the SDK `stre
 `stream_map_config`, `faker_config` and `flattening_*` settings are accepted unchanged through a
 compatibility translator ([ADR-0010](../wiki/decisions/0010-stream-map-superset.md)).
 
+Why a mapper, rather than cleanup in each target or in dbt: one goal among several is to
+avoid a dbt cleanup layer, which is SQL only, needs macros written to work across every
+warehouse a project targets, and runs after the raw data (and any personal data) has
+landed. In Python, upstream of every target, the cleanup is written once, with exact
+decimals, real date parsing, Unicode-aware names and masking before storage.
+
 ## 2. Quality attributes
 
 | Attribute | Target |
 | -- | -- |
-| Correctness | Same output for RECORD and BATCH; output always valid against the emitted SCHEMA |
-| RECORD throughput | ≥ 50k rows/s for a 20-column all-builtin stream on one core (orjson I/O) |
-| BATCH throughput | ≥ 1M rows/s for an all-vectorisable stream; memory bounded by a row-group-sized chunk |
+| Correctness | Same output for RECORD and BATCH (parity suite); output always valid against the emitted SCHEMA |
+| Throughput | Measured, not targeted: on CI, about 17k rows/s for RECORD, 23k for row-wise BATCH and 110k for columnar BATCH on the benchmark stream; a gate fails a large regression ([benchmarks](../wiki/qa/benchmarks.md)). The design goals of 50k and 1M rows/s are not met: RECORD I/O uses the SDK's JSON handling, and columnar BATCH still builds each row for the row-wise parts |
+| Memory | BATCH is read and written in row-group-sized chunks |
 | Safety | Expression sandbox; UDFs from module paths need an explicit opt-in; no `eval` of user strings |
-| Operability | Clear errors naming stream, column, row number and value; metrics; a `doctor` command |
-| Compatibility | Python 3.11–3.14; singer-sdk compatible range pinned; Meltano ≥ 3 |
+| Operability | Clear errors naming stream, column, row number and value; metrics; rejects; `spec validate`, `spec explain` and `doctor` |
+| Compatibility | Python 3.11–3.14; singer-sdk compatible range pinned; Meltano ≥ 4 |
 
 ## 3. Component view
 
 ```
 map_conform/
-├── mapper.py          ConformMapper(InlineMapper): message dispatch, lifecycle
-├── settings.py        plugin settings (spec_path, spec, batch_output, allow_python_udfs, …)
+├── mapper.py          MapConformMapper(InlineMapper): message dispatch, lifecycle, metrics
+├── settings.py        plugin settings (spec_path, spec, add_record_metadata, batch_output, …)
+├── cli.py             map-conform (the mapper) + `spec validate|explain|schema|import|export`,
+│                      `doctor`, `functions`
+├── doctor.py          checks a Meltano project's use of map-conform
 ├── spec/              ── the conform spec ──
-│   ├── model.py         frozen dataclasses (Spec, Defaults, StreamSpec, ColumnSpec, …)
-│   ├── load.py          YAML/JSON load, strict parse, inheritance by presence, glob resolution
-│   ├── jsonschema.py    JSON Schema generated from the model (and a staleness test)
-│   └── bridge/          catalog import, Zamboni columns export/import, stream_maps import
-├── naming/            ── name conformer ──
-│   ├── conform.py       pipeline: transliterate → split camel → case → replace → collapse → digits → reserved → length
-│   └── reserved/        reserved-word lists per dialect (data files)
+│   ├── model.py         frozen dataclasses (Spec, Defaults, StreamSpec, ColumnSpec, FieldSpec)
+│   ├── steps.py         Chain, CallStep, ExprStep, CaseStep, Macro
+│   ├── _struct.py       strict parsing, dumping and JSON Schema from type hints
+│   ├── load.py          YAML/JSON load, variables, inheritance by presence, glob resolution
+│   ├── check.py         checks against a catalog; `spec explain`
+│   ├── jsonschema.py    the shipped JSON Schema (generated; a test fails when stale)
+│   ├── reference.py     docs/spec-reference.md (generated; a test fails when stale)
+│   ├── stream_maps.py   SDK stream_maps/flattening settings → spec (compatibility mode)
+│   ├── importer.py      `spec import --stream-maps`
+│   ├── bridge.py        `spec import --catalog`, `spec export --zamboni`
+│   └── zamboni.py       Zamboni table-config (version 2) read/write
+├── naming/            ── names ──
+│   ├── conform.py       transliterate → split camel → case → replace → collapse → digits → reserved → length
+│   ├── translit.py      the bundled transliteration table (ascii-table.json)
+│   ├── reserved.py      reserved words per dialect (data files in reserved/)
+│   ├── streams.py       output stream names
+│   ├── nested.py        member names inside structs
+│   ├── flatten.py       SDK-compatible flattening
+│   └── shape.py         declared shapes for nested columns
 ├── types/             ── the canonical type system ──
 │   ├── canonical.py     CType (int16…decimal(p,s)…timestamptz…struct/list/json)
 │   ├── from_jsonschema.py  tap SCHEMA property → CType (undeclared columns)
 │   ├── to_jsonschema.py    CType → canonical JSON Schema property (the contract)
-│   └── to_arrow.py         CType → pyarrow DataType
+│   ├── to_arrow.py         CType → pyarrow DataType
+│   ├── wire.py             Python values → RECORD values
+│   └── jsontext.py         JSON text with exact decimals
 ├── transforms/        ── builtins ──
-│   ├── registry.py      Transform protocol, kwargs schema, scalar + optional arrow impls
-│   ├── text.py          trim, strip_chars, null_tokens, regex_replace, case, normalize_unicode …
-│   ├── numeric.py       cast int/float/decimal, parens_negative, percent, round, clamp …
-│   ├── temporal.py      parse formats, excel_serial, epoch, assume_tz, to_utc …
-│   ├── boolean.py, json_.py, binary.py
-│   ├── privacy.py       hash, mask, set_null, redact_date, mask_number, mask_hidden, tokenize, fake
-├── compat/            stream_maps → spec translator (SDK names, prefix type inference, flattening)
+│   ├── registry.py      Transform (scalar implementation, kwargs, stages) and Registry
+│   ├── builtins.py      the registry of every builtin and cast, with their docs
+│   ├── text.py, numeric.py, temporal.py, casts.py, nested.py, privacy.py, fake.py
+│   ├── vector.py        Arrow kernels for the vectorised casts and text steps
+│   └── polars_vector.py polars kernels (`engine: polars`)
 ├── expr/              ── expression language ──
-│   ├── parser.py        safe AST subset (simpleeval-compatible superset)
-│   ├── functions.py     is_* predicates, coalesce, parse_datetime, ensure_utc, re_*, math …
-│   └── compile.py       expr → closure (row) / arrow expression where possible
-├── udf/               registry: entry points `map_conform.functions`, spec `udfs:` module paths
+│   ├── compiler.py      safe AST subset → closures, names resolved at compile time
+│   ├── sandbox.py       allowed types, attributes and limits
+│   ├── functions.py     the function library (predicates, coercion, temporal, text, …)
+│   └── sdk.py           SDK stream-map expression names
+├── udfs.py            UDFs: entry points `map_conform.functions`, spec `udfs:` module paths
 ├── plan/              ── compiled plan ──
 │   ├── compile.py       StreamSpec + tap SCHEMA → StreamPlan (ordered ColumnPlans + output schema)
+│   ├── chain.py         a column's steps → ops, with stage (type) tracking
+│   ├── ops.py           the run-time ops (steps, expressions, case, guards, fields, shapes)
 │   ├── row.py           execute a plan on one record (dict → dict)
-│   └── columnar.py      execute a plan on a pyarrow.RecordBatch (vectorised + splice)
-├── batch/             manifest read/write, parquet & JSONL readers/writers, storage (fsspec)
+│   ├── vector.py        which columns vectorise, and their vector chains
+│   ├── lower.py         `case`/`when` conditions → Arrow masks
+│   └── validate.py      `spec validate` compiles every plan
+├── batch/             ── BATCH ──
+│   ├── engine.py        per manifest file: columnar or row-wise, output files or RECORDs
+│   ├── columnar.py      the columnar executor (vector chains + row-wise splice)
+│   ├── arrow.py         rows ↔ Arrow with the declared schema
+│   └── files.py         fsspec manifest I/O, parquet and JSONL readers/writers
 ├── metadata.py        _sdc_* columns, exactly as the SDK sets them
-├── errors.py          ConformError (stream, column, row, value, rule), on_error, reject sink
-├── metrics.py         per-stream counters (rows in/out, nulls made, rejects, casts by rule)
-└── cli.py             map-conform (mapper) + `spec validate|explain|export|import`, `doctor`
+├── errors.py          ConformError (stream, column, row, value, rule) and on_error
+├── rejects.py         the reject sink (JSONL or parquet)
+└── metrics.py         per-stream counters (rows in/out/rejected/nulled/filtered, values
+                       kept, members dropped, errors by column and rule)
 ```
 
 ## 4. Message flow
 
 | Message | Handling |
 | -- | -- |
-| **SCHEMA** | Resolve the StreamSpec (by glob), then compile a StreamPlan: conform names, decide each column's CType (spec, or tap SCHEMA when undeclared), bind transforms, and check the plan (clashes, unknown functions, type-incompatible transforms). Emit the conformed SCHEMA with canonical types, `_sdc_*` and renamed `key_properties`/`bookmark_properties`. Cache the plan per stream. |
+| **SCHEMA** | Resolve the StreamSpec (by glob), then compile a StreamPlan: conform names, decide each column's CType (spec, or tap SCHEMA when undeclared), bind transforms, and check the plan (clashes, unknown functions, type-incompatible transforms). Emit the conformed SCHEMA with canonical types, `_sdc_*` when `add_record_metadata` is set, and renamed `key_properties`/`bookmark_properties`. Cache the plan per stream. |
 | **RECORD** | `plan.row(record)`, then the metadata. Emit the record with `time_extracted` and `version` preserved. `on_error` decides what happens on a failure: raise, null, keep or reject. Rows dropped by `filter` are counted. |
-| **BATCH** | For each manifest file: read in chunks (parquet `iter_batches`, JSONL by line blocks), run `plan.columnar(batch)`, and write a new file with the declared Arrow schema to `batch_output.storage`. Emit one BATCH with the new manifest. Optionally (`batch_output.mode: record`) emit RECORDDs instead, for targets without BATCH support. |
+| **BATCH** | For each manifest file: parquet in and parquet out runs the columnar executor over row-group batches; anything else (JSONL in or out, `batch_output.mode: record`, shapes, flattening, `engine: row`) runs each row through the row executor. Output files carry the declared Arrow schema and go to `batch_output.storage`; one BATCH message per output stream lists them. With `batch_output.mode: record`, RECORDs are emitted instead, for targets without BATCH support. The log says which engine ran and why. |
 | **STATE** | Pass through unchanged and in order (bookmarks stay keyed by tap names). Flushed only after every preceding output message is written. |
 | **ACTIVATE_VERSION** | Rename the stream and pass through. |
 
@@ -103,15 +136,18 @@ record ──▶ for each ColumnPlan: source value ─▶ pre (string) ─▶ ca
 ### 4.2 BATCH path
 
 ```
-parquet/JSONL file ─▶ RecordBatch chunk ─▶ ColumnPlan kind?
-                                             ├─ vectorised ─▶ pyarrow.compute kernels (or polars expr)
-                                             └─ row-wise   ─▶ to_pylist(that column [+ deps]) ─▶ row executor ─▶ pa.array(type)
-                                           ─▶ assemble Table with declared schema ─▶ write parquet ─▶ manifest
+parquet file ─▶ RecordBatch ─▶ vectorised columns: Arrow (or polars) kernels ─▶ values + todo mask
+                     │
+                     └──────▶ every row: row executor, skipping the vectorised columns
+                              except their todo rows; expressions, filter, policies, _sdc_*
+                ─▶ splice ─▶ Table with the declared schema ─▶ write parquet ─▶ manifest
 ```
 
-A column is **vectorised** if every step of its chain has an Arrow implementation. Otherwise it
-is **row-wise**: only that column and the columns its `expr`/UDF reads are converted to Python.
-Rows rejected by any column are removed with a mask and written to the reject sink.
+A column is **vectorised** when every step of its chain has a kernel and no expression or
+filter reads it. A kernel claims only the rows where it is known to agree with the scalar
+code, and marks the rest *todo*; those run through the row executor and are spliced back.
+Every row still passes through the row executor for the other columns, so rejects, the first
+error and the metrics are exactly the RECORD path's. JSONL BATCH files run row by row.
 
 ## 5. Key design decisions
 
@@ -136,17 +172,17 @@ Rows rejected by any column are removed with a mask and written to the reject si
 plugins:
   mappers:
     - name: map-conform
+      namespace: map_conform          # needed while it is a custom plugin
       pip_url: map-conform            # [polars] extra optional
       executable: map-conform
-      settings:
+      settings:                       # declare the settings you set (plugin-definition.yml has all)
         - {name: spec_path, kind: string}
-        - {name: allow_python_udfs, kind: boolean}
-      config:
-        spec_path: ${MELTANO_PROJECT_ROOT}/conform/orders.yml
+        - {name: add_record_metadata, kind: boolean}
       mappings:
         - name: conform-orders
           config:
-            spec_path: ${MELTANO_PROJECT_ROOT}/conform/orders.yml
+            spec_path: conform/orders.yml
+            add_record_metadata: true   # add the _sdc_* columns
   loaders:
     - name: target-ducklake
       config:
@@ -163,4 +199,5 @@ plugins:
 | Conform spec | user → mapper | [conform-spec schema](../wiki/schemas/conform-spec.md), JSON Schema shipped in the package |
 | UDF API | user code → mapper | `@udf` decorator / entry point `map_conform.functions` |
 | Zamboni bridge | mapper ↔ Zamboni | canonical type → Zamboni `columns` string |
-| Reject sink | mapper → storage | JSONL/parquet: original row, stream, column, rule, error |
+| Reject sink | mapper → storage | `<reject.storage>/<stream>/<run id>.jsonl` (or parquet): stream, row number, column, rule, error, value, the raw record, time |
+| Metrics | mapper → log / file | INFO line per stream at the end of the run; `metrics_path` writes them as JSON |

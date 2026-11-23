@@ -4,7 +4,7 @@ title: Clean-Landing Contract
 description: "What a target may assume about SCHEMA, RECORD and BATCH output from map-conform, and the reviewer instruction for targets."
 resource: map_conform/types/to_jsonschema.py
 tags: [engineering, contract, draft]
-timestamp: 2026-11-22T21:00:00Z
+timestamp: 2026-11-23T16:00:00Z
 sources:
   - path: docs/detailed-design.md
   - path: creating-a-better-mapper-guidance.md
@@ -82,8 +82,8 @@ Every guarantee below has a contract test in `tests/contract/` (planned: WBS 4.3
   - `date32`
   - `time64[us]`
   - `json` as string
-  - `uuid` as `fixed_len_byte_array(16)` with the Parquet UUID logical type (Arrow `arrow.uuid`),
-    unless the spec sets `uuid_as: string` ([ADR-0011](../decisions/0011-uuid-in-batch.md))
+  - `uuid` as `fixed_len_byte_array(16)` with the Parquet UUID logical type (Arrow `arrow.uuid`)
+    ([ADR-0011](../decisions/0011-uuid-in-batch.md))
 - Each file in the manifest belongs to the stream named in the message.
 
 ## 6. What a target still owns

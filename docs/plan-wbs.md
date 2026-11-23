@@ -5,6 +5,12 @@ Related: [exec overview](exec-overview.md) · [HLD](architecture-hld.md) ·
 
 Tracking uses `gh agile` on `paulcaron16k/map-conform`, with key `MAPC` and 2-week sprints.
 
+Status: P0–P5 are done and 0.1.0 is on PyPI (2026-11-23); the Meltano Hub PR (10.4) waits for
+the maintainer's field testing, and P6 is next. Story rows below are the plan as filed, and
+their titles are what `bin/create-agile-issues.py` matches on, so they are not edited after
+the fact; notes record where the build differs. Work found later (bugs, follow-ups such as
+MAPC-113 and MAPC-128 to 138) is tracked on the board only.
+
 The tracker hierarchy is **Initiative → Epic → Story**. The WBS codes below (`1.2.3`) appear
 in every issue title suffix and in the `FR` field, so the two can be traced to each other.
 
@@ -25,15 +31,18 @@ referenced by at least one target's review rules.
 
 ## Phases
 
-| Phase | Epics | Exit criteria |
-| -- | -- | -- |
-| **P0 Foundations** | E1 | Cookiecutter scaffold committed; CI (lint, type, test, build) green on 3.10–3.14; wiki and docs in place; pre-commit and wiki lint working |
-| **P1 Spec & names** | E2, E3 | Spec loads strictly with inheritance; JSON Schema generated, with a staleness test; `spec validate/schema`; conformer passes golden and property tests |
-| **P2 RECORD engine** | E4, E5, E7 | Type system and builtins; RECORD path end to end; `_sdc_*`; on_error/reject; CSV corpus lands clean via target-jsonl |
-| **P3 Expressions, UDFs & stream-map parity** | E6, E12 | Safe expr, `case`, macros, UDF registry; SDK `stream_maps` settings accepted unchanged; SDK stream-map test cases pass in compatibility mode; pipelinewise masking parity |
-| **P4 BATCH engine** | E8 | Columnar executor; parquet/JSONL I/O; splice; polars extra; parity suite green; benchmarks recorded |
-| **P5 Bridges, docs & release** | E9, E10 | Catalog/Zamboni bridge; `doctor`, `explain`; user docs; 0.1.0 on PyPI; Meltano Hub PR |
-| **P6 Adoption** | E11 | Contract published; target review rules updated; duplicate cleanup removed from targets with tests |
+| Phase | Epics | Exit criteria | Status |
+| -- | -- | -- | -- |
+| **P0 Foundations** | E1 | Cookiecutter scaffold committed; CI (lint, type, test, build) green on 3.11–3.14; wiki and docs in place; pre-commit and wiki lint working | Done |
+| **P1 Spec & names** | E2, E3 | Spec loads strictly with inheritance; JSON Schema generated, with a staleness test; `spec validate/schema`; conformer passes golden and property tests | Done |
+| **P2 RECORD engine** | E4, E5, E7 | Type system and builtins; RECORD path end to end; `_sdc_*`; on_error/reject; CSV corpus lands clean via target-jsonl | Done |
+| **P3 Expressions, UDFs & stream-map parity** | E6, E12 | Safe expr, `case`, macros, UDF registry; SDK `stream_maps` settings accepted unchanged; SDK stream-map test cases pass in compatibility mode; pipelinewise masking parity | Done |
+| **P4 BATCH engine** | E8 | Columnar executor; parquet/JSONL I/O; splice; polars extra; parity suite green; benchmarks recorded | Done |
+| **P5 Bridges, docs & release** | E9, E10 | Catalog/Zamboni bridge; `doctor`, `explain`; user docs; 0.1.0 on PyPI; Meltano Hub PR | Done, except the Hub PR |
+| **P6 Adoption** | E11 | Contract published; target review rules updated; duplicate cleanup removed from targets with tests | Next |
+
+Python 3.10 was dropped at its end of life before P0 finished
+([ADR-0001](../wiki/decisions/0001-name-and-licence.md)); story 1.2's matrix is 3.11–3.14.
 
 ## WBS — epics and stories
 
