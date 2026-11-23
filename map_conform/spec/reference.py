@@ -24,6 +24,7 @@ from map_conform.spec._struct import dump, fields_of, spec_key
 from map_conform.spec.model import ColumnSpec, Defaults, ExprRef, FieldSpec, Spec, StreamSpec
 from map_conform.spec.steps import Chain, Macro
 from map_conform.transforms.builtins import builtin_registry
+from map_conform.transforms.temporal import FORMAT_KEYWORDS
 from map_conform.types.canonical import Kind
 
 SHIPPED = Path(__file__).resolve().parents[2] / "docs" / "spec-reference.md"
@@ -89,6 +90,25 @@ def _rows(cls: type[Any], prefix: str = "", *, expand: bool = True) -> list[str]
 def _table(cls: type[Any], *, expand: bool = True) -> list[str]:
     rows = _rows(cls, expand=expand)
     return ["| Key | Type | Default | Meaning |", "| -- | -- | -- | -- |", *rows]
+
+
+def _parse_options() -> list[str]:
+    """One table per cast option class, naming the kinds that use it."""
+    kinds: dict[type[Any], list[str]] = {}
+    for kind, caster in sorted(builtin_registry().casts.items()):
+        kinds.setdefault(caster.kwargs, []).append(kind)
+    lines: list[str] = []
+    for cls, names in kinds.items():
+        lines += ["", "### " + ", ".join(f"`{k}`" for k in names), ""]
+        lines += ["| Key | Type | Default | Meaning |", "| -- | -- | -- | -- |"]
+        for field, tp in fields_of(cls):
+            doc = " ".join(str(field.metadata.get("doc", "")).split())
+            layered = field.metadata.get("from")
+            default = f"`defaults.{layered}`" if layered else _default(field)
+            lines.append(_row(f"`{spec_key(field)}`", _type(tp), default, doc))
+    lines += ["", "### Format keywords", "", "| Keyword | Reads |", "| -- | -- |"]
+    lines += [_row(f"`{k}`", doc) for k, doc in FORMAT_KEYWORDS.items()]
+    return lines
 
 
 def _steps() -> list[str]:
@@ -157,6 +177,14 @@ def render() -> str:
         "",
         f"Kinds: {kinds}. Parameterised: `decimal(p,s)`, `string(n)`, `list<T>`,",
         "`struct<name: T, ...>`. SQL aliases are read too (`bigint`, `varchar(n)`, `long`, ...).",
+        "",
+        "## `parse` options",
+        "",
+        "A column's `parse` sets the options of its cast, by its type; a `cast` step takes the",
+        "same options. A default written `defaults.…` comes from that stream setting (and the",
+        "column's own `trim`, `null_tokens`, `true_values` or `false_values`). An unknown key",
+        "is an error at `columns.<name>.parse.<key>`.",
+        *_parse_options(),
         "",
         "## Builtin steps",
         "",

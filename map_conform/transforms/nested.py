@@ -16,6 +16,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from map_conform.errors import StepFailed
+from map_conform.spec._struct import documented
 from map_conform.transforms import casts, numeric, temporal
 from map_conform.transforms.registry import RAW, Registry, Transform
 from map_conform.types.canonical import CType
@@ -51,7 +52,7 @@ _MEMBER_CASTS: dict[str, tuple[Callable[..., Any], Any]] = {
 class NestedCast:
     """Options for casts to struct and list."""
 
-    parse_strings: bool = True
+    parse_strings: bool = documented("Decode text that holds JSON.", default=True)
 
 
 @dataclass(frozen=True)

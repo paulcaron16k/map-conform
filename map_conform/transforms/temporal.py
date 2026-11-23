@@ -39,19 +39,21 @@ if TYPE_CHECKING:
     from map_conform.spec.model import ColumnSpec, Defaults
     from map_conform.transforms.registry import Context
 
-NAMED_FORMATS = frozenset(
-    {
-        "iso",
-        "excel_serial",
-        "excel_serial_1904",
-        "epoch_s",
-        "epoch_ms",
-        "epoch_us",
-        "epoch_ns",
-        "epoch_auto",
-        "rfc2822",
-    }
-)
+FORMAT_KEYWORDS: dict[str, str] = {
+    "iso": "ISO-8601, leniently: Z or z, a T, t or space separator, any fraction digits "
+    "(kept to microseconds), date-only or time-only",
+    "excel_serial": "Spreadsheet day numbers, 1900 system: 46095 is 2026-03-14; serials below "
+    "60 count from 1899-12-31, and 60 (Lotus's 1900-02-29) is an error",
+    "excel_serial_1904": "Spreadsheet day numbers, 1904 system",
+    "epoch_s": "Seconds since 1970-01-01 UTC",
+    "epoch_ms": "Milliseconds since 1970-01-01 UTC",
+    "epoch_us": "Microseconds since 1970-01-01 UTC",
+    "epoch_ns": "Nanoseconds since 1970-01-01 UTC (truncated to microseconds)",
+    "epoch_auto": "An epoch whose unit is chosen by magnitude (opt-in only)",
+    "rfc2822": "Email-style dates: Sat, 14 Mar 2026 09:26:53 +0000",
+}
+"""Format keywords for ``formats``, besides strftime patterns (anything with ``%``)."""
+NAMED_FORMATS = frozenset(FORMAT_KEYWORDS)
 _EXCEL_1900 = dt.datetime(1899, 12, 30)  # noqa: DTZ001 -- serials are naive wall time
 _EXCEL_EARLY = dt.datetime(1899, 12, 31)  # noqa: DTZ001
 _EXCEL_1904 = dt.datetime(1904, 1, 1)  # noqa: DTZ001
@@ -88,14 +90,27 @@ class TemporalCast(Cleanup):
     """Options for casts to timestamptz, timestamp, date and time."""
 
     formats: tuple[str, ...] = documented(
-        "Formats tried in order.", default=("iso",), metadata={"check": _formats_problem}
+        "Formats tried in order, the first match winning: strftime patterns and the keywords "
+        "below.",
+        default=("iso",),
+        metadata={"check": _formats_problem, "from": "timestamp.formats"},
     )
-    tz: str = documented("Zone of naive input.", default="UTC", metadata={"check": _zone_problem})
-    ambiguous: Literal["error", "earliest", "latest"] = "error"
-    nonexistent: Literal["error", "shift"] = "error"
-    min_year: int | None = None
-    max_year: int | None = None
-    output_precision: Literal["s", "ms", "us"] = "us"
+    tz: str = documented(
+        "IANA zone of naive input; input with an offset keeps it.",
+        default="UTC",
+        metadata={"check": _zone_problem, "from": "timestamp.assume_tz"},
+    )
+    ambiguous: Literal["error", "earliest", "latest"] = documented(
+        "A wall time that occurs twice (DST ends).", default="error"
+    )
+    nonexistent: Literal["error", "shift"] = documented(
+        "A wall time skipped by DST: an error, or the instant after the gap.", default="error"
+    )
+    min_year: int | None = documented("Earliest year accepted.", default=None)
+    max_year: int | None = documented("Latest year accepted.", default=None)
+    output_precision: Literal["s", "ms", "us"] = documented(
+        "Fraction digits kept.", default="us", metadata={"from": "timestamp.output_precision"}
+    )
 
 
 def _temporal_defaults(settings: Defaults, column: ColumnSpec | None) -> dict[str, Any]:

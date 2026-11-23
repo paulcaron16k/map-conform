@@ -12,11 +12,12 @@ import binascii
 import datetime as dt
 import json
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Literal
 
 from map_conform.errors import StepFailed
+from map_conform.spec._struct import documented
 from map_conform.transforms.registry import RAW, TEMPORAL, Registry, Transform
 
 if TYPE_CHECKING:
@@ -32,9 +33,21 @@ _EMPTY = object()
 class Cleanup:
     """The value cleanup every cast from a raw value applies."""
 
-    trim: bool = True
-    null_tokens: tuple[str, ...] = ()
-    null_tokens_case_sensitive: bool = False
+    trim: bool = documented(
+        "Trim surrounding whitespace before parsing.",
+        default=True,
+        metadata={"from": "values.trim"},
+    )
+    null_tokens: tuple[str, ...] = documented(
+        "Text that means null, compared after trimming.",
+        default=(),
+        metadata={"from": "values.null_tokens"},
+    )
+    null_tokens_case_sensitive: bool = documented(
+        "Compare null tokens case-sensitively.",
+        default=False,
+        metadata={"from": "values.null_tokens_case_sensitive"},
+    )
 
 
 def cleanup_defaults(settings: Defaults, column: ColumnSpec | None) -> dict[str, Any]:
@@ -69,9 +82,18 @@ def clean(value: object, options: Cleanup, *, keep_empty: bool = False) -> objec
 class StringCast(Cleanup):
     """Options for casts to string."""
 
-    empty_string_for_string: Literal["keep", "null"] = "keep"
-    max_length: int | None = None
-    on_overflow: Literal["truncate", "error"] = "error"
+    empty_string_for_string: Literal["keep", "null"] = documented(
+        "What an empty string becomes in a string column.",
+        default="keep",
+        metadata={"from": "values.empty_string_for_string"},
+    )
+    max_length: int | None = documented(
+        "The longest value allowed (also set by string(n) or the column's max_length).",
+        default=None,
+    )
+    on_overflow: Literal["truncate", "error"] = documented(
+        "What a longer value does.", default="error"
+    )
 
 
 def _string_defaults(settings: Defaults, column: ColumnSpec | None) -> dict[str, Any]:
@@ -118,9 +140,13 @@ def cast_string(value: object, args: CastArgs, _ctx: Context) -> object:
 class BooleanCast(Cleanup):
     """Options for casts to boolean."""
 
-    true_values: tuple[str, ...] = ("true",)
-    false_values: tuple[str, ...] = ("false",)
-    case_sensitive: bool = False
+    true_values: tuple[str, ...] = documented(
+        "Text read as true.", default=("true",), metadata={"from": "boolean.true_values"}
+    )
+    false_values: tuple[str, ...] = documented(
+        "Text read as false.", default=("false",), metadata={"from": "boolean.false_values"}
+    )
+    case_sensitive: bool = documented("Compare the tokens case-sensitively.", default=False)
 
 
 def _boolean_defaults(settings: Defaults, column: ColumnSpec | None) -> dict[str, Any]:
@@ -167,7 +193,7 @@ def cast_boolean(value: object, args: CastArgs, _ctx: Context) -> object:
 class UuidCast(Cleanup):
     """Options for casts to uuid."""
 
-    version: int | None = None
+    version: int | None = documented("Require this UUID version.", default=None)
 
 
 def cast_uuid(value: object, args: CastArgs, _ctx: Context) -> object:
@@ -192,7 +218,9 @@ def cast_uuid(value: object, args: CastArgs, _ctx: Context) -> object:
 class BinaryCast(Cleanup):
     """Options for casts to binary."""
 
-    encoding: Literal["base64", "hex", "utf8"] = "base64"
+    encoding: Literal["base64", "hex", "utf8"] = documented(
+        "How the text encodes the bytes (strict).", default="base64"
+    )
 
 
 def cast_binary(value: object, args: CastArgs, _ctx: Context) -> object:
@@ -219,9 +247,14 @@ def cast_binary(value: object, args: CastArgs, _ctx: Context) -> object:
 class JsonCast:
     """Options for casts to json (no value cleanup: text is data here)."""
 
-    parse_strings: bool = True
-    sort_keys: bool = False
-    null_tokens: tuple[str, ...] = field(default=())
+    parse_strings: bool = documented(
+        "Decode text that is already JSON, instead of storing it as a JSON string.",
+        default=True,
+    )
+    sort_keys: bool = documented("Write object keys sorted.", default=False)
+    null_tokens: tuple[str, ...] = documented(
+        "Text that means null (none by default: text is data in a json column).", default=()
+    )
 
 
 def cast_json(value: object, args: CastArgs, _ctx: Context) -> object:

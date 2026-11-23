@@ -151,6 +151,112 @@ list items.
 Kinds: `boolean`, `int16`, `int32`, `int64`, `float32`, `float64`, `decimal`, `string`, `date`, `time`, `timestamp`, `timestamptz`, `uuid`, `binary`, `json`, `struct`, `list`. Parameterised: `decimal(p,s)`, `string(n)`, `list<T>`,
 `struct<name: T, ...>`. SQL aliases are read too (`bigint`, `varchar(n)`, `long`, ...).
 
+## `parse` options
+
+A column's `parse` sets the options of its cast, by its type; a `cast` step takes the
+same options. A default written `defaults.…` comes from that stream setting (and the
+column's own `trim`, `null_tokens`, `true_values` or `false_values`). An unknown key
+is an error at `columns.<name>.parse.<key>`.
+
+### `binary`
+
+| Key | Type | Default | Meaning |
+| -- | -- | -- | -- |
+| `trim` | boolean | `defaults.values.trim` | Trim surrounding whitespace before parsing. |
+| `null_tokens` | list of string | `defaults.values.null_tokens` | Text that means null, compared after trimming. |
+| `null_tokens_case_sensitive` | boolean | `defaults.values.null_tokens_case_sensitive` | Compare null tokens case-sensitively. |
+| `encoding` | `base64` \| `hex` \| `utf8` | `"base64"` | How the text encodes the bytes (strict). |
+
+### `boolean`
+
+| Key | Type | Default | Meaning |
+| -- | -- | -- | -- |
+| `trim` | boolean | `defaults.values.trim` | Trim surrounding whitespace before parsing. |
+| `null_tokens` | list of string | `defaults.values.null_tokens` | Text that means null, compared after trimming. |
+| `null_tokens_case_sensitive` | boolean | `defaults.values.null_tokens_case_sensitive` | Compare null tokens case-sensitively. |
+| `true_values` | list of string | `defaults.boolean.true_values` | Text read as true. |
+| `false_values` | list of string | `defaults.boolean.false_values` | Text read as false. |
+| `case_sensitive` | boolean | `false` | Compare the tokens case-sensitively. |
+
+### `date`, `time`, `timestamp`, `timestamptz`
+
+| Key | Type | Default | Meaning |
+| -- | -- | -- | -- |
+| `trim` | boolean | `defaults.values.trim` | Trim surrounding whitespace before parsing. |
+| `null_tokens` | list of string | `defaults.values.null_tokens` | Text that means null, compared after trimming. |
+| `null_tokens_case_sensitive` | boolean | `defaults.values.null_tokens_case_sensitive` | Compare null tokens case-sensitively. |
+| `formats` | list of string | `defaults.timestamp.formats` | Formats tried in order, the first match winning: strftime patterns and the keywords below. |
+| `tz` | string | `defaults.timestamp.assume_tz` | IANA zone of naive input; input with an offset keeps it. |
+| `ambiguous` | `error` \| `earliest` \| `latest` | `"error"` | A wall time that occurs twice (DST ends). |
+| `nonexistent` | `error` \| `shift` | `"error"` | A wall time skipped by DST: an error, or the instant after the gap. |
+| `min_year` | integer or null | unset | Earliest year accepted. |
+| `max_year` | integer or null | unset | Latest year accepted. |
+| `output_precision` | `s` \| `ms` \| `us` | `defaults.timestamp.output_precision` | Fraction digits kept. |
+
+### `decimal`, `float32`, `float64`, `int16`, `int32`, `int64`
+
+| Key | Type | Default | Meaning |
+| -- | -- | -- | -- |
+| `trim` | boolean | `defaults.values.trim` | Trim surrounding whitespace before parsing. |
+| `null_tokens` | list of string | `defaults.values.null_tokens` | Text that means null, compared after trimming. |
+| `null_tokens_case_sensitive` | boolean | `defaults.values.null_tokens_case_sensitive` | Compare null tokens case-sensitively. |
+| `locale` | `us` \| `eu` \| `ch` | `"us"` | Separators: us is 1,234.56; eu is 1.234,56; ch is 1'234.56. |
+| `thousands` | string or null | unset | Thousands separator, overriding the locale's. |
+| `decimal_point` | string or null | unset | Decimal point, overriding the locale's. |
+| `parens_negative` | boolean | `false` | (12.50) is -12.50. |
+| `trailing_minus` | boolean | `false` | 12.50- is -12.50. |
+| `percent` | `error` \| `divide` \| `strip` | `"error"` | A trailing %: an error, divide by 100 (15% is 0.15), or drop the sign (15% is 15). |
+| `rounding` | `half_up` \| `half_even` \| `down` \| `error` or null | unset | Digits beyond the scale: half_up (halves away from zero), half_even, down, or error. Unset: half_up for decimals, error for integers ('12.0' is always 12). |
+| `nan` | `null` \| `error` | `"null"` | What NaN and infinity become. |
+
+### `json`
+
+| Key | Type | Default | Meaning |
+| -- | -- | -- | -- |
+| `parse_strings` | boolean | `true` | Decode text that is already JSON, instead of storing it as a JSON string. |
+| `sort_keys` | boolean | `false` | Write object keys sorted. |
+| `null_tokens` | list of string | `[]` | Text that means null (none by default: text is data in a json column). |
+
+### `list`, `struct`
+
+| Key | Type | Default | Meaning |
+| -- | -- | -- | -- |
+| `parse_strings` | boolean | `true` | Decode text that holds JSON. |
+
+### `string`
+
+| Key | Type | Default | Meaning |
+| -- | -- | -- | -- |
+| `trim` | boolean | `defaults.values.trim` | Trim surrounding whitespace before parsing. |
+| `null_tokens` | list of string | `defaults.values.null_tokens` | Text that means null, compared after trimming. |
+| `null_tokens_case_sensitive` | boolean | `defaults.values.null_tokens_case_sensitive` | Compare null tokens case-sensitively. |
+| `empty_string_for_string` | `keep` \| `null` | `defaults.values.empty_string_for_string` | What an empty string becomes in a string column. |
+| `max_length` | integer or null | unset | The longest value allowed (also set by string(n) or the column's max_length). |
+| `on_overflow` | `truncate` \| `error` | `"error"` | What a longer value does. |
+
+### `uuid`
+
+| Key | Type | Default | Meaning |
+| -- | -- | -- | -- |
+| `trim` | boolean | `defaults.values.trim` | Trim surrounding whitespace before parsing. |
+| `null_tokens` | list of string | `defaults.values.null_tokens` | Text that means null, compared after trimming. |
+| `null_tokens_case_sensitive` | boolean | `defaults.values.null_tokens_case_sensitive` | Compare null tokens case-sensitively. |
+| `version` | integer or null | unset | Require this UUID version. |
+
+### Format keywords
+
+| Keyword | Reads |
+| -- | -- |
+| `iso` | ISO-8601, leniently: Z or z, a T, t or space separator, any fraction digits (kept to microseconds), date-only or time-only |
+| `excel_serial` | Spreadsheet day numbers, 1900 system: 46095 is 2026-03-14; serials below 60 count from 1899-12-31, and 60 (Lotus's 1900-02-29) is an error |
+| `excel_serial_1904` | Spreadsheet day numbers, 1904 system |
+| `epoch_s` | Seconds since 1970-01-01 UTC |
+| `epoch_ms` | Milliseconds since 1970-01-01 UTC |
+| `epoch_us` | Microseconds since 1970-01-01 UTC |
+| `epoch_ns` | Nanoseconds since 1970-01-01 UTC (truncated to microseconds) |
+| `epoch_auto` | An epoch whose unit is chosen by magnitude (opt-in only) |
+| `rfc2822` | Email-style dates: Sat, 14 Mar 2026 09:26:53 +0000 |
+
 ## Builtin steps
 
 | Step | Options | Meaning |
