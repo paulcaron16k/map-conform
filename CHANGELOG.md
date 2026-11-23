@@ -16,6 +16,11 @@ each such change is listed.
 
 ### Fixed
 
+- A column's `flatten: true` without a `shape` was ignored. It now flattens the column
+  from the tap's schema, whatever `nested` is; its leaf columns can be declared.
+
+- Configuration errors start "Problems in" and name the file or plan, instead of "Invalid".
+
 - A vector cast now hands every value to the row path when an option it does not implement
   is set, instead of relying on a hand-kept list of grammar options.
 

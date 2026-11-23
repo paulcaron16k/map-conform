@@ -339,8 +339,10 @@ class ColumnSpec:
         default=None,
     )
     flatten: bool | None = documented(
-        "Flatten this column into parent__child columns (from its shape when it has one). "
-        "Unset: follow nested: flatten.",
+        "Flatten this column into parent__child columns: from its shape when it has one, "
+        "else from the tap's schema (the column then takes only source; declare leaf "
+        "columns for types or steps). false keeps it whole under nested: flatten. Unset: "
+        "follow nested: flatten.",
         default=None,
     )
     engine: Literal["arrow", "polars", "row"] | None = documented(

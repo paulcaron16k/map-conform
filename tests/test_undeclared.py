@@ -47,5 +47,5 @@ def test_error_names_each_one(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_strict_setting_overrides_the_spec(capsys: pytest.CaptureFixture[str]) -> None:
     """strict: true makes undeclared columns errors even when the spec says conform."""
-    with pytest.raises(ConfigValidationError, match="Invalid"):
+    with pytest.raises(ConfigValidationError, match="Problems in"):
         run_mapper([SCHEMA], capsys, spec("conform"), strict=True)
