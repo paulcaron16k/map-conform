@@ -146,7 +146,12 @@ def compile_stream(  # noqa: PLR0913 -- the SCHEMA message's parts, plus the spe
     notes.extend(f"stream name: {n}" for n in (named.notes if named else ()))
     properties: Mapping[str, Any] = tap_schema.get("properties") or {}
     resolved, properties, shaped = _flatten_shapes(resolved, properties, issues, path)
-    flattener = _flattener(resolved) if resolved.settings.nested == "flatten" else None
+    resolved, flagged = _flagged_columns(resolved, issues, path)
+    flattener = (
+        _flattener(resolved, properties, flagged)
+        if resolved.settings.nested == "flatten" or flagged
+        else None
+    )
     if flattener is not None:
         try:
             properties = flattener.properties(properties)
@@ -276,16 +281,59 @@ def _replace(properties: dict[str, Any], name: str, leaves: Mapping[str, Any]) -
     return out
 
 
-def _flattener(resolved: ResolvedStream) -> Flattener:
-    """SDK flattening for the properties the spec does not name itself."""
-    named = set(resolved.spec.columns)
-    for spec in resolved.spec.columns.values():
-        if isinstance(spec.source, str):
-            named.add(spec.source)
-        elif spec.source is not None:
-            named.update(spec.source)
+def _flagged_columns(
+    resolved: ResolvedStream, issues: Issues, path: str
+) -> tuple[ResolvedStream, frozenset[str]]:
+    """Find the columns with ``flatten: true`` and no shape.
+
+    Returns their source properties, to flatten from the tap's schema, and the rules
+    without them, since their leaves take their place.
+    """
+    flagged: set[str] = set()
+    columns: dict[str, ColumnSpec] = {}
+    for key, spec in resolved.spec.columns.items():
+        if not spec.flatten or spec.shape is not None or spec.drop:
+            columns[key] = spec
+            continue
+        if spec.source is not None and not isinstance(spec.source, str):
+            issues.add(child(child(child(path, "columns"), key), "source"),
+                       "a flattened column reads one source")  # fmt: skip
+            continue
+        if dataclasses.replace(spec, flatten=None, source=None) != ColumnSpec():
+            issues.add(
+                child(child(path, "columns"), key),
+                "a column flattened without a shape takes only flatten and source; declare its "
+                f"leaf columns (such as '{spec.source or key}__<member>') for types or steps, "
+                "or give it a shape",
+            )
+            continue
+        flagged.add(spec.source or key)
+    if len(columns) == len(resolved.spec.columns):
+        return resolved, frozenset()
+    # Flagged columns, and any in error (already reported), give way to their leaves.
+    stream = dataclasses.replace(resolved.spec, columns=MappingProxyType(columns))
+    return dataclasses.replace(resolved, spec=stream), frozenset(flagged)
+
+
+def _flattener(
+    resolved: ResolvedStream, properties: Mapping[str, Any], flagged: frozenset[str]
+) -> Flattener:
+    """SDK flattening for the flagged columns.
+
+    Under ``nested: flatten``, also for every property the spec does not name itself.
+    """
+    if resolved.settings.nested == "flatten":
+        named = set(resolved.spec.columns)
+        for spec in resolved.spec.columns.values():
+            if isinstance(spec.source, str):
+                named.add(spec.source)
+            elif spec.source is not None:
+                named.update(spec.source)
+    else:
+        named = set(properties)
     options = resolved.settings.flatten
-    return Flattener(options.separator, options.max_depth, options.max_key_length, frozenset(named))
+    return Flattener(options.separator, options.max_depth, options.max_key_length,
+                     frozenset(named - flagged))  # fmt: skip
 
 
 def _filter(text: str | None, scope: Names, issues: Issues, path: str) -> Expression | None:

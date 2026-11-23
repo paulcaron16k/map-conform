@@ -131,7 +131,7 @@ name when the rule has `source`.
 | `when` | string or null | unset | Apply the chain only to rows where this is truthy; sees conformed names. |
 | `fields` | mapping of object or null | unset | Transforms on nested members of struct and json columns, by dotted path. |
 | `shape` | mapping of any or null | unset | JSON Schema of the column's object or array value, inline or as a path to a .json file (relative to the spec file). It alone decides the column's type, or its flattened columns; members it does not declare are dropped, counted and logged; a member's default (null, {}, []) is used when it is missing or empty. |
-| `flatten` | boolean or null | unset | Flatten this column into parent__child columns (from its shape when it has one). Unset: follow nested: flatten. |
+| `flatten` | boolean or null | unset | Flatten this column into parent__child columns: from its shape when it has one, else from the tap's schema (the column then takes only source; declare leaf columns for types or steps). false keeps it whole under nested: flatten. Unset: follow nested: flatten. |
 | `engine` | `arrow` \| `polars` \| `row` or null | unset | Overrides engine for this column. |
 | `infer_type` | `sdk` or null | unset | Without type: infer it from expr as the Singer SDK mapper does (int(...) is an integer, and so on). Set by stream_maps translation; declaring type is clearer. |
 

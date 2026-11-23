@@ -102,7 +102,7 @@ def test_mapper_rejects_a_bad_spec_with_every_problem(tmp_path: Path) -> None:
         f"streams.s.bogus: unknown key; allowed here: {STREAM_RULE_KEYS}",
         "streams.s.columns.a.type: unknown type 'decimel' at position 7 in 'decimel'",
     ]
-    assert str(caught.value) == f"Invalid {spec}"
+    assert str(caught.value) == f"Problems in {spec}"
 
 
 def test_unknown_setting_is_rejected_by_the_sdk() -> None:

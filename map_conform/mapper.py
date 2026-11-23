@@ -131,7 +131,7 @@ class MapConformMapper(InlineMapper):
                                         self._rows, self.logger)  # fmt: skip
         except SpecError as exc:
             raise ConfigValidationError(
-                f"Invalid {exc.source or 'configuration'}",
+                f"Problems in {exc.source or 'the configuration'}",
                 errors=[str(issue) for issue in exc.issues],
             ) from exc
 
@@ -201,7 +201,7 @@ class MapConformMapper(InlineMapper):
                 )
             except SpecError as exc:
                 raise ConfigValidationError(
-                    f"Invalid {exc.source}", errors=[str(i) for i in exc.issues]
+                    f"Problems in {exc.source}", errors=[str(i) for i in exc.issues]
                 ) from exc
             for note in plan.notes:
                 self.logger.info("Stream %r: %s", tap_stream, note)
