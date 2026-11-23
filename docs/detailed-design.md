@@ -48,7 +48,7 @@ map-conform spec import --catalog C [--zamboni TC] [--namespace NS] [-o OUT]  # 
 map-conform spec export SPEC --zamboni TC --catalog C [--namespace NS] [-o OUT]  # write canonical types into Zamboni `columns`
 map-conform spec import --stream-maps CONFIG.json [--catalog C] [-o OUT]  # SDK stream_maps (+ flattening) to a native spec
 map-conform doctor [--meltano-yml meltano.yml] [--strict]  # check targets have add_record_metadata, etc.
-map-conform functions [--json]                       # list builtins, kwargs, vectorisable?
+map-conform functions [--json]                       # list builtins, kwargs, the engines that vectorise each
 ```
 
 `spec validate` reports every problem, each with its path, and exits 1 when there is an

@@ -7,6 +7,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+from map_conform.cli import functions_report
+from map_conform.transforms import polars_vector, vector
+
 EXECUTABLE = str(Path(sys.executable).with_name("map-conform"))
 
 
@@ -53,3 +56,25 @@ def test_functions_lists_steps_and_expression_functions() -> None:
     text = run("functions").stdout
     assert "Expression functions: predicates" in text
     assert '  parse_datetime(value, *formats, tz="UTC")' in text
+
+
+def test_functions_reports_the_engines_that_vectorise_each_step() -> None:
+    """The vectorised flags come from the kernel tables, per step and per cast kind."""
+    report = functions_report()
+    steps = {step["name"]: step for step in report["steps"]}
+    for name, step in steps.items():
+        expected = [
+            e
+            for e in ("arrow", "polars")
+            if name in vector.TRANSFORMS or (e == "polars" and name in polars_vector.TRANSFORMS)
+        ]
+        assert step["engines"] == expected, name
+        assert step["vectorised"] is bool(expected)
+    assert steps["trim"]["engines"] == ["arrow", "polars"]
+    assert steps["regex_replace"]["engines"] == ["polars"]
+    assert steps["hash"]["engines"] == []
+    assert set(vector.TRANSFORMS) | set(polars_vector.TRANSFORMS) <= set(steps)
+    casts = report["cast_engines"]
+    assert casts["decimal"] == ["arrow", "polars"]
+    assert casts["uuid"] == []
+    assert set(vector.CASTS) | set(polars_vector.CASTS) <= set(casts)

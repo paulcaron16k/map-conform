@@ -19,6 +19,7 @@ from map_conform.doctor import check_project
 from map_conform.expr.functions import FUNCTIONS
 from map_conform.mapper import MapConformMapper
 from map_conform.plan.compile import compile_stream, plan_report
+from map_conform.plan.lower import cast_engines, step_engines
 from map_conform.plan.validate import check_plans
 from map_conform.spec.bridge import draft_from_catalog, export_columns
 from map_conform.spec.check import CatalogStream, Finding, check_spec, explain, read_catalog
@@ -409,18 +410,32 @@ def doctor(meltano_yml: str, *, strict: bool) -> None:
 @tools.command(name="functions")
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
 def functions(*, as_json: bool) -> None:
-    """List the builtin steps and the functions expressions can call."""
+    """List the builtin steps and the functions expressions can call.
+
+    A step or cast marked vectorised runs on whole columns of a parquet BATCH file under the
+    named engines, for the rows its options and values allow; the rest run row-wise.
+    """
     report = functions_report()
     if as_json:
         click.echo(json.dumps(report, indent=2))
         return
     lines = ["Builtin steps:"]
     for step in report["steps"]:
-        flags = (" [vectorised]" if step["vectorised"] else "") + (" [udf]" if step["udf"] else "")
+        engines = f" [vectorised: {', '.join(step['engines'])}]" if step["engines"] else ""
+        flags = engines + (" [udf]" if step["udf"] else "")
         lines.append(f"  {step['name']}({step['signature']}){flags}")
         if step["doc"]:
             lines.append(f"      {step['doc']}")
     lines.append(f"  cast: one of {', '.join(report['casts'])}")
+    lines.append(
+        "  (vectorised: run on whole columns of parquet BATCH files by those engines, for the "
+        "rows their options and values allow; other rows run row-wise)"
+    )
+    lines.extend(
+        f"      to {kind} [vectorised: {', '.join(engines)}]"
+        for kind, engines in report["cast_engines"].items()
+        if engines
+    )
     group = None
     for fn in report["functions"]:
         if fn["group"] != group:
@@ -443,6 +458,7 @@ def functions_report() -> dict[str, Any]:
             for name, t in sorted(registry.names().items())
         ],
         "casts": sorted(registry.casts),
+        "cast_engines": {kind: list(cast_engines(kind)) for kind in sorted(registry.casts)},
         "functions": [
             {"name": f.name, "group": f.group, "signature": f.signature, "doc": f.doc}
             for f in ordered
@@ -451,6 +467,7 @@ def functions_report() -> dict[str, Any]:
 
 
 def _step_report(transform: Transform) -> dict[str, Any]:
+    engines = step_engines(transform.name)
     params = [
         f"{f.name}={f.default!r}" if _shown_default(f.default) else f.name
         for f in dataclasses.fields(transform.kwargs)
@@ -460,7 +477,8 @@ def _step_report(transform: Transform) -> dict[str, Any]:
         "signature": ", ".join(params),
         "positional": transform.positional,
         "accepts": sorted(transform.accepts),
-        "vectorised": transform.vectorised,
+        "vectorised": bool(engines),
+        "engines": list(engines),
         "doc": transform.doc,
     }
 
