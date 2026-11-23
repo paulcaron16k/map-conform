@@ -5,6 +5,8 @@ All notable changes to map-conform are recorded here. The format follows
 [Semantic Versioning](https://semver.org/). Before 1.0, a minor version may change behaviour;
 each such change is listed.
 
+## [Unreleased]
+
 ## [0.2.0] - 2026-11-23
 
 ### Added

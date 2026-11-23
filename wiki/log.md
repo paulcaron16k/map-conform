@@ -109,3 +109,5 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-23T18:00:00Z | UPDATED | runbooks/wiki-maintenance | Wiki changes via pull requests; what claim tests check; ADR conventions |
 | 2026-11-23T18:00:00Z | UPDATED | runbooks/dev-environment | Definition of done, generated files, checklists (MAPC-145) |
 | 2026-11-23T18:00:00Z | UPDATED | ci-cd/pipeline | All jobs; publishing on; release job |
+| 2026-11-23T20:00:00Z | UPDATED | plans/roadmap | 0.2.0 released (MAPC-147) |
+| 2026-11-23T20:00:00Z | UPDATED | runbooks/release | 0.2.0 released this way |

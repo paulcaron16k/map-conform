@@ -18,7 +18,7 @@ Parent: [Wiki Index](../index.md) · Related: [CI/CD pipeline](../ci-cd/pipeline
 
 A release is a `v*` tag on `main`. The tag sets the version (hatch-vcs reads it; nothing in
 the code holds a version number), and the *Release* workflow (path:.github/workflows/build.yml)
-builds, publishes to PyPI and creates the GitHub release. 0.1.0 was released this way on
+builds, publishes to PyPI and creates the GitHub release. 0.1.0 and 0.2.0 were released this way on
 2026-11-23.
 
 ## Before the first release (done once)

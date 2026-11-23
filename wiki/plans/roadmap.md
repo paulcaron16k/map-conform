@@ -25,7 +25,7 @@ Issues are filed by [bin/create-agile-issues.py](../../bin/create-agile-issues.p
 | P2 RECORD engine | E4, E5, E7 | 64 | Done 2026-11-22 (PRs #98–#105; 7.5 in #114) |
 | P3 Expressions, UDFs & stream-map parity | E6, E12 | 53 | Done 2026-11-22 (PRs #106–#111) |
 | P4 BATCH engine | E8 | 40 | Done 2026-11-22 (PRs #115–#120) |
-| P5 Bridges, docs & release | E9, E10 | 21 | Done 2026-11-23 except 10.4, the Meltano Hub PR, which waits for field testing (PRs #121–#127; 0.1.0 on PyPI) |
+| P5 Bridges, docs & release | E9, E10 | 21 | Done 2026-11-23 except 10.4, the Meltano Hub PR, which waits for field testing (PRs #121–#127; 0.1.0 on PyPI; 0.2.0, with the post-release fixes, on 2026-11-23) |
 | P6 Adoption | E11 | 6 | Next |
 
 Each phase ends with verification and an explicit approval from the owner.
