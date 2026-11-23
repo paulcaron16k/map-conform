@@ -12,6 +12,7 @@ from hypothesis import strategies as st
 
 from map_conform.plan import compile as compile_module
 from map_conform.plan.vector import VectorChain
+from map_conform.transforms import polars_vector
 from tests.parity.harness import _executor, assert_parity
 
 STRING = {"type": ["null", "string"]}
@@ -40,6 +41,13 @@ def spec_for(steps: Any, type_: str = "string", engine: str = "polars") -> dict[
     """Column c with the steps, on the given engine."""
     column = {"type": type_, "transform": steps, "engine": engine}
     return {"defaults": {"on_error": "null"}, "streams": {"s": {"columns": {"c": column}}}}
+
+
+def test_every_polars_kernel_has_parity_cases() -> None:
+    """A step or cast kind given a polars kernel must be added to these parity cases."""
+    steps = {next(iter(s)) for s in REGEX if isinstance(s, dict)}
+    assert set(polars_vector.TRANSFORMS) <= steps
+    assert set(polars_vector.CASTS) <= {"timestamptz", "timestamp", "date"}  # strptime test
 
 
 @pytest.mark.parametrize("step", REGEX)

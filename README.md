@@ -151,18 +151,16 @@ maintenance spec of its Iceberg tables; skip it if you do not use Zamboni.
 
 ```bash
 uv sync --all-groups
-uv run pytest                      # the suite, offline
-uv run pytest -m e2e               # into a real target-jsonl (needs uvx and network)
-uv run pytest -m bench tests/bench # throughput benchmarks and the regression gate
-uv run ruff check . && uv run ruff format --check .
-uv run mypy map_conform tests && uv run ty check
-uvx --with tox-uv tox              # every supported Python, plus typing
-uvx pre-commit install             # once: ruff, mypy, mdformat, typos, wiki frontmatter
+uv run pytest
 ```
 
-After changing the spec model, regenerate the shipped schema and reference:
-`uv run python -m map_conform.spec.jsonschema` and
-`uv run python -m map_conform.spec.reference`.
+[CONTRIBUTING.md](https://github.com/paulcaron16k/map-conform/blob/main/CONTRIBUTING.md) has
+the workflow, and the
+[dev environment runbook](https://github.com/paulcaron16k/map-conform/blob/main/wiki/runbooks/dev-environment.md)
+the checks that make a change done, the generated files, and checklists for adding a step,
+an option, a setting or a type. Releases follow the
+[release runbook](https://github.com/paulcaron16k/map-conform/blob/main/wiki/runbooks/release.md).
+Security problems: [SECURITY.md](https://github.com/paulcaron16k/map-conform/blob/main/SECURITY.md).
 
 ## Licence
 

@@ -4,7 +4,7 @@ title: "Decision 0005 — Emit SDK _sdc_* exactly; document target requirement"
 description: "Emit the seven _sdc_* columns with SDK names and values; SDK targets must set add_record_metadata: true."
 resource: creating-a-better-mapper-guidance.md
 tags: [architecture, decision, active]
-timestamp: 2026-11-22T19:00:00Z
+timestamp: 2026-11-23T18:00:00Z
 sources:
   - path: creating-a-better-mapper-guidance.md
 ---
@@ -34,7 +34,8 @@ Status: **Accepted** (2026-11-21, planning quiz). **Amended** 2026-11-22: off un
   the **mapper start time**, so the whole run is one batch (decided 2026-11-21, Q2).
 
 ## Consequences
-- `map-conform doctor` warns when a downstream SDK target lacks the flag.
+- `map-conform doctor` reports an error when a loader after a mapping that adds the columns
+  lacks the flag.
 - BATCH files carry the columns too. The SDK target BATCH path neither strips nor adds them,
   but the SCHEMA it holds will have them removed unless the flag is set.
 

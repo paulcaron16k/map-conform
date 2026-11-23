@@ -4,7 +4,7 @@ title: "Decision 0010 — A superset of SDK stream maps, including masking"
 description: "Everything SDK stream maps and pipelinewise-transform-field can do has a native equivalent; SDK stream_maps settings are accepted unchanged."
 resource: docs/detailed-design.md
 tags: [architecture, decision, active]
-timestamp: 2026-11-22T16:00:00Z
+timestamp: 2026-11-23T18:00:00Z
 sources:
   - path: docs/detailed-design.md
 ---
@@ -39,7 +39,7 @@ map-conform must be a *better* stream map, and must not lose any functionality.
   - SDK flattening semantics.
 - **Compatibility mode.** The SDK settings `stream_maps`, `stream_map_config`, `faker_config`
   and `flattening_*` are accepted unchanged and translated into the spec. The native spec
-  wins. Undeclared expression types use the SDK's prefix inference, with a warning, so the
+  wins. Undeclared expression types use the SDK's prefix inference, with an INFO note, so the
   output matches meltano-map-transformer. The implicit cast and `on_error` still apply.
 - **Masking parity with pipelinewise-transform-field.** Every one of its types is a builtin.
   A `when` expression can be put on a column or on any step, and `fields` applies transforms

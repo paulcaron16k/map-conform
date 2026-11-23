@@ -4,7 +4,7 @@ title: "Decision 0002 — Builtins, expressions and Python UDFs"
 description: "Declarative builtins with kwargs and macros, a safe expression language with conditionals, and registered Python UDFs."
 resource: creating-a-better-mapper-guidance.md
 tags: [architecture, decision, active]
-timestamp: 2026-11-21T00:00:00Z
+timestamp: 2026-11-23T18:00:00Z
 sources:
   - path: creating-a-better-mapper-guidance.md
 ---
@@ -24,12 +24,14 @@ same long cleanup expression gets copied from column to column.
 Three tiers, and each tier is callable from the next:
 1. **Builtins**: steps with validated kwargs, e.g. `{cast: decimal, rounding: half_even}`.
    Macros bundle chains of steps under a name and take parameters.
-2. **`expr`**: an AST-whitelisted Python subset. It is a superset of the SDK dialect and
-   includes `case` when/then/else.
+2. **`expr`**: an AST-whitelisted Python subset. It is a superset of the SDK dialect.
+   Conditionals are the `case` step (when/then/else, whose branches are chains) or a
+   ternary inside an expression.
 3. **UDFs**: Python functions registered by entry point (`map_conform.functions`) or by
    module path. A module path needs `allow_python_udfs: true`.
 
 ## Consequences
 - Most columns need one short declarative line.
-- Builtins and many expressions vectorise for BATCH.
+- Many builtins vectorise for parquet BATCH, and so does a `case` whose conditions lower to
+  Arrow masks; `expr` steps run row by row (as built, 0.1.0).
 - UDFs are arbitrary code, documented as such.

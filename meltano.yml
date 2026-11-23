@@ -1,5 +1,8 @@
-# Development project: runs map-conform between a smoke-test tap and target-jsonl.
-#   uv run meltano run tap-smoke-test map-conform target-jsonl
+# Development project: runs this checkout of map-conform between a smoke-test tap and
+# target-jsonl:  uvx meltano install && uvx meltano run tap-smoke-test map-conform target-jsonl
+# It is also the source of the plugin's settings: tests/test_settings.py checks they match
+# map_conform/settings.py, and bin/render-hub-definition.py builds plugin-definition.yml from
+# them. A new setting goes here (wiki/runbooks/dev-environment.md, "Adding a setting").
 send_anonymous_usage_stats: false
 project_id: "map-conform"
 default_environment: test

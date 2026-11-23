@@ -4,7 +4,7 @@ title: "Type system, builtins, expressions and UDFs"
 description: "Canonical CType vocabulary, builtin transform catalogue, expression language and UDF registry."
 resource: map_conform/types/
 tags: [engineering, types, active]
-timestamp: 2026-11-22T18:00:00Z
+timestamp: 2026-11-23T18:00:00Z
 sources:
   - path: docs/detailed-design.md
 ---
@@ -20,7 +20,9 @@ Parent: [Wiki Index](../index.md) · Related: [Detailed design](../../docs/detai
 > - **Built (P3):** the expression language (`map_conform/expr/`), `case`, `when` and
 >   `fields` (`map_conform/plan/ops.py`), UDFs (`map_conform/udfs.py`), masking parity and
 >   Faker, and stream-map compatibility (`map_conform/spec/stream_maps.py`).
-> - **Not yet:** the Arrow implementations of the vectorisable builtins (P4).
+> - **Built (P4):** Arrow and polars kernels for some casts and text steps
+>   (`map_conform/transforms/vector.py`, `map_conform/transforms/polars_vector.py`); see
+>   [Execution engines](execution-engines.md). `map-conform functions` lists which.
 
 ## Canonical types
 
@@ -41,13 +43,15 @@ The full table is in detailed design §4.
 ## Transform tiers ([ADR-0002](../decisions/0002-transform-authoring.md))
 
 1. **Builtins.** Text, numeric, temporal, boolean/json/binary/uuid and privacy transforms
-   (detailed design §6). Each declares kwargs, type constraints, and a scalar implementation
-   plus an optional Arrow one.
+   (detailed design §6). Each declares kwargs, the stages it accepts and produces, and a
+   scalar implementation; vector kernels live in separate tables, keyed by step name or
+   cast kind.
 2. **Macros.** Named, parameterised chains of steps.
 3. **`expr`.** An AST-whitelisted Python subset, compiled to closures, a superset of SDK
    stream-map expressions. Names resolve at compile time; columns are their conformed values.
    The library has predicates (`is_string`, `is_datetime`, …), coercions, temporal and text
-   helpers (`map-conform functions` lists them), with `case` when/then/else. The sandbox
+   helpers (`map-conform functions` lists them). Conditionals are the `case` step form or
+   a ternary inside an expression. The sandbox
    (`map_conform/expr/sandbox.py`) bounds attributes, modules and sizes.
 4. **UDFs.** Registered with `@udf`, by entry point `map_conform.functions`, or by module path
    behind `allow_python_udfs`.

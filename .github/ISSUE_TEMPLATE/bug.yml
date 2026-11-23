@@ -1,0 +1,37 @@
+name: Bug report
+description: map-conform wrote something it should not have, or failed when it should not.
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`map-conform --version`, and the Python version"
+    validations:
+      required: true
+  - type: textarea
+    id: spec
+    attributes:
+      label: Spec and settings
+      description: The spec (or the part that matters) and any plugin settings. Remove secrets.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Input
+      description: A SCHEMA and a few RECORD messages (or rows) that show the problem. No real personal data.
+      render: json
+  - type: textarea
+    id: actual
+    attributes:
+      label: What map-conform wrote (or the error)
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true

@@ -11,6 +11,8 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from map_conform.plan.vector import VectorChain
+from map_conform.transforms import vector
+from map_conform.types.canonical import parse_ctype
 from tests.parity.harness import _executor, assert_parity
 from tests.transforms.corpus import cases
 
@@ -51,10 +53,14 @@ TEXT = st.one_of(
 )  # fmt: skip
 
 
+CAST_TYPES = ["int16", "int32", "int64", "decimal(10,2)", "float32", "float64", "boolean",
+              "timestamptz", "timestamp", "date", "string", "string(3)"]  # fmt: skip
+"""Every cast kind with an Arrow kernel (test_every_kernel_has_parity_cases checks)."""
+
+
 @settings(max_examples=60, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(st.lists(st.one_of(st.none(), TEXT), min_size=1, max_size=12),
-       st.sampled_from(["int16", "int64", "decimal(10,2)", "float32", "float64", "boolean",
-                        "timestamptz", "timestamp", "date", "string", "string(3)"]),
+       st.sampled_from(CAST_TYPES),
        st.sampled_from(["null", "keep", "reject", "raise"]))  # fmt: skip
 def test_generated_text_parity(values: list[str | None], type_: str, on_error: str) -> None:
     """Arbitrary text through each vectorised cast, under every on_error policy."""
@@ -73,11 +79,28 @@ def test_typed_integer_input_parity(values: list[int | None], type_: str) -> Non
     assert_parity(one_column(type_, {}), {"c": {"type": ["null", "integer"]}}, table)
 
 
+TEXT_STEPS: list[list[Any]] = [
+    ["trim"], ["upper"], ["lower"], [{"left": 2}], [{"right": 2}], [{"strip_chars": "x-"}],
+    [{"null_tokens": ["A", "b"]}], ["set_null"], ["trim", "upper", {"left": 3}],
+]  # fmt: skip
+"""Every text step with an Arrow kernel, alone and chained."""
+
+
+def _step_name(step: Any) -> str:  # noqa: ANN401 -- a spec step
+    return step if isinstance(step, str) else next(iter(step))
+
+
+def test_every_kernel_has_parity_cases() -> None:
+    """A step or cast kind given an Arrow kernel must be added to the generated parity cases."""
+    steps = {_step_name(s) for chain in TEXT_STEPS for s in chain}
+    assert set(vector.TRANSFORMS) <= steps, set(vector.TRANSFORMS) - steps
+    kinds = {parse_ctype(t).kind for t in CAST_TYPES}
+    assert set(vector.CASTS) <= kinds, set(vector.CASTS) - kinds
+
+
 @settings(max_examples=40, deadline=None)
 @given(st.lists(st.text(max_size=6), min_size=1, max_size=10),
-       st.sampled_from([["trim"], ["upper"], ["lower"], [{"left": 2}], [{"right": 2}],
-                        [{"strip_chars": "x-"}], [{"null_tokens": ["A", "b"]}], ["set_null"],
-                        ["trim", "upper", {"left": 3}]]))  # fmt: skip
+       st.sampled_from(TEXT_STEPS))  # fmt: skip
 def test_text_builtin_parity(values: list[str], steps: list[Any]) -> None:
     """Vectorised text builtins, alone and chained."""
     column = {"type": "string", "transform": steps}
