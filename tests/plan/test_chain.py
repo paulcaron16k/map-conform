@@ -184,9 +184,7 @@ def test_cast_options_layer_defaults_column_parse_and_step() -> None:
     step_wins = options(transform={"cast": "int64", "base": 2}, column={"parse": {"base": 8}})
     assert step_wins.base == 2  # noqa: PLR2004
     _, problems = compile_chain(None, column={"parse": {"radix": 8}})
-    assert problems == [
-        "streams.s.columns.c.transform.radix: unknown key; allowed here: base, trim"
-    ]
+    assert problems == ["streams.s.columns.c.parse.radix: unknown key; allowed here: base, trim"]
 
 
 MONEY = {"params": {"sym": "$"}, "steps": [{"strip_chars": "${sym}"}, "upper"]}

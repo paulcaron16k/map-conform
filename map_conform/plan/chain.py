@@ -87,6 +87,8 @@ class _Context:
     own: str | None
     column_expr: str | None = None
     """The spec path of the column's ``expr``, while its first step is still to compile."""
+    parse_path: str | None = None
+    """The spec path of the column's ``parse``, where problems with its options are shown."""
 
 
 @dataclass
@@ -168,7 +170,7 @@ class ChainCompiler:
     ) -> CompiledChain | None:
         """Compile a chain ending as ``target``; None when it had problems."""
         before = len(self.issues.items)
-        context = _Context(column, target, own, column_expr)
+        context = _Context(column, target, own, column_expr, child(path, "parse"))
         seq = self._sequence(chain, child(path, "transform"), None, context, ())
         if seq is None or len(self.issues.items) != before:
             return None  # a failed step makes any further type error a consequence of it
@@ -177,7 +179,7 @@ class ChainCompiler:
         if stage != target and (stage is None or not seq.cast_seen):
             implicit = self.cast_step(
                 arg=None, extra={}, column=column, target=target, stage=stage,
-                path=child(path, "transform"),
+                path=child(path, "transform"), parse_path=context.parse_path,
             )  # fmt: skip
             if implicit is None:
                 return None
@@ -267,7 +269,7 @@ class ChainCompiler:
         if step.name == "cast":
             compiled = self.cast_step(
                 arg=step.arg, extra=step.kwargs, column=context.column, target=context.target,
-                stage=stage, path=path,
+                stage=stage, path=path, parse_path=context.parse_path,
             )  # fmt: skip
             if compiled is None:
                 return None
@@ -328,7 +330,7 @@ class ChainCompiler:
             if seq.stage != out:
                 cast = self.cast_step(
                     arg=None, extra={}, column=context.column, target=context.target,
-                    stage=seq.stage, path=branch_path,
+                    stage=seq.stage, path=branch_path, parse_path=context.parse_path,
                 )  # fmt: skip
                 if cast is None:
                     return None
@@ -474,8 +476,12 @@ class ChainCompiler:
         target: CType,
         stage: CType | None,
         path: str,
+        parse_path: str | None = None,
     ) -> CompiledStep | None:
-        """Resolve a cast to ``target`` (or to ``arg``), with layered options."""
+        """Resolve a cast to ``target`` (or to ``arg``), with layered options.
+
+        A problem with an option the column's ``parse`` set is shown at ``parse_path``.
+        """
         cast_target = self._cast_target(arg, target, path)
         if cast_target is None:
             return None
@@ -487,10 +493,14 @@ class ChainCompiler:
             self.issues.add(path, f"cast to {cast_target} cannot take {_stage(stage)}")
             return None
         data = caster.defaults(self.settings, column) if caster.defaults else {}
-        if column is not None and column.parse:
-            data.update(thaw_mapping(column.parse))
+        parsed = thaw_mapping(column.parse) if column is not None and column.parse else {}
+        data.update(parsed)
         data.update(thaw_mapping(extra))
-        options = parse_dataclass(caster.kwargs, data, path, self.issues)
+        found = Issues()
+        options = parse_dataclass(caster.kwargs, data, path, found)
+        from_parse = [k for k in parsed if k not in extra] if parse_path is not None else []
+        for issue in found.items:
+            self.issues.add(_moved(issue.path, path, parse_path, from_parse), issue.message)
         if isinstance(options, Invalid):
             return None
         return CompiledStep(caster, CastArgs(cast_target, options), f"cast: {cast_target}")
@@ -535,6 +545,15 @@ def _member_type(ctype: CType, segments: tuple[str, ...]) -> CType | None:
 
 
 # --- steps called as functions from expressions ------------------------------------------------
+
+
+def _moved(at: str, path: str, parse_path: str | None, keys: list[str]) -> str:
+    """``at``, moved from ``path`` to ``parse_path`` when it is one of the ``parse`` keys."""
+    for key in keys:
+        prefix = child(path, key)
+        if at == prefix or at.startswith((f"{prefix}.", f"{prefix}[")):
+            return child(parse_path or "", key) + at[len(prefix) :]
+    return at
 
 
 def _problems(issues: Issues) -> str:

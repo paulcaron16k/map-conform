@@ -113,7 +113,77 @@ def test_catalog_check_reports_every_problem_with_its_path(tmp_path: Path) -> No
     ]
     code, _, err = run("spec", "validate", str(path), "--catalog", str(ORDERS))
     assert code == 1
-    assert err.splitlines()[-1].endswith(": 6 problem(s)")
+    assert err.splitlines()[-2:] == [
+        (
+            "streams[\"Orders Export\"].columns.order_year.expr: unknown name 'year'; use "
+            "record['year'] for a source property (at column 1)"
+        ),
+        f"{path}: 7 problem(s)",
+    ]
+
+
+def test_validate_compiles_plans_without_a_catalog(tmp_path: Path) -> None:
+    """Step and parse options, steps and expressions are checked; parse keys at their path."""
+    path = write(
+        tmp_path,
+        """\
+        version: 1
+        streams:
+          e:
+            columns:
+              d: {type: date, parse: {format: "%d.%m.%Y"}}
+              m: {type: "decimal(10,2)", parse: {locale: de_DE}}
+              h: {transform: {hash: {algo: md55}}}
+              x: {type: int64, expr: "nosuch(1)"}
+          "orders_*":
+            columns:
+              a: {type: int64, transform: [trim, {nope: 1}]}
+        """,
+    )
+    code, _, err = run("spec", "validate", str(path))
+    assert code == 1
+    assert err.splitlines() == [
+        (
+            "streams.e.columns.d.parse.format: unknown key; allowed here: ambiguous, formats, "
+            "max_year, min_year, nonexistent, null_tokens, null_tokens_case_sensitive, "
+            "output_precision, trim, tz"
+        ),
+        "streams.e.columns.m.parse.locale: expected one of 'us', 'eu', 'ch', got 'de_DE'",
+        (
+            "warning: streams.e.columns.h.transform.algo: expected one of 'sha256', 'md5', 'sha1', "
+            "'sha512', got 'md55' (the column has no declared type, so a string was assumed; check "
+            "with --catalog)"
+        ),
+        (
+            "streams.e.columns.x.expr: unknown name 'nosuch'; use record['nosuch'] for a source "
+            "property (at column 1)"
+        ),
+        (
+            "streams[\"orders_*\"].columns.a.transform[1]: unknown step 'nope': not a builtin or a "
+            "macro"
+        ),
+        f"{path}: 4 problem(s)",
+    ]
+
+
+def test_validate_assumes_the_tap_columns_a_rule_refers_to(tmp_path: Path) -> None:
+    """Undeclared columns that expressions read, and key properties, are taken as tap columns."""
+    path = write(
+        tmp_path,
+        """\
+        version: 1
+        streams:
+          customers:
+            key_properties: [id]
+            filter: "active and country != 'XX'"
+            columns:
+              Qty: {type: int32}
+              total: {type: "decimal(12,2)", expr: "qty * price"}
+              domain: {type: string, expr: "email.split('@')[1]", when: "email is not None"}
+              tier: {transform: {case: [{when: "qty > 10", then: {expr: "'bulk'"}}]}}
+        """,
+    )
+    assert run("spec", "validate", str(path)) == (0, f"{path}: valid (1 stream rule(s))\n", "")
 
 
 def test_key_property_cannot_be_dropped_and_undeclared_error() -> None:

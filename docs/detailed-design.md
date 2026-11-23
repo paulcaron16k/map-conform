@@ -41,8 +41,8 @@ declares the same settings, and a test keeps the two in step.
 
 ```
 map-conform --config CONFIG [--input FILE]          # the mapper (SDK CLI)
-map-conform spec validate SPEC [--catalog C] [--var N=V] [--strict]  # strict parse; checks against a catalog
-map-conform spec explain SPEC --stream S [--catalog C] [--json]     # rules, output names, columns
+map-conform spec validate SPEC [--catalog C] [--var N=V] [--strict] [--allow-python-udfs]  # strict parse, compiled plans
+map-conform spec explain SPEC --stream S [--catalog C] [--var N=V] [--json] [--allow-python-udfs]  # rules, output names, columns
 map-conform spec schema                              # print the spec's JSON Schema
 map-conform spec import --catalog C [--zamboni TC] [--namespace NS] [-o OUT]  # draft a spec from a catalog (+ Zamboni columns)
 map-conform spec export SPEC --zamboni TC --catalog C [--namespace NS] [-o OUT]  # write canonical types into Zamboni `columns`
@@ -60,6 +60,16 @@ outputs:
 - that explicit `name:`s are legal, and output-name collisions;
 - that `key_properties` exist and that no key property is dropped;
 - `undeclared: error`.
+
+It then compiles every plan, so step and `parse` options, macro calls, expressions and type
+flow are checked before a run (`map_conform/plan/validate.py`). With `--catalog`, each
+catalog stream's outputs compile against its schema, as the mapper will; a path the catalog
+check already faults gets no second finding. Without one, each stream rule compiles
+against the tap columns it implies: those it declares, and any name its expressions read or
+its `key_properties` list. Steps start from the raw value either way, so only a column's
+type depends on the tap; problems in a tap column with no declared `type` (or `shape`) are
+warnings, since a string was assumed. A problem with a `parse` option is reported at
+`columns.<c>.parse.<key>`.
 
 As built (`map_conform/spec/bridge.py`, `map_conform/spec/zamboni.py`, WBS 9.1–9.2):
 
