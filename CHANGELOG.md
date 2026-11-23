@@ -9,6 +9,8 @@ each such change is listed.
 
 ### Fixed
 
+- The default `pytest` run no longer needs the network: the e2e test is opt-in
+  (`-m e2e`), and CI runs it in the test matrix.
 - `spec validate` compiles every plan, so a typo in a step or `parse` option, an unknown
   step or name, or a type mismatch fails validation rather than the run. Without
   `--catalog`, problems in a tap column with no declared type are warnings. It takes

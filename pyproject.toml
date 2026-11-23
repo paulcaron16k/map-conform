@@ -116,7 +116,7 @@ unused-type-ignore-comment = "ignore"
 addopts = [
     "-ra",
     "-m",
-    "not bench",
+    "not bench and not e2e",  # opt in with -m e2e / -m bench; CI runs e2e in the test matrix
 ]
 filterwarnings = [
     "error",
