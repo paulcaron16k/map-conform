@@ -4,7 +4,7 @@ title: Survey of existing mappers and targets
 description: "What existing Singer mappers and targets do to SCHEMA, RECORD and BATCH, and which of it map-conform absorbs."
 resource: creating-a-better-mapper-guidance.md
 tags: [engineering, research, active]
-timestamp: 2026-11-21T00:00:00Z
+timestamp: 2026-11-23T16:00:00Z
 sources:
   - path: creating-a-better-mapper-guidance.md
 ---
@@ -20,9 +20,9 @@ design.
 | Finding | Consequence for map-conform |
 |---|---|
 | No mapper coerces strings to declared types | Core feature (E5) |
-| Two targets each built a `type_source` coercion layer, with different number grammars and rounding | One grammar, with an explicit `rounding` policy |
+| Targets build their own coercion layers, with different number grammars and rounding | One grammar, with an explicit `rounding` policy |
 | No one splits camelCase, handles reserved words or conforms nested names | Naming pipeline (E3) |
-| One private mapper silently merges `Id` and `ID` | Collision is an error |
+| A mapper that only lowercases keys can silently merge `Id` and `ID` | Collision is an error |
 | SDK stream maps infer types from expression prefixes, and runtime errors crash the run | Declared types; ConformError + `on_error` |
 | meltano-map-transformer overwrites `time_extracted` and drops `bookmark_properties` | Preserve both (WBS 5.8) |
 | pipelinewise-transform-field swallows exceptions, ignores `equals: 0`, and drops ACTIVATE_VERSION | Fail loud; tests for falsy conditions; pass ACTIVATE_VERSION |

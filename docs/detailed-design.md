@@ -2,6 +2,11 @@
 
 Related: [HLD](architecture-hld.md) · [plan](plan-wbs.md) · [contract](../wiki/concepts/clean-landing-contract.md)
 
+This document explains how each feature behaves, and why, as built in 0.1.0. Every key, its
+type and default is listed in the generated [spec reference](spec-reference.md), which wins
+where the two differ; worked examples are in the [cookbook](cookbook.md). Sections written
+before a feature was built are marked "As built" where the build differs from the design.
+
 ## 1. Plugin settings (Meltano / `--config`)
 
 The plugin settings are kept small on purpose. The real configuration is in the spec file,
@@ -143,6 +148,7 @@ Parsing rules (the Zamboni pattern):
 ```yaml
 defaults:
   naming:
+    preset: map-conform          # map-conform | sdk (the Singer SDK's conform_name, byte for byte)
     case: snake                  # snake | lower | upper | preserve
     split_camel: true            # customerID → customer_id; HTTPServer → http_server
     ascii: transliterate         # transliterate (Ünïcode→Unicode) | strip | keep
@@ -176,7 +182,11 @@ defaults:
   undeclared: conform            # conform | drop | error
   nested: json                   # json | flatten | keep   (for undeclared object/array)
   flatten: {separator: "__", max_depth: 1, max_key_length: 255}   # SDK flattening semantics
+                                 # (naming.collapse then turns "__" into "_"; set collapse: false to keep it)
   faker: {seed: null, locale: null}   # for `fake` (needs the [faker] extra)
+  engine: arrow                  # arrow | polars | row : the BATCH engine (§10.2)
+  max_reject_rate: null          # fail the run above this fraction of rejected rows (0-1)
+  max_null_rate: null            # fail the run above this fraction of rows nulled by on_error: null
 
 streams:
   <glob>:
@@ -218,7 +228,8 @@ streams:
 | `transform` | Chain | Steps run before/around the cast (§3.4). |
 | `parse` | object | Shorthand for the cast's kwargs, e.g. `{formats: [...], tz: ...}`. |
 | `true_values` / `false_values` / `null_tokens` / `trim` / `on_error` |  | Column-level overrides of the defaults. |
-| `max_length` | int | For strings: `truncate` \| `error` via `on_overflow`. |
+| `max_length` | int | For strings: the longest value allowed. |
+| `on_overflow` | `error` \| `truncate` | What a longer value does. |
 | `enum` | list | Allowed values, checked after the cast. |
 | `drop` | bool | Remove the column. Dropping a key property is an error. |
 | `doc` | string | Copied to the SCHEMA `description` and to the Zamboni export. |
@@ -226,6 +237,8 @@ streams:
 | `when` | expr | Apply the whole chain only to rows where this is truthy; other rows keep the cast value. Sees conformed names. (pipelinewise `when`: `equals` → `col == x`, `regex_match` → `matches(re, col)`; a falsy literal such as `0` is compared correctly.) |
 | `shape` | JSON Schema \| path | The column's object or array value, declared (inline, or a `.json` file relative to the spec file). It alone decides the column's type, or its flattened columns, so the output SCHEMA does not follow tap schema drift. Members it does not declare are dropped, counted (`members_dropped`) and logged once per stream; a member's `default` (`null`, `{}`, `[]`) is used when it is missing, null or empty (WBS 8.10, decided 2026-11-22). |
 | `flatten` | bool | Flatten this column into `parent__child` columns, from its `shape` when it has one. Unset: follows `nested: flatten`. |
+| `engine` | `arrow` \| `polars` \| `row` | Overrides `defaults.engine` for this column in BATCH. |
+| `infer_type` | `sdk` | Without `type`: infer it from `expr` as the SDK mapper does. Set by the stream_maps translation. |
 | `fields` | `{path: ColumnSpec-lite}` | For `struct` and `json` columns: transforms on nested members by dotted path (`address.zip`, `items[*].sku`), e.g. masking a nested field. Only `transform`, `when` and `drop` are allowed. (pipelinewise `field_paths`.) |
 
 ### 3.4 Chains, steps and macros
@@ -312,7 +325,7 @@ As built (`map_conform/plan/chain.py`, `map_conform/plan/ops.py`):
 | `time` |  | string, `format: time` | time64[us] | time |
 | `timestamp` | timestamp_ntz | string, `format: date-time`, `x-sql-datatype: timestamp` | timestamp[us] | timestamp |
 | `timestamptz` | timestamp_tz | string, `format: date-time`, `x-sql-datatype: timestamptz` | timestamp[us, UTC] | timestamptz |
-| `uuid` |  | string, `format: uuid` | `arrow.uuid` extension, which parquet stores as `fixed_len_byte_array(16)` with the UUID logical type; `uuid_as: string` is an option | uuid |
+| `uuid` |  | string, `format: uuid` | `arrow.uuid` extension, which parquet stores as `fixed_len_byte_array(16)` with the UUID logical type (a string option exists in `to_arrow` but is not exposed as a setting in 0.1.0) | uuid |
 | `binary` | bytes, blob | string, `contentEncoding: base64` | binary | binary |
 | `json` | variant | string, `x-sql-datatype: json` (the value is JSON **text**; decimals inside are exact JSON numbers) | string | string |
 | `struct<a: T, …>` |  | object with `properties`, `required` for non-nullable members | struct | struct\<…> |
@@ -452,8 +465,8 @@ Details of steps 2–8 (`map_conform/naming/conform.py`):
   containers normalised to the default) before it is flattened. An unflattened column with
   a `shape` is typed by it, and the same conforming runs as its first step.
 
-Every lossy rename (dropped characters, transliteration) is logged once per stream. The mapping
-from source to conformed name is available from `spec explain` and is written to metrics.
+Every lossy rename (dropped characters, transliteration) is logged at INFO when the SCHEMA
+compiles. The mapping from source to conformed name is shown by `spec explain`.
 
 ## 6. Builtin transforms
 
@@ -462,11 +475,13 @@ Each builtin is a `Transform`:
 - a name;
 - a kwargs dataclass, validated at plan compile time;
 - input/output CType constraints;
-- `scalar(value, ctx)`;
-- an optional `arrow(array, ctx)`.
+- `scalar(value, ctx)`.
 
-`ctx` carries the column, the stream, the row index and the defaults. Vectorisable builtins
-are marked ✓.
+`ctx` carries the column, the stream, the row index and the defaults. Vector kernels live
+apart from the builtins, in `transforms/vector.py` (Arrow) and `transforms/polars_vector.py`
+(polars); `map-conform functions` lists which steps and casts have one. In the tables below,
+**Vec** names the engines with a kernel for the step (`arrow` kernels are used under
+`engine: polars` too), and "row" means it always runs row by row (§10.2).
 
 **Chain compilation** (`map_conform/plan/chain.py`, registry in
 `map_conform/transforms/registry.py`):
@@ -485,8 +500,6 @@ are marked ✓.
   type. The chain must end as the column's declared type.
 - **Macros** expand in place with their parameters, and cycles are detected. Errors inside
   a macro point at its definition (`macros.money.steps[0]`).
-- **Not yet supported.** `expr`, `case` and step-level `when` are refused with a clear
-  message until the expression language exists (WBS 6.x).
 - **Run time.** Nulls skip steps that are not null-safe. A step that fails raises with its
   rule; the executor adds the stream, column, row and value, and applies `on_error`
   (`map_conform/errors.py`).
@@ -495,29 +508,31 @@ are marked ✓.
 
 | Builtin | Kwargs | Vec |
 | -- | -- | -- |
-| `trim` | `chars=None` | ✓ |
-| `null_tokens` | `tokens`, `case_sensitive` | ✓ |
-| `strip_chars` | `chars` | ✓ |
-| `regex_replace` | `pattern`, `repl`, `flags` | ✓ (RE2 subset; otherwise row-wise) |
-| `regex_extract` | `pattern`, `group=1` | ✓ |
-| `lower` / `upper` / `title` |  | ✓ |
+| `trim` | `chars=None` | arrow (ASCII `chars`) |
+| `null_tokens` | `tokens`, `case_sensitive` | arrow (ASCII tokens) |
+| `strip_chars` | `chars` | arrow (ASCII `chars`) |
+| `regex_replace` | `pattern`, `repl`, `flags` | polars (patterns polars compiles; otherwise row) |
+| `regex_extract` | `pattern`, `group=1`, `flags` | polars (as above) |
+| `lower` / `upper` |  | arrow (ASCII text) |
+| `title` |  | row |
 | `normalize_unicode` | `form=NFKC` | row |
-| `normalize_whitespace` | collapse internal runs | ✓ |
-| `remove_control_chars` |  | ✓ |
-| `pad` / `left` / `right` / `substring` |  | ✓ |
-| `map_values` | `{from: to}`, `default` | ✓ |
-| `split` | `sep` → list<string> | ✓ |
+| `normalize_whitespace` | collapse internal runs | row |
+| `remove_control_chars` |  | row |
+| `left` / `right` | `n` | arrow |
+| `pad` / `substring` |  | row |
+| `map_values` | `{from: to}`, `default` | row |
+| `split` | `sep` → list<string> | row |
 
 ### 6.2 Numeric
 
 | Builtin | Kwargs / grammar | Vec |
 | -- | -- | -- |
-| `cast: int*` / `cast: float*` / `cast: decimal` | The default grammar accepts: surrounding whitespace; a sign; one currency symbol or ISO-4217 code before or after; thousands separators in valid groups (`thousands=","`, `decimal_point="."`, locale presets `us`, `eu`, `ch`); an exponent; `(x)` as negative when `parens_negative`; a trailing `-` when `trailing_minus`; `%` when `percent: divide`. | ✓ (a regex validate + pyarrow cast; failures go row-wise for the error path) |
-| `rounding` (on cast) | `half_up` (default; halves round away from zero, `-12.5` → `-13`), `half_even`, `down`, `error`. Also controls int-from-fraction: `error` default. `"12.0"` → 12 is always allowed. | ✓ |
-| `round` | `ndigits` | ✓ |
-| `clamp` | `min`, `max`, `on_out_of_range` | ✓ |
-| `nan` | `null` \| `error`. NaN/Inf from float sources become null by default for decimal and int columns. | ✓ |
-| `scale` | `factor` (e.g. cents → units) | ✓ |
+| `cast: int*` / `cast: float*` / `cast: decimal` | The default grammar accepts: surrounding whitespace; a sign; one currency symbol or ISO-4217 code before or after; thousands separators in valid groups (`thousands=","`, `decimal_point="."`, locale presets `us`, `eu`, `ch`); an exponent; `(x)` as negative when `parens_negative`; a trailing `-` when `trailing_minus`; `%` when `percent: divide`. | arrow, for plain numbers under the default grammar (a regex check, then a pyarrow cast); other rows, and every row under another `locale`, `thousands` or `decimal_point`, go row-wise |
+| `rounding` (on cast) | `half_up` (default; halves round away from zero, `-12.5` → `-13`), `half_even`, `down`, `error`. Also controls int-from-fraction: `error` default. `"12.0"` → 12 is always allowed. | arrow for `half_up` on decimals; other modes row |
+| `round` | `ndigits` | row |
+| `clamp` | `min`, `max`, `on_out_of_range` | row |
+| `nan` | `null` \| `error`. NaN/Inf from float sources become null by default for decimal and int columns. | row (non-finite values are handed on) |
+| `scale` | `factor` (e.g. cents → units) | row |
 
 Details pinned by the implementation (`map_conform/transforms/numeric.py`):
 
@@ -538,12 +553,12 @@ Details pinned by the implementation (`map_conform/transforms/numeric.py`):
 
 | Builtin | Kwargs | Vec |
 | -- | -- | -- |
-| `cast: timestamptz` / `timestamp` / `date` / `time` | `formats`: tried in order, each one of: a `strftime` pattern; `iso` (fromisoformat with a lenient `Z`/`z`/space separator); `excel_serial` (1900 system; serials below 60 count from 1899-12-31 and serial 60, Lotus's nonexistent 1900-02-29, is an error; `excel_serial_1904`); `epoch_s` / `epoch_ms` / `epoch_us` / `epoch_ns`; `epoch_auto` (by magnitude, opt-in only); `rfc2822`. Also `tz` (source zone for naive input), `ambiguous: error \| earliest \| latest` and `nonexistent: error \| shift`, `dayfirst` (only for `auto`), `min_year` / `max_year` sanity bounds. | ✓ for strptime and ISO via `pyarrow.compute.strptime` / `cast`; serial and epoch via arithmetic; otherwise row-wise |
-| `to_utc` | timestamptz is always UTC on output; this is explicit for clarity | ✓ |
-| `assume_tz` | `tz` | ✓ |
-| `to_local` | `tz` (for `timestamp` naive local wall clock) | ✓ |
-| `truncate` | `unit` | ✓ |
-| `date_from_timestamp` | `tz` | ✓ |
+| `cast: timestamptz` / `timestamp` / `date` / `time` | `formats`: tried in order, each one of: a `strftime` pattern; `iso` (fromisoformat with a lenient `Z`/`z`/space separator); `excel_serial` (1900 system; serials below 60 count from 1899-12-31 and serial 60, Lotus's nonexistent 1900-02-29, is an error; `excel_serial_1904`); `epoch_s` / `epoch_ms` / `epoch_us` / `epoch_ns`; `epoch_auto` (by magnitude, opt-in only); `rfc2822`. Also `tz` (source zone for naive input), `ambiguous: error \| earliest \| latest` and `nonexistent: error \| shift`, `dayfirst` (only for `auto`), `min_year` / `max_year` sanity bounds. | arrow when the first format is `iso` and `tz` is UTC; polars also for a first format that is a simple strptime pattern (`%Y %m %d %H %M %S` and literals); serials, epochs and other zones row |
+| `to_utc` | timestamptz is always UTC on output; this is explicit for clarity | row |
+| `assume_tz` | `tz` | row |
+| `to_local` | `tz` (for `timestamp` naive local wall clock) | row |
+| `truncate` | `unit` | row |
+| `date_from_timestamp` | `tz` | row |
 
 **Ambiguity rule.** A pattern list that could parse the same string to two different
 instants, such as `%m/%d` and `%d/%m` both listed, is allowed. The first match wins. A
@@ -573,19 +588,18 @@ Details pinned by the implementation (`map_conform/transforms/temporal.py`):
 
 | Builtin | Kwargs | Vec |
 | -- | -- | -- |
-| `cast: boolean` | `true_values`, `false_values`, `case_sensitive=false`; numbers: only 0 and 1 are allowed (otherwise an error) | ✓ |
-| `cast: json` | `parse_strings` (decode text that is already JSON instead of double-encoding), `sort_keys`, `ensure_ascii=false`, decimals kept exact | row |
-| `json_get` | `path` (JSONPath subset) | row |
-| `cast: binary` | `encoding: base64 \| hex \| utf8`, strict | ✓ |
-| `cast: uuid` | `version=None`; accepts braces, no dashes, uppercase; normalises to canonical lowercase | ✓ |
-| `hash` | `algo=sha256 \| md5 \| sha1 \| sha512`, `salt=${env:...}`, `skip_first=n` (any n, not a single digit) | ✓ |
-| `mask` | `keep_first`, `keep_last`, `char="*"` | ✓ |
-| `set_null` | Also makes the column nullable in SCHEMA | ✓ |
-| `redact_date` | `to: year \| month`. Keeps the column's type (date stays date, timestamptz stays timestamptz) | ✓ |
-| `mask_number` | `value=0` | ✓ |
-| `mask_hidden` | `value="hidden"`. Only on string columns; otherwise declare `type: string` | ✓ |
+| `cast: boolean` | `true_values`, `false_values`, `case_sensitive=false`; numbers: only 0 and 1 are allowed (otherwise an error) | arrow (ASCII tokens) |
+| `cast: json` | `parse_strings` (decode text that is already JSON instead of double-encoding), `sort_keys`; non-ASCII kept as is, decimals kept exact | row |
+| `cast: binary` | `encoding: base64 \| hex \| utf8`, strict | row |
+| `cast: uuid` | `version=None`; accepts braces, no dashes, uppercase; normalises to canonical lowercase | row |
+| `hash` | `algo=sha256 \| md5 \| sha1 \| sha512`, `salt=${env:...}`, `skip_first=n` (any n, not a single digit) | row |
+| `mask` | `keep_first`, `keep_last`, `char="*"` | row |
+| `set_null` | Also makes the column nullable in SCHEMA | arrow |
+| `redact_date` | `to: year \| month`. Keeps the column's type (date stays date, timestamptz stays timestamptz) | row |
+| `mask_number` | `value=0` | row |
+| `mask_hidden` | `value="hidden"`. Only on string columns; otherwise declare `type: string` | row |
 | `fake` | `provider` (e.g. `name`, `email`), `args`, `unique=false`; seeded by `defaults.faker`. Needs the `[faker]` extra | row |
-| `tokenize` | `key=${env:...}`: deterministic HMAC-SHA256, the same input giving the same token across runs | ✓ |
+| `tokenize` | `key=${env:...}`: deterministic HMAC-SHA256, the same input giving the same token across runs | row |
 
 **pipelinewise-transform-field parity** (each one is a builtin, minus pipelinewise's bugs):
 
@@ -660,6 +674,7 @@ dialect accepts, so existing stream-map expressions run unchanged.
 | `stream`, `source_stream` | Stream names |
 | `row_number` | Ordinal of the row |
 | `NULL` | The null sentinel |
+| `fake` | A Faker generator (the `[faker]` extra) |
 
 **Functions.**
 
@@ -668,17 +683,20 @@ dialect accepts, so existing stream-map expressions run unchanged.
 | predicates | `is_null`, `is_string`, `is_number`, `is_int`, `is_decimal`, `is_bool`, `is_datetime`, `is_date`, `is_list`, `is_dict`, `is_blank`, `matches(re, s)` |
 | coercion | `to_int`, `to_float`, `to_decimal(v, p, s)`, `to_bool`, `to_str`, `to_json`, `from_json` |
 | temporal | `parse_datetime(v, *formats, tz=)`, `ensure_utc(v, assume=)`, `to_tz`, `now_utc`, `date_trunc`, `excel_date(n)`, `from_epoch(n, unit)` |
-| text | `re_sub`, `re_match`, `re_extract`, `lower`, `upper`, `strip`, `split`, `join`, `len`, `pad_left` |
-| numeric | `round`, `abs`, `min`, `max`, `floor`, `ceil`, `clamp` |
-| misc | `coalesce`, `nullif`, `md5`, `sha256`, `uuid4`, `uuid5`, `fake` (with the `[faker]` extra) |
-| modules | `datetime`, `decimal`, `math`, `re` (wrapped and read-only) |
+| text | `re_sub`, `re_match`, `re_extract`, `lower`, `upper`, `strip`, `split`, `join`, `pad_left` |
+| numeric | `round`, `floor`, `ceil`, `clamp` |
+| misc | `coalesce`, `nullif`, `md5`, `sha256`, `uuid4`, `uuid5`, `rand`, `randint` |
+| python | `abs`, `all`, `any`, `bool`, `dict`, `enumerate`, `float`, `int`, `len`, `list`, `max`, `min`, `range` (bounded), `set`, `sorted`, `str`, `sum`, `tuple`, `zip` |
+| modules | `datetime`, `decimal`, `json`, `math`, `re` (wrapped and read-only) |
 | UDFs | every registered UDF |
 | builtins | every builtin transform, also callable as a function: `money(value)`, `cast(value, "decimal(18,2)")` |
 
 **Conditionals.** A conditional is either the `case:` step form (§3.4) or a ternary inside an
-`expr`. `case` is preferred, because each branch can contain builtins and so stays
-vectorisable: the whens become masks, branches run on their subset, and the results are
-merged with `pyarrow.compute.case_when`.
+`expr`. `case` is preferred: each branch can contain builtins, and in BATCH a `case` whose
+conditions lower to Arrow masks (§10.2: null and blank tests, comparisons and membership
+against literals, `matches`, and `not`/`and`/`or` of those) and whose branches all have
+kernels is vectorised, with the results merged by `pyarrow.compute.case_when`. Anything
+else runs row-wise.
 
 ```yaml
 transform:
@@ -698,8 +716,8 @@ transform:
   closures once per column.
 - This is not simpleeval at runtime: it is faster, has the same safety envelope, and its
   error messages name the column.
-- `expr` → Arrow lowering covers arithmetic, comparisons, boolean ops, `coalesce`, string
-  methods with Arrow kernels and the predicates. Anything else runs row-wise.
+- `expr` steps always run row by row; only `case`/`when` conditions lower to Arrow (§10.2).
+  A column that any expression reads also runs row by row in BATCH.
 - Runtime exceptions become a `ConformError` and follow `on_error`. They never crash the run
   without context.
 - **Output typing.** The column's declared `type` is authoritative. After the expr, the
@@ -748,7 +766,9 @@ from map_conform import udf
 def fiscal_week(value, *, start_month: int = 7, ctx=None) -> int | None: ...
 
 
-@udf(name="clean_sku", returns="string", vectorized=True)  # receives a pyarrow.Array
+@udf(
+    name="clean_sku", returns="string", vectorized=True
+)  # receives a pyarrow.Array (one element, as built)
 def clean_sku(arr, *, ctx=None): ...
 ```
 
@@ -782,8 +802,8 @@ As built (`map_conform/udfs.py`):
   it the result is untyped and the column's implicit cast follows.
 - **Failures.** An exception in a UDF becomes a cell error naming the step, and follows
   `on_error`.
-- **Vectorized UDFs** run on one-element arrays in the row executor; BATCH (P4) will pass
-  whole arrays.
+- **Vectorized UDFs** run on one-element arrays, in RECORD and BATCH alike: whole-array
+  calls in the columnar executor are not built.
 - **Names.** Spec module paths override entry points of the same name. A UDF may not take
   the name of a builtin step or a library function.
 - **Loading.** Module paths import with the current directory (the Meltano project root)
@@ -845,10 +865,10 @@ As built (`map_conform/plan/compile.py`):
 
 ### 10.1 Row executor
 
-- The input is the SDK-decoded record (`Decimal` for numbers). I/O uses orjson where it is
-  safe; numbers that need exact Decimal go through the SDK decoder path.
-- Each ColumnPlan is one composed closure. A fast path skips the cast when the value already
-  has the target Python type and passes its checks.
+- The input is the SDK-decoded record (`Decimal` for numbers); reading and writing use the
+  SDK's JSON handling, with exact decimals (`types/jsontext.py` for JSON text). orjson is not
+  used.
+- Each ColumnPlan is one composed closure.
 - Output dict in plan order, then `_sdc_*` (§11).
 - `filter` is evaluated on the **conformed** record, after the column plans and before
   `_sdc_*`, so it sees conformed names and cast values.
@@ -872,33 +892,28 @@ As built (`map_conform/plan/row.py`, `map_conform/mapper.py`):
   `keep` keeps it.
 - **Messages.**
   - SCHEMA compiles a plan for each output stream and emits its conformed SCHEMA, with
-    `_sdc_*` declared.
+    `_sdc_*` declared when `add_record_metadata` is set.
   - RECORD keeps `version` and `time_extracted` unchanged.
   - STATE passes through in order.
   - ACTIVATE_VERSION is emitted once per output stream, under the conformed name.
   - A new SCHEMA for a stream recompiles its plans.
-- **BATCH** messages are conformed row by row by the same executors (§10.3); the columnar
-  engine (WBS 8.4–8.6) replaces this path for vectorisable plans.
-- **Not yet built.** The fast path that skips a cast and the orjson I/O are performance work
-  for later.
+- **BATCH** messages are conformed by the same executors (§10.3); for parquet in and out,
+  the columnar executor (§10.2) computes the vectorised columns first.
+- **Not built.** A fast path that skips a cast when the value already has the target type,
+  and orjson I/O, were designed for throughput and remain open performance work.
 
 ### 10.2 Columnar executor
 
-- Input: a `pyarrow.RecordBatch` with any schema. JSONL is read in line blocks with
-  `pyarrow.json.read_json`, with explicit `string` types for declared columns so nothing is
-  inferred, or through the row decoder when nested shapes are irregular.
-- Vectorised ColumnPlans run as chains of `pyarrow.compute` calls. With the `[polars]` extra,
-  a plan may instead be lowered to a polars expression. This is chosen per column with
-  `engine: polars` or globally, and is useful for regex-heavy text and flexible datetime
-  parsing.
-- Row-wise ColumnPlans convert only the columns in their `reads` set with `to_pylist`, run
-  the row closure and build `pa.array(values, type=arrow_type)`.
-- Errors produce a boolean reject mask, a null replacement or a raise. Rejected rows are
-  filtered out of the output batch and written to the reject sink together with the error.
-- Output: `pa.RecordBatch.from_arrays(…, schema=declared)`, written with
-  `pyarrow.parquet.ParquetWriter`, one output file per input file, in the same order.
-- **Parity.** One test corpus is run through both executors, and their outputs must be
-  identical when converted to the canonical JSON form.
+The design was: read any BATCH input (JSONL through `pyarrow.json.read_json`) as Arrow
+batches; run vectorised columns as `pyarrow.compute` chains (or lowered polars
+expressions); convert only the columns a row-wise column reads to Python; and build the
+output table with the declared schema, one output file per input file, in order. One test
+corpus runs through both executors, and their outputs must be identical.
+
+As built, it differs in three ways, described below: only parquet in and parquet out runs
+columnar (JSONL runs row by row); every row still goes through the row executor for the
+columns, expressions and policies without kernels; and polars contributes kernels for
+specific steps rather than lowering whole plans.
 
 As built (`map_conform/transforms/vector.py`, `map_conform/plan/vector.py`,
 `map_conform/batch/columnar.py`, WBS 8.4–8.5):
@@ -1017,8 +1032,8 @@ As built (`map_conform/batch/`, WBS 8.1–8.3 and 8.8):
   the store does not report one. `_sdc_extracted_at` is the BATCH message's
   `time_extracted`.
 - **`delete_input`** deletes each input file once every output written from it is closed.
-- **Not yet:** the vectorised path (8.4–8.6). Every column runs row-wise for now, which is
-  correct but not fast.
+- **Columnar.** Parquet in and parquet out first computes the vectorised columns with the
+  columnar executor (§10.2); the row executor does the rest, as above.
 
 ## 11. `_sdc_*` metadata (SDK-exact)
 
@@ -1060,10 +1075,10 @@ values with near-identical ones, which is defined SDK behaviour.
 
 | on_error | Effect |
 | -- | -- |
-| `raise` (default) | Stop with a precise message and the first N similar errors in the batch. |
+| `raise` (default) | Stop at the first error, with a precise message. |
 | `null` | Write null (an error if the column is non-nullable). Counted. |
 | `keep` | Keep the source value. Allowed only when the declared type is string or json. |
-| `reject` | Drop the row from output. Write a dead-letter row `{stream, row_number, column, rule, error, record}` to the reject sink. Counted. |
+| `reject` | Drop the row from output. Write a dead-letter row `{stream, row_number, column, rule, error, value, record, rejected_at}` to the reject sink. Counted. |
 
 **Thresholds.** `max_reject_rate` and `max_null_rate` per stream turn a lenient policy back
 into a failure when a source goes bad.
@@ -1090,7 +1105,7 @@ Per stream:
 - filtered, rejected;
 - nulls produced by each column and rule;
 - lossy renames;
-- columns run row-wise in BATCH, and why.
+- whether BATCH files ran columnar or row-wise, and why.
 
 Emitted as SDK-style metric log lines, and optionally to `metrics_path`.
 
@@ -1102,8 +1117,8 @@ As built (`map_conform/metrics.py`):
   with them.
 - **Output.** One `Metrics for '<stream>': {...}` log line per stream at the end of the run,
   and `metrics_path` as `{"streams": {name: counters}}`.
-- **Later:** row-wise BATCH columns (WBS 8.x).
-  Lossy renames are logged once per stream, when its SCHEMA compiles.
+- **Logs, not counters:** lossy renames (once per stream, when its SCHEMA compiles) and the
+  BATCH engine each stream's files ran on, with the reason (§10.2).
 
 ## 14. Testing strategy (summary — see [wiki/qa/test-strategy.md](../wiki/qa/test-strategy.md))
 
@@ -1114,9 +1129,12 @@ As built (`map_conform/metrics.py`):
 - **Parity tests**, RECORD vs BATCH, for every corpus case.
 - **Contract tests.** The emitted SCHEMA validates every emitted RECORD. The emitted parquet
   schema equals `to_arrow(plan)`.
-- **End-to-end** through `meltano run tap-csv map-conform target-jsonl`, and through
-  target-ducklake with its cleanup options off.
-- **Benchmarks** (pytest-benchmark) gate regressions in CI.
+- **End-to-end** (`tests/e2e/`, opt-in with `-m e2e`, run in CI): the messy CSV fixture
+  piped through map-conform into the published target-jsonl. The reference Meltano project
+  (`examples/`) runs `meltano run` into target-ducklake in CI and checks the lake.
+- **Benchmarks** (`tests/bench/`, `-m bench`): RECORD, row-wise BATCH and columnar BATCH
+  throughput, gated in CI against a recorded baseline and a minimum columnar speed-up
+  ([benchmarks](../wiki/qa/benchmarks.md)).
 - **Stream-map parity.** The SDK's own stream-map test cases run through `stream_maps`
   compatibility mode, and their output must match the SDK mapper's.
 
@@ -1149,8 +1167,8 @@ also accepted unchanged ([ADR-0010](../wiki/decisions/0010-stream-map-superset.m
    wins column by column.
 1. A translated expression column with no declared `type` gets the **SDK's prefix-based
    inference** (`int(` → integer, `float(` → number, …, otherwise the existing type or
-   string), so output types match the SDK mapper. A warning per column suggests declaring a
-   type.
+   string), so output types match the SDK mapper. A note (INFO) per column suggests
+   declaring a type.
 1. Unlike the SDK, the implicit cast still applies, so values always match the SCHEMA, and a
    runtime error follows `on_error` instead of crashing without context.
 1. Defects of meltano-map-transformer are *not* reproduced: `time_extracted` is preserved and
@@ -1186,8 +1204,10 @@ As built (`map_conform/spec/stream_maps.py`, `map_conform/spec/importer.py`, `ma
 - **`__else__: null`** keeps the key properties: under `undeclared: drop` the spec's
   `key_properties`, or the tap's, stay. A stream-level `source` may be a glob.
 - **Parity** (WBS 12.9, `tests/compat/`). Every case of the SDK's own mapper tests runs
-  through the SDK's `PluginMapper` and through map-conform: 38 cases, all but the BATCH one
-  (P4). Stream names, key properties, columns, type families and values agree, except for
+  through the SDK's `PluginMapper` and through map-conform: 38 cases. The SDK's BATCH case
+  (`aliased_stream_batch`) is not ported, because the SDK's inline mapper does not map BATCH
+  messages, so there is no SDK output to compare with; map-conform's BATCH output is
+  compared with its own RECORD output instead (`tests/parity/`). Stream names, key properties, columns, type families and values agree, except for
   these deliberate differences:
   1. canonical UTC timestamps;
   1. exact decimals written as strings (ADR-0007);

@@ -4,7 +4,7 @@ title: "Development environment"
 description: "How to set up, test, lint and type-check map-conform locally."
 resource: pyproject.toml
 tags: [platform, active]
-timestamp: 2026-11-22T06:00:00Z
+timestamp: 2026-11-23T16:00:00Z
 sources:
   - path: pyproject.toml
   - path: .pre-commit-config.yaml
@@ -50,5 +50,3 @@ messy on purpose.
 See [tests/fixtures/README.md](../../tests/fixtures/README.md). The case tables in
 `corpus/` are edited by hand; everything else is generated, and a test fails when it is
 stale.
-
-Git identity for this repo: `user.email = paulcaron16k@yahoo.com`, set in `.git/config`.

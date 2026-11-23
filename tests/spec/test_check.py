@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import textwrap
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from click.testing import CliRunner
 
@@ -13,9 +13,6 @@ from map_conform.spec.check import check_spec, explain, read_catalog
 from map_conform.spec.load import load_spec
 from map_conform.spec.model import DEFAULTS_KEYS, STREAM_KEYS, parse_spec
 from tests.fixtures.paths import FIXTURES
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 ORDERS = FIXTURES / "catalogs" / "orders_export.catalog.json"
 
@@ -356,3 +353,13 @@ def test_explain_reports_plan_problems(tmp_path: Path) -> None:
     )
     assert code == 1
     assert "keep would put raw text in a int64 column" in out
+
+
+def test_the_founding_brief_example_validates(tmp_path: Path) -> None:
+    """The spec example in creating-a-better-mapper-guidance.md §5 stays valid."""
+    root = Path(__file__).resolve().parents[2]
+    brief = (root / "creating-a-better-mapper-guidance.md").read_text(encoding="utf-8")
+    example = brief.split("```yaml\n", 1)[1].split("```", 1)[0]
+    path = tmp_path / "brief.yml"
+    path.write_text(example, encoding="utf-8")
+    assert run("spec", "validate", str(path))[:2] == (0, f"{path}: valid (2 stream rule(s))\n")

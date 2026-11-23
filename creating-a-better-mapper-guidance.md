@@ -1,9 +1,9 @@
 # Creating a better mapper — guidance
 
-> Status: planning record (2026-11-21). This is the founding brief for **map-conform**.
-> The docs set in [`docs/`](docs/) elaborates it; the knowledge base in [`wiki/`](wiki/index.md)
-> tracks it as it evolves. Where they disagree, the newest dated decision in
-> [`wiki/decisions/`](wiki/decisions/) wins.
+> Status: planning record (2026-11-21), kept as the founding brief for **map-conform**. It
+> describes the intent; [`docs/`](docs/) describes 0.1.0 as built and the knowledge base in
+> [`wiki/`](wiki/index.md) tracks it since. Where they disagree, those win, and the newest
+> dated decision in [`wiki/decisions/`](wiki/decisions/) wins over both.
 
 ## 1. Purpose
 
@@ -29,8 +29,9 @@ The mapper does five jobs, in one place:
 | e | **`_sdc_*` metadata**, exactly as the SDK would add it, once, upstream | `_sdc_extracted_at`, `_sdc_table_version`, … |
 
 And one non-functional job: **BATCH handled at columnar speed**. A BATCH message (parquet
-preferred, JSONL supported) is transformed with Arrow (optionally Polars), and only the
-columns that need Python-level logic are taken through the per-record path.
+preferred, JSONL supported) is transformed with Arrow (optionally Polars) where a column's
+steps have vector kernels; the rest of each row goes through the per-record path. (As built,
+see [detailed design §10.2](docs/detailed-design.md).)
 
 ### 1.1 Why
 
@@ -38,6 +39,13 @@ Every target today re-implements a slightly different subset of the same cleanup
 §3). The duplication is expensive and the differences are bugs: the same CSV lands with
 different values depending on the target. Worse, the Singer SDK's own BATCH path skips *all*
 per-record cleanup, so BATCH data is the least clean data in the system.
+
+One goal among several is to avoid a cleanup layer in dbt. There, cleanup is SQL only, and
+macros must be written to work across every warehouse a project targets, so the same parsing
+is re-implemented per dialect or reduced to what all dialects share. It also runs after the
+raw data has landed, so the raw tables still hold the mess. A mapper written in Python has
+none of those limits: exact decimals, real date parsing, Unicode-aware names, masking before
+anything is stored, and one implementation for every target.
 
 **The rule this project exists to enable:** *a target may assume the data lands clean.*
 When reviewing a target (human or AI reviewer), do not add value cleanup, coercion or name
@@ -57,9 +65,9 @@ Licence Apache-2.0, Python ≥ 3.11, scaffolded from the Singer SDK mapper cooki
 
 ## 3. Survey: what existing systems do
 
-Six systems were read. The tables list what each does to SCHEMA, RECORD and BATCH, so the
-mapper can do the union *once*, correctly. Private code was surveyed for behaviour only; no
-private code or names are reproduced.
+Public systems were read, and a few further mappers and targets were looked at for general
+behaviour only. The tables list what the public ones do to SCHEMA, RECORD and BATCH, so the
+mapper can do the union *once*, correctly; the others only confirmed the same patterns.
 
 ### 3.1 Systems surveyed
 
@@ -68,79 +76,78 @@ private code or names are reproduced.
 | Singer SDK `InlineMapper` / `PluginMapper` (stream maps, flattening) | library | yes |
 | `meltano-map-transformer` | mapper (thin wrapper over SDK stream maps) | yes |
 | `pipelinewise-transform-field` | mapper (masking/hashing) | yes |
-| A private lowercase-keys mapper | mapper (lowercase + stream prefix) | no — behaviour only |
 | `target-ducklake` | target (DuckDB / DuckLake) | yes |
-| A private Iceberg target (uses Zamboni table-config for partitioning) | target | no — behaviour only |
 | Zamboni table-config | table layout & maintenance spec | yes |
 
 ### 3.2 Name conforming
 
-| Behaviour | SDK SQL `conform_name` | lowercase-keys mapper | target-ducklake | Iceberg target |
-| -- | -- | -- | -- | -- |
-| Default on? | in SQL sinks | yes | **no** (opt-in `conform_column_names`) | yes |
-| Lowercase | ✓ | ✓ (only this) | ✓ | ✓ |
-| Strip chars outside `[A-Za-z0-9_\-.\s]` (drops non-ASCII) | ✓ | – | ✓ | ✓ |
-| `.`, `-`, space → `_` | ✓ | – | ✓ | ✓ |
-| camelCase → snake_case | – | – | – | – |
-| Leading digit | → letter (0→a …) | – | → letter | → letter |
-| Reserved words | – | – (TODO) | – | logged only |
-| Max length / truncation | – | – | 63 for Postgres catalog, `_i` suffix | – |
-| Clash detection | – | **silent overwrite** | error | error |
-| Nested member names | – | – | – | – |
-| Stream/table names | – | lowercase + prefix | split on `-` → schema/table | conform |
-| Applied to `required`, `key_properties` | partial | **`required` missed** | ✓ | ✓ |
+| Behaviour | SDK SQL `conform_name` | target-ducklake |
+| -- | -- | -- |
+| Default on? | in SQL sinks | **no** (opt-in `conform_column_names`) |
+| Lowercase | ✓ | ✓ |
+| Strip chars outside `[A-Za-z0-9_\-.\s]` (drops non-ASCII) | ✓ | ✓ |
+| `.`, `-`, space → `_` | ✓ | ✓ |
+| camelCase → snake_case | – | – |
+| Leading digit | → letter (0→a …) | → letter |
+| Reserved words | – | – |
+| Max length / truncation | – | 63 for Postgres catalog, `_i` suffix |
+| Clash detection | – | error |
+| Nested member names | – | – |
+| Stream/table names | – | split on `-` → schema/table |
+| Applied to `required`, `key_properties` | partial | ✓ |
 
-**Takeaway.** Nobody splits camelCase, nobody handles reserved words, nobody conforms nested
-member names, and the private mapper silently merges `Id` and `ID`.
+**Takeaway.** Nobody splits camelCase, nobody handles reserved words, and nobody conforms
+nested member names. A mapper that only lowercases keys can silently merge `Id` and `ID`,
+so a collision must be an error.
 
 ### 3.3 Type mapping (JSON Schema → storage type)
 
-| JSON Schema | target-ducklake | Iceberg target |
-| -- | -- | -- |
-| `integer` | INTEGER if bounds fit int32, else BIGINT | long (int via hints or bounds) |
-| `number` | DECIMAL(38,9) default; honours non-standard `precision`/`scale` | double (float via hints) |
-| `string` + `x-singer.decimal` + p,s | DECIMAL(p,s); else VARCHAR | decimal(p,s); invalid → string |
-| `x-sql-datatype` hints | many, validated against JSON type | some (decimal, int widths, float, uuid, tz flavour) |
-| `date-time` | TIMESTAMPTZ default (configurable) | timestamptz default; naive via hint |
-| `date` / `time` / `uuid` | DATE / TIME / UUID | date / time / uuid |
-| `contentEncoding: base64` | BLOB | binary |
-| object with props | STRUCT (or flatten / JSON) | struct |
-| object w/o props, array w/o items | JSON | string holding JSON text |
-| `anyOf`/`oneOf` | first non-null branch | **string + warning (not handled)** |
-| several non-null types | VARCHAR | string |
+| JSON Schema | target-ducklake |
+| -- | -- |
+| `integer` | INTEGER if bounds fit int32, else BIGINT |
+| `number` | DECIMAL(38,9) default; honours non-standard `precision`/`scale` |
+| `string` + `x-singer.decimal` + p,s | DECIMAL(p,s); else VARCHAR |
+| `x-sql-datatype` hints | many, validated against JSON type |
+| `date-time` | TIMESTAMPTZ default (configurable) |
+| `date` / `time` / `uuid` | DATE / TIME / UUID |
+| `contentEncoding: base64` | BLOB |
+| object with props | STRUCT (or flatten / JSON) |
+| object w/o props, array w/o items | JSON |
+| `anyOf`/`oneOf` | first non-null branch |
+| several non-null types | VARCHAR |
 
-**Takeaway.** Every target hand-rolls hint parsing, and they disagree (e.g. bare `number` is
-DECIMAL(38,9) in one and double in the other). A single declared type with a single canonical
+**Takeaway.** Every target hand-rolls hint parsing, and targets disagree: a bare `number` is
+DECIMAL(38,9) here and a double in others. A single declared type with a single canonical
 JSON-Schema rendering removes the guessing.
 
 ### 3.4 Value cleanup and coercion on RECORD
 
-| Cleanup | SDK target base | target-ducklake | Iceberg target | Mappers |
-| -- | -- | -- | -- | -- |
-| ISO timestamp parse (`fromisoformat`), top-level only | ✓ (error on failure) | via SDK | via SDK | – |
-| Non-ISO timestamp formats (`strptime`) | – | opt-in `type_source` + `x-parse-format` | opt-in `type_source` | – |
-| Epoch → timestamp | – | – (never loads) | – | – |
-| Excel/Sheets serial dates | – | – | – | – |
-| Naive timestamp assumed UTC | – | ✓ for TIMESTAMPTZ | ✓ | – |
-| Offset → UTC | – | ✓ (opt-in for TIMESTAMP) | ✓ | – |
-| Empty/whitespace → null | – | `type_source` only | `type_source` only | – |
-| Null tokens (`N/A`, `#N/A`, `NULL`, `-`) | – | – | – | – |
-| Currency/thousands stripping | – | `type_source` (validated groups) | `type_source` (crude regex) | – |
-| Parenthesised negatives `(5)` | – | rejected | – | – |
-| Boolean words (`yes/y/t/1`…) | – | `type_source` | `type_source` | – |
-| int from `"12.0"` / fraction | – | truncate (type_source) / round half-up (staging) | `int(float())` truncation | – |
-| Decimal quantize to scale | – | ROUND_HALF_UP | `Decimal(str(v))` | – |
-| NaN/Inf | – | passes into float/JSON, fails decimal/int | unhandled | – |
-| JSON text → object for object columns | – | ✓ | – | – |
-| object/array → JSON text | – | ✓ (keeps all digits) | ✓ (`default=str`) | SDK flattening |
-| base64 strict decode | – | ✓ | ✓ | – |
-| `on_error` policy | ERROR/MAX/NULL for dates | raise/null/string | raise/null/string | **pipelinewise swallows errors** |
-| Masking / hashing | – | – | – | pipelinewise (SET-NULL, HASH, MASK-\*) |
-| Undeclared fields | kept | kept | **silently dropped** | – |
+| Cleanup | SDK target base | target-ducklake | Mappers |
+| -- | -- | -- | -- |
+| ISO timestamp parse (`fromisoformat`), top-level only | ✓ (error on failure) | via SDK | – |
+| Non-ISO timestamp formats (`strptime`) | – | opt-in `type_source` + `x-parse-format` | – |
+| Epoch → timestamp | – | – (never loads) | – |
+| Excel/Sheets serial dates | – | – | – |
+| Naive timestamp assumed UTC | – | ✓ for TIMESTAMPTZ | – |
+| Offset → UTC | – | ✓ (opt-in for TIMESTAMP) | – |
+| Empty/whitespace → null | – | `type_source` only | – |
+| Null tokens (`N/A`, `#N/A`, `NULL`, `-`) | – | – | – |
+| Currency/thousands stripping | – | `type_source` (validated groups) | – |
+| Parenthesised negatives `(5)` | – | rejected | – |
+| Boolean words (`yes/y/t/1`…) | – | `type_source` | – |
+| int from `"12.0"` / fraction | – | truncate (type_source) / round half-up (staging) | – |
+| Decimal quantize to scale | – | ROUND_HALF_UP | – |
+| NaN/Inf | – | passes into float/JSON, fails decimal/int | – |
+| JSON text → object for object columns | – | ✓ | – |
+| object/array → JSON text | – | ✓ (keeps all digits) | SDK flattening |
+| base64 strict decode | – | ✓ | – |
+| `on_error` policy | ERROR/MAX/NULL for dates | raise/null/string | **pipelinewise swallows errors** |
+| Masking / hashing | – | – | pipelinewise (SET-NULL, HASH, MASK-\*) |
+| Undeclared fields | kept | kept | – |
 
-**Takeaway.** Two targets each built a `type_source` coercion layer, with different number
-grammars and different integer rounding. That is exactly the duplicate-but-different logic
-this project removes.
+**Takeaway.** Targets build their own coercion layers (target-ducklake's `type_source` is
+one), each with its own number grammar and integer rounding. That is exactly the
+duplicate-but-different logic this project removes.
 
 ### 3.5 `_sdc_*` metadata
 
@@ -157,7 +164,7 @@ this project removes.
 **Behaviour that matters (verified in SDK source):** with `add_record_metadata: false`, the
 default, an SDK target **removes all seven columns from the schema and from every record**
 (`singer_sdk/sinks/core.py` `_remove_sdc_metadata_from_schema`, `target_base.py`). With
-`true` it **overwrites** them with its own values. Both targets above add workarounds to keep a
+`true` it **overwrites** them with its own values. Targets add workarounds to keep a
 tap-declared `_sdc_deleted_at`. The SDK BATCH path applies neither stripping nor adding.
 
 **Decision ([ADR-0005](wiki/decisions/0005-sdc-metadata.md)).** map-conform emits the
@@ -172,11 +179,11 @@ equal. This is documented, not worked around.
 | SDK `InlineMapper` | `map_batch_message` raises `NotImplementedError` |
 | meltano-map-transformer | inherits the raise, so **any BATCH crashes the pipeline** |
 | pipelinewise-transform-field | unknown message type, so it crashes |
-| lowercase-keys mapper | renames the stream but **not the file contents** (silent corruption) |
+| A mapper that renames keys per record | renames a BATCH stream but **not its file contents** (silent corruption) |
 | SDK tap encoders | JSONL is always gzip; parquet Arrow schema is **inferred from data**, not from JSON Schema; tap-side batches bypass stream maps |
 | SDK target base | `read_table().to_pylist()`: no maps, no metadata, no validation, no timestamp parsing |
 | target-ducklake | reads parquet in chunks and converts **every value back to JSON form**, then runs the RECORD path |
-| Iceberg target | parquet → `to_pylist()` → dict → Arrow again; **skips all per-record cleanup** |
+| Targets generally | parquet → `to_pylist()` → dict → Arrow again, often **skipping per-record cleanup** |
 
 **Takeaway.** No component in the ecosystem transforms BATCH columnar data. map-conform is the
 first: Arrow in, Arrow out, declared schema.
@@ -254,8 +261,9 @@ config to a native spec.
 
 ## 5. The conform spec (summary)
 
-The full reference is in [docs/detailed-design.md §3](docs/detailed-design.md#3-the-conform-spec),
-and the schema page is in [wiki/schemas/conform-spec.md](wiki/schemas/conform-spec.md).
+Every key is in the generated [spec reference](docs/spec-reference.md); the behaviour behind
+them is in [docs/detailed-design.md §3](docs/detailed-design.md#3-the-conform-spec), and worked
+examples are in the [cookbook](docs/cookbook.md).
 
 ```yaml
 version: 1
@@ -265,14 +273,11 @@ defaults:                          # inherited by every stream; objects merge, l
   values: {trim: true, null_tokens: ["", "NULL", "N/A", "#N/A", "-"]}
   timestamp: {assume_tz: UTC}
   on_error: raise
-  metadata: sdc                    # the seven SDK _sdc_* columns
+  add_record_metadata: true        # the seven SDK _sdc_* columns
   undeclared: conform              # conform | drop | error
 
 macros:                            # named, parameterised transform chains
   money: [{strip_chars: "$€£, "}, {cast: decimal, parens_negative: true}]
-
-udfs:                              # Python functions; module paths need allow_python_udfs: true
-  fiscal_week: "my_pkg.udfs:fiscal_week"
 
 streams:
   "sheets-*":                      # glob; the most specific match wins
@@ -286,20 +291,23 @@ streams:
       "Total":      {type: "decimal(18,2)", transform: money}
       "Order Date": {type: timestamptz,
                      parse: {formats: ["%m/%d/%Y %I:%M %p", excel_serial, iso], tz: America/New_York}}
-      "Shipped?":   {type: boolean, true_values: [Y, yes, shipped]}
+      "Shipped?":   {type: boolean, parse: {true_values: [Y, yes, shipped]}}
       "Payload":    {type: json}
       "SSN":        {drop: true}
-      week:         {type: int32, expr: "fiscal_week(order_date)"}   # derived column
+      order_year:   {type: timestamptz, expr: "date_trunc('year', order_date)"}  # derived
       "Amount":
         type: "decimal(12,2)"
+        on_error: reject           # a value no branch can cast goes to the rejects file
         transform:
           case:
             - when: is_number(value)
               then: {cast: decimal}
             - when: is_string(value)
-              then: [money]
-            - else: {on_error: reject}
+              then: money
 ```
+
+Python UDFs are declared under `udfs:` (module paths need `allow_python_udfs: true`); see
+the detailed design §8. A test validates this example.
 
 ## 6. What targets receive: the Clean-Landing Contract (summary)
 
@@ -327,7 +335,8 @@ A target built against map-conform may assume all of the following.
   - `json` columns: JSON *text*.
   - Declared `struct`/`list`: typed nested values with conformed member names.
   - No empty strings where the type is not string.
-- **Metadata.** The seven `_sdc_*` columns are present in SCHEMA and RECORD, with SDK semantics.
+- **Metadata.** With `add_record_metadata: true`, the seven `_sdc_*` columns are present in
+  SCHEMA and RECORD, with SDK semantics.
 - **BATCH.** Files are parquet (or JSONL) whose Arrow schema is the declared schema exactly.
   Decimals are `decimal128(p,s)`, `timestamptz` is `timestamp[us, UTC]`, and `json` is `string`.
 
