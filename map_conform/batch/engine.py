@@ -15,12 +15,13 @@ file is deleted once every output written from it is complete.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from map_conform.batch.arrow import output_columns
-from map_conform.batch.columnar import ColumnarExecutor, columnar
+from map_conform.batch.columnar import ColumnarExecutor, row_wise_reason, vectorised_columns
 from map_conform.batch.files import (
     Writer,
     compression_for,
@@ -49,7 +50,10 @@ class BatchEngine:
     reject: Reject
     rows: dict[str, int] = field(default_factory=dict)
     """Rows seen per tap stream, shared with the RECORD path."""
+    log: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
     _numbers: dict[str, int] = field(default_factory=dict)
+    _routes: dict[str, str] = field(default_factory=dict)
+    """The engine last announced per tap stream, so INFO says it once (and on a change)."""
 
     def process(
         self, message: dict[str, Any], executors: list[RowExecutor]
@@ -65,7 +69,9 @@ class BatchEngine:
         for uri in message.get("manifest", []):
             batched_at = last_modified(uri, params).isoformat()
             writers: dict[int, Writer] = {}
-            if self._columnar(encoding, executors):
+            reason = self._row_wise_reason(encoding, executors)
+            self._announce(tap_stream, uri, reason, executors)
+            if reason is None:
                 self._columnar_file(
                     uri, tap_stream=tap_stream, executors=executors, passed=passed,
                     batched_at=batched_at, writers=writers,
@@ -135,15 +141,42 @@ class BatchEngine:
                 if rows:
                     self._writer(executor, uri, writers).write(rows)
 
-    def _columnar(self, encoding: dict[str, Any], executors: list[RowExecutor]) -> bool:
-        """Parquet in, parquet out, and every output stream has vectorised columns."""
-        return (
-            encoding.get("format") == "parquet"
-            and self.settings.mode == "batch"
-            and self.settings.format == "parquet"
-            and bool(executors)
-            and all(columnar(e) for e in executors)
+    def _row_wise_reason(
+        self, encoding: dict[str, Any], executors: list[RowExecutor]
+    ) -> str | None:
+        """Why a file runs row by row, or None when it runs columnar.
+
+        Columnar needs parquet in and out, and vectorised columns in every output stream.
+        """
+        if encoding.get("format") != "parquet":
+            return f"the input is {encoding.get('format') or 'of no stated format'}, not parquet"
+        if self.settings.mode != "batch":
+            return "batch_output.mode is record"
+        if self.settings.format != "parquet":
+            return f"batch_output.format is {self.settings.format}"
+        if not executors:
+            return "no output stream"
+        for executor in executors:
+            if (why := row_wise_reason(executor)) is not None:
+                return f"output stream {executor.plan.name!r}: {why}"
+        return None
+
+    def _announce(
+        self, tap_stream: str, uri: str, reason: str | None, executors: list[RowExecutor]
+    ) -> None:
+        """Say which engine conforms a file: DEBUG per file, INFO once per stream."""
+        route = "row-wise" if reason is not None else "columnar"
+        detail = (
+            reason
+            if reason is not None
+            else "; ".join(
+                f"{e.plan.name!r} vectorises {', '.join(vectorised_columns(e))}" for e in executors
+            )
         )
+        self.log.debug("BATCH file %s of %r runs %s: %s", uri, tap_stream, route, detail)
+        if self._routes.get(tap_stream) != route:
+            self._routes[tap_stream] = route
+            self.log.info("BATCH files of %r run %s: %s", tap_stream, route, detail)
 
     def _columnar_file(  # noqa: PLR0913 -- the file and where it goes
         self,

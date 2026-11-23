@@ -147,5 +147,7 @@ TRANSFORMS: dict[str, vector.Vector] = {
 }
 """Builtins polars vectorises, by name."""
 
-CASTS: dict[str, vector.Vector] = dict.fromkeys(("timestamptz", "timestamp", "date"), cast_temporal)
+CASTS: dict[str, vector.Vector] = dict.fromkeys(
+    ("timestamptz", "timestamp", "date"), vector.claims(cast_temporal, vector.TEMPORAL_OPTIONS)
+)
 """Casts polars vectorises (over the Arrow ones), by target kind."""

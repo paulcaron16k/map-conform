@@ -51,6 +51,11 @@ Compiled once per SCHEMA. A `StreamPlan` holds:
   regular expressions and strptime formats.
 - A column is vectorised only if no expression or filter reads it; everything else, plus
   `_sdc_*`, the filter and the policies, runs per row.
+- A vector cast hands every value on when an option it does not list as understood differs
+  from its default (`claims`), so a new cast option is never ignored in BATCH.
+- **Triage.** INFO says once per stream whether its BATCH files run columnar (naming the
+  vectorised columns) or row-wise, and why; DEBUG says it per file. `engine: row` gives the
+  row-wise reference for the same input.
 
 ## BATCH I/O
 

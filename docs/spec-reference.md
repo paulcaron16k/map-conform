@@ -85,7 +85,7 @@ Inherited by every stream; a stream rule may set any of these keys to override t
 | `flatten.max_key_length` | integer | `255` | Longest flattened key. |
 | `faker.seed` | integer or null | unset | Seed for reproducible fake values. |
 | `faker.locale` | string or list of string or null | unset | Faker locale or locales. |
-| `engine` | `arrow` \| `polars` | `"arrow"` | Vectorised BATCH engine: Arrow, or polars (the polars extra), which also vectorises regular expressions and strptime date formats. |
+| `engine` | `arrow` \| `polars` \| `row` | `"arrow"` | BATCH engine for parquet files: arrow (vectorised), polars (the polars extra; also vectorises regular expressions and strptime date formats), or row, which runs every row as a RECORD would: the reference to compare a vectorised result against. |
 | `max_reject_rate` | number or null | unset | Fail the run when more than this fraction of a stream's rows is rejected (0-1). |
 | `max_null_rate` | number or null | unset | Fail the run when on_error: null nulls values in more than this fraction of a stream's rows (0-1). |
 
@@ -132,7 +132,7 @@ name when the rule has `source`.
 | `fields` | mapping of object or null | unset | Transforms on nested members of struct and json columns, by dotted path. |
 | `shape` | mapping of any or null | unset | JSON Schema of the column's object or array value, inline or as a path to a .json file (relative to the spec file). It alone decides the column's type, or its flattened columns; members it does not declare are dropped, counted and logged; a member's default (null, {}, []) is used when it is missing or empty. |
 | `flatten` | boolean or null | unset | Flatten this column into parent__child columns (from its shape when it has one). Unset: follow nested: flatten. |
-| `engine` | `arrow` \| `polars` or null | unset | Overrides engine for this column. |
+| `engine` | `arrow` \| `polars` \| `row` or null | unset | Overrides engine for this column. |
 | `infer_type` | `sdk` or null | unset | Without type: infer it from expr as the Singer SDK mapper does (int(...) is an integer, and so on). Set by stream_maps translation; declaring type is clearer. |
 
 ## `fields.<path>`

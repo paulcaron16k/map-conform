@@ -237,9 +237,10 @@ class Defaults:
     )
     flatten: FlattenDefaults = documented("Flattening settings.", default_factory=FlattenDefaults)
     faker: FakerDefaults = documented("Fake data settings.", default_factory=FakerDefaults)
-    engine: Literal["arrow", "polars"] = documented(
-        "Vectorised BATCH engine: Arrow, or polars (the polars extra), which also vectorises "
-        "regular expressions and strptime date formats.",
+    engine: Literal["arrow", "polars", "row"] = documented(
+        "BATCH engine for parquet files: arrow (vectorised), polars (the polars extra; also "
+        "vectorises regular expressions and strptime date formats), or row, which runs every "
+        "row as a RECORD would: the reference to compare a vectorised result against.",
         default="arrow",
     )
     max_reject_rate: float | None = documented(
@@ -342,7 +343,7 @@ class ColumnSpec:
         "Unset: follow nested: flatten.",
         default=None,
     )
-    engine: Literal["arrow", "polars"] | None = documented(
+    engine: Literal["arrow", "polars", "row"] | None = documented(
         "Overrides engine for this column.", default=None
     )
     infer_type: Literal["sdk"] | None = documented(

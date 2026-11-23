@@ -186,3 +186,47 @@ def test_unreadable_manifest(capsys: pytest.CaptureFixture[str], tmp_path: Path)
     stream[1]["encoding"] = {"format": "csv"}
     with pytest.raises(Exception, match="BATCH format 'csv' is not supported"):
         run(stream, capsys)
+
+
+def _parquet_rows(out: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    manifest = next(m for m in out if m["type"] == "BATCH")["manifest"]
+    return [r for u in manifest for r in pq.read_table(u.removeprefix("file://")).to_pylist()]
+
+
+def test_engine_row_is_the_reference_and_the_route_is_logged(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture
+) -> None:
+    """engine: row runs a parquet BATCH row by row with the same result; each run says why."""
+    stream = copied(tmp_path, "orders_export.batch-parquet.singer.jsonl")
+    caplog.set_level("DEBUG")
+    _, columnar = run(stream, capsys, batch_output={"storage": {"root": f"file://{tmp_path}/a"}})
+    row_spec = {**SPEC, "defaults": {**SPEC["defaults"], "engine": "row"}}
+    _, row_wise = run(stream, capsys, spec=row_spec,
+                      batch_output={"storage": {"root": f"file://{tmp_path}/b"}})  # fmt: skip
+    assert _parquet_rows(row_wise) == _parquet_rows(columnar)
+    infos = [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
+    assert [i for i in infos if i.startswith("BATCH")] == [
+        (
+            "BATCH files of 'Orders Export' run columnar: 'orders_export' vectorises order_id, "
+            "order_date, customer_id, customer_name, amount, discount, paid, ship_date, notes, "
+            "sku, qty, unit_price, created_at_utc"
+        ),
+        (
+            "BATCH files of 'Orders Export' run row-wise: output stream 'orders_export': no "
+            "column is vectorised (engine: row, or no step has a kernel)"
+        ),
+    ]
+    debugs = [r.getMessage() for r in caplog.records if r.levelname == "DEBUG"]
+    assert sum("BATCH file file://" in d for d in debugs) == 4  # noqa: PLR2004 -- 2 files, 2 runs
+
+
+def test_jsonl_batch_says_why_it_runs_row_wise(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture
+) -> None:
+    """A JSONL input is not columnar, and the log says so."""
+    stream = copied(tmp_path, "orders_export.batch-jsonl.singer.jsonl")
+    caplog.set_level("INFO")
+    run(stream, capsys, batch_output={"format": "jsonl", "storage": {"root": str(tmp_path)}})
+    assert "BATCH files of 'Orders Export' run row-wise: the input is jsonl, not parquet" in [
+        r.getMessage() for r in caplog.records
+    ]
