@@ -5,6 +5,17 @@ All notable changes to map-conform are recorded here. The format follows
 [Semantic Versioning](https://semver.org/). Before 1.0, a minor version may change behaviour;
 each such change is listed.
 
+## [Unreleased]
+
+### Fixed
+
+- `spec validate` compiles every plan, so a typo in a step or `parse` option, an unknown
+  step or name, or a type mismatch fails validation rather than the run. Without
+  `--catalog`, problems in a tap column with no declared type are warnings. It takes
+  `--allow-python-udfs`, as `spec explain` does.
+- A problem with a `parse` option is reported at `columns.<c>.parse.<key>`, not under
+  `transform`.
+
 ## [0.1.0] - 2026-11-23
 
 The first release: a Singer/Meltano inline mapper that conforms names, types, values and

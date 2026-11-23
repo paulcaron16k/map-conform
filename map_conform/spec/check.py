@@ -181,7 +181,7 @@ def _column_entries(
     known = properties if properties is not None else {}
     for key, spec in columns.items():
         col_path = child(child(path, "columns"), key)
-        sources = _sources(key, spec)
+        sources = column_sources(key, spec)
         if properties is not None:
             missing = [s for s in sources if s not in known]
             if missing and spec.expr is None:
@@ -221,7 +221,8 @@ def _column_entries(
     return entries
 
 
-def _sources(key: str, spec: ColumnSpec) -> tuple[str, ...]:
+def column_sources(key: str, spec: ColumnSpec) -> tuple[str, ...]:
+    """The tap properties a column reads: its own name, or its ``source``."""
     if spec.source is None:
         return (key,)
     return (spec.source,) if isinstance(spec.source, str) else spec.source

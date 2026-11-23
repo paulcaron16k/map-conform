@@ -27,6 +27,7 @@ Parent: [Wiki Index](../index.md) · Related: [Detailed design](../../docs/detai
 | `map_conform/spec/load.py` | Read YAML/JSON, merge the inline spec, substitute variables, resolve streams |
 | `map_conform/spec/jsonschema.py` | The generated schema; shipped as `map_conform/map-conform-spec.schema.json` |
 | `map_conform/spec/check.py` | `spec validate --catalog` and `spec explain`; the column naming the plan reuses |
+| `map_conform/plan/validate.py` | `spec validate` compiles every plan, with or without a catalog |
 
 ## Behaviour
 

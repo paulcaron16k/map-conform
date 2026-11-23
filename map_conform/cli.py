@@ -19,8 +19,9 @@ from map_conform.doctor import check_project
 from map_conform.expr.functions import FUNCTIONS
 from map_conform.mapper import MapConformMapper
 from map_conform.plan.compile import compile_stream, plan_report
+from map_conform.plan.validate import check_plans
 from map_conform.spec.bridge import draft_from_catalog, export_columns
-from map_conform.spec.check import CatalogStream, check_spec, explain, read_catalog
+from map_conform.spec.check import CatalogStream, Finding, check_spec, explain, read_catalog
 from map_conform.spec.errors import SpecError
 from map_conform.spec.importer import import_stream_maps
 from map_conform.spec.jsonschema import render
@@ -74,6 +75,12 @@ _VARS = click.option(
     help="A spec variable for ${NAME}; repeatable.",
 )
 
+_ALLOW_UDFS = click.option(
+    "--allow-python-udfs",
+    is_flag=True,
+    help="Import the spec's module-path UDFs, as the allow_python_udfs setting does.",
+)
+
 
 def _spec_vars(variables: tuple[str, ...]) -> dict[str, Any]:
     spec_vars: dict[str, Any] = {}
@@ -106,16 +113,34 @@ def _load(
 @_CATALOG
 @_VARS
 @click.option("--strict", is_flag=True, help="Treat warnings as errors.")
+@_ALLOW_UDFS
 def spec_validate(
-    spec_path: str, catalog: str | None, variables: tuple[str, ...], *, strict: bool
+    spec_path: str,
+    catalog: str | None,
+    variables: tuple[str, ...],
+    *,
+    strict: bool,
+    allow_python_udfs: bool,
 ) -> None:
-    """Parse SPEC strictly and report every problem with its path.
+    """Parse SPEC strictly, compile its plans, and report every problem with its path.
 
-    With --catalog, also check it against the catalog's streams: output names, column
-    references, explicit names, collisions, key properties and undeclared columns.
+    Compiling checks step and parse options, macros, expressions and types. With --catalog,
+    plans compile against the catalog's schemas, and the spec is also checked against its
+    streams: output names, column references, explicit names, collisions, key properties
+    and undeclared columns. Without it, a column with no declared type is assumed to be a
+    string, and its problems are warnings.
     """
     loaded, streams = _load(spec_path, variables, catalog)
     findings = check_spec(loaded, streams)
+    try:
+        registry = _registry(loaded, allow_python_udfs=allow_python_udfs)
+    except SpecError as exc:
+        findings.extend(Finding("error", i.path, i.message) for i in exc.issues)
+    else:
+        # A path the catalog check already faults gets no second, consequential finding.
+        faulted = {f.path for f in findings if f.severity == "error"}
+        plans = check_plans(loaded, streams, registry, _spec_vars(variables))
+        findings.extend(f for f in plans if f.path not in faulted)
     for finding in findings:
         click.echo(str(finding), err=True)
     errors = [f for f in findings if f.severity == "error" or strict]
@@ -238,11 +263,7 @@ def spec_export(  # noqa: PLR0913 -- one parameter per option
 @_CATALOG
 @_VARS
 @click.option("--json", "as_json", is_flag=True, help="Print the report as JSON.")
-@click.option(
-    "--allow-python-udfs",
-    is_flag=True,
-    help="Import the spec's module-path UDFs, as the allow_python_udfs setting does.",
-)
+@_ALLOW_UDFS
 def spec_explain(  # noqa: PLR0913 -- one parameter per option
     spec_path: str,
     tap_stream: str,
