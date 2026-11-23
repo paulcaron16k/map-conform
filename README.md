@@ -107,7 +107,9 @@ map-conform functions
 
 ```bash
 uv sync --all-groups
-uv run pytest                      # the suite; -m e2e needs uvx, -m bench runs benchmarks
+uv run pytest                      # the suite, offline
+uv run pytest -m e2e               # into a real target-jsonl (needs uvx and network)
+uv run pytest -m bench tests/bench # throughput benchmarks and the regression gate
 uv run ruff check . && uv run ruff format --check .
 uv run mypy map_conform tests && uv run ty check
 uvx --with tox-uv tox              # every supported Python, plus typing

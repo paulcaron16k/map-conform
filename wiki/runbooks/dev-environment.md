@@ -22,7 +22,9 @@ Requires [uv](https://docs.astral.sh/uv/). Python 3.11–3.14 are supported (pat
 | Task | Command |
 |---|---|
 | Install everything (dev = lint + test + typing groups) | `uv sync --all-groups` |
-| Tests | `uv run pytest` |
+| Tests (offline) | `uv run pytest` |
+| End-to-end, into a real target-jsonl (needs uvx and network; CI runs it) | `uv run pytest -m e2e` |
+| Benchmarks and their gate | `uv run pytest -m bench tests/bench` |
 | Lint and format | `uv run ruff check . && uv run ruff format --check .` |
 | Types | `uv run mypy map_conform tests && uv run ty check map_conform tests` |
 | Every Python, plus typing, as CI runs it | `uvx --with tox-uv tox` |
