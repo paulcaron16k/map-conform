@@ -15,6 +15,9 @@ each such change is listed.
   `--allow-python-udfs`, as `spec explain` does.
 - A problem with a `parse` option is reported at `columns.<c>.parse.<key>`, not under
   `transform`.
+- `map-conform functions` reported no step as vectorised. It now lists the engines that
+  vectorise each step and cast (`engines`, `cast_engines` in `--json`), from the kernel
+  tables themselves.
 
 ## [0.1.0] - 2026-11-23
 

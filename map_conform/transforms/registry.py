@@ -59,7 +59,6 @@ class Transform:
     """``(input stage, kwargs) -> output stage``; None keeps the input stage."""
     positional: str | None = None
     """The kwarg a scalar step argument fills, e.g. ``chars`` for ``{strip_chars: "$, "}``."""
-    arrow: Callable[..., Any] | None = None
     doc: str = ""
     null_safe: bool = False
     """True when the step must see nulls; otherwise nulls pass through untouched."""
@@ -69,11 +68,6 @@ class Transform:
     """The step can produce null whatever the input (set_null), so the column is nullable."""
     column_kinds: frozenset[str] | None = None
     """The column types the step may be used in, when it is restricted (mask_hidden)."""
-
-    @property
-    def vectorised(self) -> bool:
-        """Whether the columnar executor can run this step on whole arrays."""
-        return self.arrow is not None
 
     def accepts_stage(self, stage: CType | None) -> bool:
         """Whether a value at ``stage`` may enter this step."""

@@ -206,6 +206,26 @@ def lower_when(text: str) -> Mask | None:
     return lower_expression(tree.body)
 
 
+ENGINES = ("arrow", "polars")
+"""The ``engine`` settings; polars falls back to the Arrow kernels where it has none."""
+
+
+def step_engines(name: str) -> tuple[str, ...]:
+    """The engines that vectorise builtin step ``name`` (empty: it always runs row-wise)."""
+    return tuple(
+        e
+        for e in ENGINES
+        if name in TRANSFORMS or (e == "polars" and name in polars_vector.TRANSFORMS)
+    )
+
+
+def cast_engines(kind: str) -> tuple[str, ...]:
+    """The engines that vectorise a cast to ``kind``."""
+    return tuple(
+        e for e in ENGINES if kind in CASTS or (e == "polars" and kind in polars_vector.CASTS)
+    )
+
+
 def _op_vector(op: CompiledStep, column_type: CType, engine: str) -> tuple[Vector | None, CType]:
     """The vector op for a step: polars' where it has one and the engine is polars."""
     if isinstance(op.kwargs, CastArgs):
