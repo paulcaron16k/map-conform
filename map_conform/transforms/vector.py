@@ -21,6 +21,7 @@ The common case is claimed, the rest is spliced:
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Callable
 from decimal import Decimal
 from typing import Any
@@ -206,13 +207,12 @@ def cast_string(column: pa.Array, args: Any, target: CType) -> tuple[pa.Array, p
 
 
 def _numeric_text(column: pa.Array, options: Any, pattern: str) -> tuple[pa.Array, pa.Array]:
-    """Cleaned text that is a plain number under the default grammar; todo for the rest."""
+    """Cleaned text that is a plain number under the default grammar; todo for the rest.
+
+    The grammar options (``locale``, ``thousands``, ``decimal_point``) are default here:
+    :func:`claims` hands every row on otherwise.
+    """
     cleaned, todo = clean(column, options)
-    default_grammar = (
-        options.locale == "us" and options.thousands is None and options.decimal_point is None
-    )
-    if not default_grammar:
-        return cleaned, everything(column)
     plain = pc.or_(pc.is_null(cleaned), _matches(cleaned, pattern))
     unsigned = pc.replace_substring_regex(cleaned, r"^\+", "")  # Arrow does not parse "+"
     return unsigned, _or(todo, pc.invert(_bool(plain)))
@@ -375,12 +375,55 @@ TRANSFORMS: dict[str, Vector] = {
 }
 """Builtins with an Arrow implementation, by name."""
 
+_CLEAN = frozenset({"trim", "null_tokens", "null_tokens_case_sensitive"})
+_NUMBER = _CLEAN | {"parens_negative", "trailing_minus", "percent", "nan", "rounding"}
+"""Options a number kernel implements, or that act only on text it hands on anyway
+(parentheses, ``%``, a trailing minus, NaN); ``rounding`` is checked by the decimal kernel."""
+
+TEMPORAL_OPTIONS = _CLEAN | {"formats", "tz", "ambiguous", "nonexistent", "min_year", "max_year",
+                             "output_precision"}  # fmt: skip
+"""Options the temporal kernels (Arrow and polars) implement; ``ambiguous`` and
+``nonexistent`` act only in a local zone, which they hand on."""
+
+
+def claims(kernel: Vector, understood: frozenset[str]) -> Vector:
+    """Guard a cast kernel: every row goes row-wise when an option it does not know is set.
+
+    An option outside ``understood`` that differs from its default makes the kernel hand
+    every value on. So a cast option added later runs row-wise in BATCH until its kernel
+    learns it, rather than being silently ignored there.
+    """
+
+    def run(column: pa.Array, args: Any, target: CType) -> tuple[pa.Array, pa.Array]:
+        if any(
+            getattr(args.options, f.name) != _default(f)
+            for f in dataclasses.fields(args.options)
+            if f.name not in understood
+        ):
+            return _pa.nulls(len(column), to_arrow(target)), everything(column)
+        return kernel(column, args, target)
+
+    run.__doc__ = kernel.__doc__
+    return run
+
+
+def _default(field: dataclasses.Field[Any]) -> object:
+    if field.default_factory is not dataclasses.MISSING:
+        return field.default_factory()
+    return field.default
+
+
 CASTS: dict[str, Vector] = {
-    "string": cast_string,
-    **dict.fromkeys(("int16", "int32", "int64"), cast_int),
-    **dict.fromkeys(("float32", "float64"), cast_float),
-    "decimal": cast_decimal,
-    "boolean": cast_boolean,
-    **dict.fromkeys(("timestamptz", "timestamp", "date"), cast_temporal),
+    "string": claims(
+        cast_string, _CLEAN | {"empty_string_for_string", "max_length", "on_overflow"}
+    ),
+    **dict.fromkeys(("int16", "int32", "int64"), claims(cast_int, _NUMBER)),
+    **dict.fromkeys(("float32", "float64"), claims(cast_float, _NUMBER)),
+    "decimal": claims(cast_decimal, _NUMBER),
+    "boolean": claims(cast_boolean, _CLEAN | {"true_values", "false_values", "case_sensitive"}),
+    **dict.fromkeys(
+        ("timestamptz", "timestamp", "date"),
+        claims(cast_temporal, TEMPORAL_OPTIONS),
+    ),
 }
 """Casts with an Arrow implementation, by target kind."""

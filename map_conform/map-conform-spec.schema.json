@@ -261,6 +261,7 @@
           "enum": [
             "arrow",
             "polars",
+            "row",
             null
           ],
           "description": "Overrides engine for this column.",
@@ -426,9 +427,10 @@
         "engine": {
           "enum": [
             "arrow",
-            "polars"
+            "polars",
+            "row"
           ],
-          "description": "Vectorised BATCH engine: Arrow, or polars (the polars extra), which also vectorises regular expressions and strptime date formats.",
+          "description": "BATCH engine for parquet files: arrow (vectorised), polars (the polars extra; also vectorises regular expressions and strptime date formats), or row, which runs every row as a RECORD would: the reference to compare a vectorised result against.",
           "default": "arrow"
         },
         "max_reject_rate": {
@@ -1029,9 +1031,10 @@
         "engine": {
           "enum": [
             "arrow",
-            "polars"
+            "polars",
+            "row"
           ],
-          "description": "Vectorised BATCH engine: Arrow, or polars (the polars extra), which also vectorises regular expressions and strptime date formats."
+          "description": "BATCH engine for parquet files: arrow (vectorised), polars (the polars extra; also vectorises regular expressions and strptime date formats), or row, which runs every row as a RECORD would: the reference to compare a vectorised result against."
         },
         "max_reject_rate": {
           "type": [

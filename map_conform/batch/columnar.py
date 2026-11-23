@@ -34,8 +34,24 @@ pc: Any = _compute
 
 def columnar(executor: RowExecutor) -> bool:
     """Whether the stream's plan has vectorised columns worth a columnar run."""
+    return row_wise_reason(executor) is None
+
+
+def row_wise_reason(executor: RowExecutor) -> str | None:
+    """Why the stream's plan runs row by row, or None when it runs columnar."""
     plan = executor.plan
-    return not plan.shaped and plan.flattener is None and any(c.vector for c in plan.columns)
+    if plan.shaped:
+        return "it has declared shapes"
+    if plan.flattener is not None:
+        return "it flattens nested objects"
+    if not any(c.vector for c in plan.columns):
+        return "no column is vectorised (engine: row, or no step has a kernel)"
+    return None
+
+
+def vectorised_columns(executor: RowExecutor) -> list[str]:
+    """The output columns the columnar executor computes on whole arrays."""
+    return [c.name for c in executor.plan.columns if c.vector]
 
 
 @dataclass

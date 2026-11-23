@@ -76,7 +76,7 @@ class ColumnPlan:
     vector: VectorChain | None = None
     """The chain as Arrow ops, for the columnar executor; None runs it row by row."""
     engine: str = "arrow"
-    """The vectorised engine: arrow, or polars."""
+    """The BATCH engine: arrow or polars (vectorised), or row."""
 
     @property
     def steps(self) -> tuple[str, ...]:

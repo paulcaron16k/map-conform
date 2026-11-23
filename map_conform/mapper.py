@@ -128,7 +128,7 @@ class MapConformMapper(InlineMapper):
             udfs = load_udfs(self.spec.udfs, allow_python_udfs=self.settings.allow_python_udfs)
             self.registry = registry_with(builtin_registry(), udfs)
             self._batches = BatchEngine(self.settings.batch_output, self._run_id, self._reject,
-                                        self._rows)  # fmt: skip
+                                        self._rows, self.logger)  # fmt: skip
         except SpecError as exc:
             raise ConfigValidationError(
                 f"Invalid {exc.source or 'configuration'}",

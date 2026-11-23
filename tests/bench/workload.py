@@ -5,7 +5,7 @@ symbols, ISO and US dates, quantities, flags and UUIDs, all as strings, about on
 twenty messy. Timed paths:
 
 - ``record``: RECORD messages through the mapper, in process;
-- ``batch_rows``: a parquet BATCH conformed row by row (the columnar engine switched off);
+- ``batch_rows``: a parquet BATCH conformed row by row (``engine: row``);
 - ``batch_columnar``: the same BATCH through the columnar engine.
 """
 
@@ -17,12 +17,10 @@ import random
 import time
 from contextlib import redirect_stdout
 from typing import TYPE_CHECKING, Any
-from unittest import mock
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from map_conform.batch import engine
 from map_conform.mapper import MapConformMapper
 
 if TYPE_CHECKING:
@@ -100,5 +98,5 @@ def time_batch(data: list[dict[str, str | None]], folder: Path, *, columnar: boo
     config = {"batch_output": {"storage": {"root": str(folder / "out")}}}
     if columnar:
         return len(data) / _run(lines, config)
-    with mock.patch.object(engine, "columnar", return_value=False):
-        return len(data) / _run(lines, config)
+    row_wise = {**SPEC, "defaults": {**SPEC.get("defaults", {}), "engine": "row"}}
+    return len(data) / _run(lines, {**config, "spec": row_wise})

@@ -7,17 +7,31 @@ each such change is listed.
 
 ## [Unreleased]
 
+### Added
+
+- `engine: row` (in `defaults`, a stream or a column) runs parquet BATCH files row by row:
+  the reference to compare a vectorised result against.
+- The mapper logs whether each stream's BATCH files run columnar or row-wise, and why
+  (INFO once per stream, DEBUG per file).
+
 ### Fixed
+
+- A vector cast now hands every value to the row path when an option it does not implement
+  is set, instead of relying on a hand-kept list of grammar options.
 
 - The default `pytest` run no longer needs the network: the e2e test is opt-in
   (`-m e2e`), and CI runs it in the test matrix.
+
 - A `|` in a spec reference cell no longer splits its table row.
+
 - `spec validate` compiles every plan, so a typo in a step or `parse` option, an unknown
   step or name, or a type mismatch fails validation rather than the run. Without
   `--catalog`, problems in a tap column with no declared type are warnings. It takes
   `--allow-python-udfs`, as `spec explain` does.
+
 - A problem with a `parse` option is reported at `columns.<c>.parse.<key>`, not under
   `transform`.
+
 - `map-conform functions` reported no step as vectorised. It now lists the engines that
   vectorise each step and cast (`engines`, `cast_engines` in `--json`), from the kernel
   tables themselves.

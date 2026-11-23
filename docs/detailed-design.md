@@ -936,6 +936,19 @@ As built (`map_conform/transforms/vector.py`, `map_conform/plan/vector.py`,
   output stream has a vectorised column and no flattening or shapes. Other BATCH input runs
   row by row.
 
+- **Which engine ran, and the reference.** The mapper logs, at INFO once per tap stream (and
+  again if it changes), whether its BATCH files run columnar, naming the columns with a
+  kernel, or row-wise, with the reason (input not parquet, `mode: record`, JSONL output,
+  shapes, flattening, no vectorised column); DEBUG repeats it per file. `engine: row`
+  (in `defaults`, a stream or a column) runs every row as a RECORD would: the reference to
+  compare a vectorised result against when they differ.
+
+- **Options a kernel does not know.** Each vector cast lists the options it implements, or
+  that act only on text it hands on anyway (`claims` in `transforms/vector.py`). When any
+  other option differs from its default, the kernel hands every value to the row path.
+  The number grammar (`locale`, `thousands`, `decimal_point`) is handled this way, and so
+  is any cast option added later, until its kernel learns it.
+
 - **Parity suite** (`tests/parity/`): every corpus case, Hypothesis-generated text and
   integers through every vectorised cast and text op under every `on_error`, and a mixed
   plan (expressions, filter, rejects, defaults, a non-nullable column). Tables, rejects,
