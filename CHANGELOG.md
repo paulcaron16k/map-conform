@@ -5,7 +5,7 @@ All notable changes to map-conform are recorded here. The format follows
 [Semantic Versioning](https://semver.org/). Before 1.0, a minor version may change behaviour;
 each such change is listed.
 
-## [0.1.0] - unreleased
+## [0.1.0] - 2026-11-23
 
 The first release: a Singer/Meltano inline mapper that conforms names, types, values and
 metadata so targets receive clean data.
