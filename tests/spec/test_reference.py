@@ -36,3 +36,16 @@ def test_readme_examples_are_valid() -> None:
     parse_spec(spec)
     mapping = meltano["plugins"]["mappers"][0]["mappings"][0]["config"]
     parse_settings(mapping)
+
+
+def test_every_table_row_has_its_header_s_cells() -> None:
+    """No unescaped '|' (even in code) splits a row: GitHub would show an extra cell."""
+    width = None
+    for number, line in enumerate(render().splitlines(), start=1):
+        if not line.startswith("|"):
+            width = None
+            continue
+        cells = len(re.split(r"(?<!\\)\|", line))
+        if width is None:
+            width = cells
+        assert cells == width, f"line {number}: {line}"

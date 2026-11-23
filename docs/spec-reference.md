@@ -257,7 +257,7 @@ too. Names in scope: `value`/`self`, columns by conformed name, `record`/`_`,
 | `list(items=())` | python | A new list. |
 | `max(*values)` | python | The largest value. |
 | `min(*values)` | python | The smallest value. |
-| `range(stop | start, stop[, step])` | python | A range of at most 100000 integers. |
+| `range(stop \| start, stop[, step])` | python | A range of at most 100000 integers. |
 | `set(items=())` | python | A new set. |
 | `sorted(items, reverse=False)` | python | A sorted list (no key function). |
 | `str(value)` | python | Python str (as in SDK stream maps). |
