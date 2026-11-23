@@ -4,7 +4,7 @@ title: "Conform spec (v1)"
 description: "Grammar of the map-conform conform spec file: top level, defaults, streams, columns, chains, macros, UDFs."
 resource: map_conform/spec/model.py
 tags: [config, interface, active]
-timestamp: 2026-11-22T10:00:00Z
+timestamp: 2026-11-23T18:00:00Z
 sources:
   - path: docs/detailed-design.md
   - path: map_conform/spec/model.py
@@ -14,56 +14,25 @@ sources:
 
 Parent: [Wiki Index](../index.md)
 
-The model is `map_conform/spec/model.py`, and the JSON Schema generated from it is
-`map_conform/map-conform-spec.schema.json`; editors can use it for completion. `map-conform
-spec validate` is the authority, since it also checks CType grammar and step forms. Detailed
-design §3 is the reference (path:docs/detailed-design.md).
+Every key, with its type, default and meaning, is in the generated
+[spec reference](../../docs/spec-reference.md), and the behaviour behind them is in detailed
+design §3 (path:docs/detailed-design.md). Worked examples are in the
+[cookbook](../../docs/cookbook.md). This page is the map.
 
-## Top level
-
-| Key | Meaning |
-|---|---|
-| `version: 1` | Required; pinned |
-| `defaults` | Naming, stream, values, timestamp, boolean, on_error, metadata, undeclared, nested, flatten |
-| `macros` | `{name: {params?, steps}}` |
-| `udfs` | `{name: "module:attr"}` (needs `allow_python_udfs`) |
-| `streams` | `{glob: StreamSpec}` (or a new output-stream name when `source` is set) |
-| `else` | `keep` \| `drop`: streams that match no key |
-
-## StreamSpec
-
-| Key | Meaning |
-|---|---|
-| `alias` | Final stream name (string or `{expr}`) |
-| `source` | Makes this key a new output stream projected from a tap stream (split or copy) |
-| `prefix` | Stream name prefix |
-| `key_properties` | Overrides the tap's keys |
-| `filter` | Expression over **conformed** names; a falsy result drops the row |
-| `columns` | `{name: ColumnSpec}` |
-| `order` | Output column order |
-| `drop` | Drop the whole stream |
-| any Defaults key | Overrides that default for this stream |
-
-## ColumnSpec
-
-| Key | Meaning |
-|---|---|
-| `name` | Output name |
-| `type` | Declared CType |
-| `nullable` | Default true |
-| `source` | Source column(s); a list means coalesce |
-| `expr` | Derived value |
-| `default` | Value when missing or null |
-| `transform` | Chain of steps |
-| `parse` | Cast kwargs |
-| `true_values`, `false_values`, `null_tokens`, `trim`, `on_error` | Column-level overrides |
-| `max_length` | String length limit |
-| `enum` | Allowed values |
-| `drop` | Remove the column |
-| `doc` | Documentation, copied to the SCHEMA and the Zamboni export |
-| `sql_type` | Overrides the emitted `x-sql-datatype` hint |
-| `when` | Apply the chain only where the expression is truthy |
-| `fields` | Transforms on nested paths of struct/json columns |
+- **Source.** The frozen dataclasses in `map_conform/spec/model.py` and
+  `map_conform/spec/steps.py`. The JSON Schema (`map_conform/map-conform-spec.schema.json`,
+  for editor completion) and the reference are generated from them; tests fail when either
+  is stale. `map-conform spec validate` is the authority: it also checks CType grammar,
+  step and `parse` options, expressions and type flow by compiling the plans.
+- **Top level.** `version: 1`, `defaults`, `macros`, `udfs` (module paths need
+  `allow_python_udfs`), `streams` (globs over tap stream names, or new output streams with
+  `source`), and `else` (`keep` | `drop` for unmatched streams).
+- **Defaults.** `naming`, `stream`, `values`, `timestamp`, `boolean`, `on_error`,
+  `add_record_metadata`, `undeclared`, `nested`, `flatten`, `faker`, `engine`,
+  `max_reject_rate`, `max_null_rate`. A stream rule may set any of them.
+- **Columns.** Name, type and nullability; `source`, `expr`, `default`; `transform` and
+  `parse`; value overrides; `max_length`, `on_overflow`, `enum`; `drop`, `doc`, `sql_type`;
+  `when`; `fields`, `shape`, `flatten`; `engine`; `infer_type`.
 
 ## Step forms
 
@@ -88,7 +57,3 @@ SDK `stream_maps` settings are also accepted and translated (detailed design §1
 - Objects merge and lists replace.
 - The most specific glob wins.
 - An implicit cast to the declared `type` ends every chain.
-
-## Example
-
-See [guidance §5](../../creating-a-better-mapper-guidance.md#5-the-conform-spec-summary).

@@ -89,3 +89,23 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-23T16:00:00Z | UPDATED | concepts/clean-landing-contract | uuid_as is not a setting in 0.1.0 (MAPC-138) |
 | 2026-11-23T16:00:00Z | UPDATED | decisions/0011-uuid-in-batch | uuid_as recorded as planned, not built (MAPC-138) |
 | 2026-11-23T16:00:00Z | UPDATED | runbooks/dev-environment | Personal git identity removed (MAPC-138) |
+| 2026-11-23T18:00:00Z | CREATED | components/cli-and-tools | The map-conform command, validate, doctor and the bridges (MAPC-144) |
+| 2026-11-23T18:00:00Z | CREATED | runbooks/release | Cutting a release (MAPC-145) |
+| 2026-11-23T18:00:00Z | UPDATED | index | 0.1.0 released; start-here and reading paths for users and maintainers |
+| 2026-11-23T18:00:00Z | UPDATED | architecture/overview | Active; module map points to the HLD; CLI row |
+| 2026-11-23T18:00:00Z | UPDATED | plans/roadmap | P5 done except the Hub PR; post-release fixes |
+| 2026-11-23T18:00:00Z | UPDATED | schemas/plugin-settings | Points to the generated reference; how settings stay in step |
+| 2026-11-23T18:00:00Z | UPDATED | schemas/conform-spec | Points to the generated reference instead of duplicating it |
+| 2026-11-23T18:00:00Z | UPDATED | components/metadata-and-errors | members_dropped; BATCH built; doctor reports an error |
+| 2026-11-23T18:00:00Z | UPDATED | components/type-system-and-builtins | Vector kernels built (P4); conditionals |
+| 2026-11-23T18:00:00Z | UPDATED | components/name-conformer | Declared shapes; column flatten; collapse |
+| 2026-11-23T18:00:00Z | UPDATED | components/execution-engines | Every row through the row executor; BATCH vs RECORD triage |
+| 2026-11-23T18:00:00Z | UPDATED | concepts/clean-landing-contract | Active; tested by tests/test_contract.py; reserved dialects; compatibility mode |
+| 2026-11-23T18:00:00Z | UPDATED | decisions/0002-transform-authoring | What vectorises, as built |
+| 2026-11-23T18:00:00Z | UPDATED | decisions/0005-sdc-metadata | doctor reports an error |
+| 2026-11-23T18:00:00Z | UPDATED | decisions/0010-stream-map-superset | Inference note is INFO |
+| 2026-11-23T18:00:00Z | UPDATED | qa/test-strategy | Contract layer; definition of done |
+| 2026-11-23T18:00:00Z | UPDATED | qa/benchmarks | Baseline from CI runners; 60% floor on CI; 3x columnar; re-recording |
+| 2026-11-23T18:00:00Z | UPDATED | runbooks/wiki-maintenance | Wiki changes via pull requests; what claim tests check; ADR conventions |
+| 2026-11-23T18:00:00Z | UPDATED | runbooks/dev-environment | Definition of done, generated files, checklists (MAPC-145) |
+| 2026-11-23T18:00:00Z | UPDATED | ci-cd/pipeline | All jobs; publishing on; release job |

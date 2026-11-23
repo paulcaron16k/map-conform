@@ -5,7 +5,8 @@ customer data or credentials** in code, docs, commits, issues or PRs.
 
 ## Orientation
 
-- Founding brief: `creating-a-better-mapper-guidance.md`
+- Founding brief (the original intent, kept as a record): `creating-a-better-mapper-guidance.md`
+- Contributor workflow: `CONTRIBUTING.md`; releases: `wiki/runbooks/release.md`
 - Design docs: `docs/` (exec overview, HLD, detailed design, plan/WBS)
 - Knowledge base: `wiki/`. Read `wiki/runbooks/wiki-maintenance.md` before editing anything
   under `wiki/`.
@@ -26,6 +27,7 @@ customer data or credentials** in code, docs, commits, issues or PRs.
 ## Workflow
 
 - Push only to `origin`; work lands through pull requests.
-- Before calling work done: `uv run pytest`, `uv run ruff check . && uv run ruff format --check .`, `uv run mypy map_conform`, `bin/wiki-lint-frontmatter.py`.
-- Wiki content syncs happen on `main` after a merge (see the maintenance runbook), with a
+- Before calling work done: the definition of done in `wiki/runbooks/dev-environment.md`
+  (tests, ruff, mypy and ty, pre-commit, generated files, docs, wiki and changelog).
+- Wiki changes go in the same pull request as the code (see the maintenance runbook), with a
   `wiki/log.md` row for each page change.

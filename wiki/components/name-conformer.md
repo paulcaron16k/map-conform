@@ -4,13 +4,15 @@ title: "Name conformer"
 description: "Deterministic pipeline that makes stream, column and nested names legal in every target."
 resource: map_conform/naming/
 tags: [engineering, naming, active]
-timestamp: 2026-11-22T18:00:00Z
+timestamp: 2026-11-23T18:00:00Z
 sources:
   - path: map_conform/naming/conform.py
   - path: map_conform/naming/translit.py
   - path: map_conform/naming/reserved.py
   - path: map_conform/naming/streams.py
   - path: map_conform/naming/nested.py
+  - path: map_conform/naming/flatten.py
+  - path: map_conform/naming/shape.py
   - path: docs/detailed-design.md
 ---
 
@@ -85,4 +87,16 @@ Translated `stream_maps` use it by default.
 ## Flattening
 
 `nested: flatten` re-implements the SDK's flattening, key shortening included
-(`map_conform/naming/flatten.py`). The flattened keys are then conformed like any name.
+(`map_conform/naming/flatten.py`). The flattened keys are then conformed like any name, so
+the default `collapse: true` turns the `__` separator into `_`. A column's `flatten: true`
+flattens just that column, from its `shape` or else from the tap's schema, whatever `nested`
+is; `flatten: false` keeps a column whole under `nested: flatten`.
+
+## Declared shapes
+
+`map_conform/naming/shape.py`. A column's `shape` (a JSON Schema, inline or a file next to
+the spec) alone decides its type, or its flattened leaf columns, so the output does not
+follow the tap's schema when it drifts. At run time each value is conformed to the shape
+first: members the shape does not declare are dropped, counted (`members_dropped`) and
+logged once per stream; a member's `default` (`null`, `{}`, `[]`) fills it when it is
+missing, null or empty.

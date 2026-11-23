@@ -1,0 +1,16 @@
+name: Feature or recipe request
+description: Something map-conform should do, or a cookbook recipe that is missing.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The data problem
+      description: What your source sends, and what the target should receive.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How you would like to declare it
+      description: A spec snippet, if you have one in mind.
+      render: yaml

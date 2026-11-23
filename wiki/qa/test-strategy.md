@@ -4,7 +4,7 @@ title: "Test strategy"
 description: "Test layers, corpora, parity and contract tests, benchmarks."
 resource: tests/
 tags: [qa, testing, active]
-timestamp: 2026-11-22T20:00:00Z
+timestamp: 2026-11-23T18:00:00Z
 sources:
   - path: docs/detailed-design.md
   - path: tests/fixtures/README.md
@@ -29,7 +29,9 @@ Parent: [Wiki Index](../index.md)
 | E2E | the messy CSV fixture through `map-conform` into the published target-jsonl (built); target-ducklake with its cleanup off (later) | `tests/e2e/` |
 | Fixtures | generated fixtures are current; streams, catalogs and BATCH files are valid and agree | `tests/test_fixtures.py` (built) |
 | Wiki | links and anchors resolve; documented modules and citations exist on active pages; no orphans; the log accounts for every page | `tests/wiki/` (built) |
+| Contract | the mapper's own output keeps the Clean-Landing Contract | `tests/test_contract.py` (built) |
 | Bench | RECORD rows/s; BATCH rows/s; regression gate ([Benchmarks](benchmarks.md)) | `tests/bench/` (built) |
 
-The gates (per the owner's rules) are tests on every supported Python, ruff lint and format,
-mypy and ty, and pre-commit, all green before any phase is called done.
+The gates are the [definition of done](../runbooks/dev-environment.md#definition-of-done):
+tests on every supported Python, ruff lint and format, mypy and ty, and pre-commit, all
+green before a change is called done.

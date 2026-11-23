@@ -4,7 +4,7 @@ title: "Metadata, errors and metrics"
 description: "SDK-exact _sdc_* columns, ConformError and on_error policies, reject sink, rate thresholds, metrics."
 resource: map_conform/metadata.py
 tags: [engineering, observability, active]
-timestamp: 2026-11-22T19:00:00Z
+timestamp: 2026-11-23T18:00:00Z
 sources:
   - path: map_conform/metadata.py
   - path: map_conform/errors.py
@@ -26,17 +26,19 @@ Parent: [Wiki Index](../index.md) · Related: [Detailed design](../../docs/detai
 |---|---|
 | extracted_at | message `time_extracted` |
 | received_at | now, UTC `isoformat()` |
-| batched_at | RECORD: mapper start; BATCH (P4): input file last-modified |
+| batched_at | RECORD: mapper start; BATCH: input file last-modified |
 | deleted_at | the record's own value, conformed to UTC |
 | sequence | `round(time.time()*1000)` |
 | table_version | message `version` |
 | sync_started_at | mapper start, epoch ms |
 
 - The columns are added only with `add_record_metadata: true` (default false), to SCHEMA,
-  RECORD and, from P4, BATCH. A stream can override the plugin setting in the spec.
+  RECORD and BATCH. The plugin setting is the spec's base default; the spec's `defaults` and
+  a stream rule override it.
 - The tap's own `_sdc_*` properties are never ordinary columns: they feed these columns, or
   are left out without the flag, as SDK targets leave them out.
-- Downstream SDK targets need `add_record_metadata: true` to keep them.
+- Downstream SDK targets need `add_record_metadata: true` to keep them; `map-conform doctor`
+  reports a loader that lacks it as an error.
 
 ## Errors ([ADR-0006](../decisions/0006-error-policy.md))
 
@@ -56,7 +58,10 @@ Parent: [Wiki Index](../index.md) · Related: [Detailed design](../../docs/detai
 
 `map_conform/metrics.py` keeps per-output-stream counters:
 - `rows_in`, `rows_out`, `rows_rejected`, `rows_nulled`, `rows_filtered`, `values_kept`;
+- `members_dropped` by (column, member path): members a declared shape does not declare;
 - `errors` by (column, rule).
 
-They are logged at the end of the run, and written to `metrics_path` when set. Row-wise BATCH
-columns (P4) are added with that feature.
+They are logged at the end of the run (`Metrics for '<stream>': {...}`), and written to
+`metrics_path` as `{"streams": {name: counters}}` when set. Which engine ran a stream's BATCH
+files, and why, is logged rather than counted
+([Execution engines](execution-engines.md)).

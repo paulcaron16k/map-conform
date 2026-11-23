@@ -1,5 +1,5 @@
-# Example conform spec used by meltano.yml's map-conform mapping.
-# Reference: docs/detailed-design.md §3; schema: map_conform/map-conform-spec.schema.json
+# The conform spec of the development project in meltano.yml (a test loads it).
+# Every key: docs/spec-reference.md; editor schema: map_conform/map-conform-spec.schema.json
 version: 1
 defaults:
   on_error: raise

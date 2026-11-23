@@ -4,7 +4,7 @@ title: map-conform wiki
 description: "Catalog of the map-conform knowledge base."
 resource: wiki/
 tags: [docs, active]
-timestamp: 2026-11-21T00:00:00Z
+timestamp: 2026-11-23T18:00:00Z
 sources:
   - path: creating-a-better-mapper-guidance.md
   - path: docs/
@@ -12,14 +12,17 @@ sources:
 
 # map-conform wiki
 
-> Status: **planning**. Pages tagged `draft` describe the designed system; no code exists yet.
+> Status: **0.1.0 released** (2026-11-23). Pages tagged `active` describe the running code;
+> `draft` would mark a page describing a design not built yet.
 > Maintenance rules: [Wiki maintenance](runbooks/wiki-maintenance.md) · Change log: [log.md](log.md)
 
 ## Start here
 
-1. [Guidance (founding brief)](../creating-a-better-mapper-guidance.md)
-2. [Clean-Landing Contract](concepts/clean-landing-contract.md)
-3. [Architecture overview](architecture/overview.md)
+1. [README](../README.md) and the [cookbook](../docs/cookbook.md): what it does, in use
+2. [Clean-Landing Contract](concepts/clean-landing-contract.md): what targets may assume
+3. [Architecture overview](architecture/overview.md): where the code is
+4. [Contributing](../CONTRIBUTING.md) and [Dev environment](runbooks/dev-environment.md): how to change it
+5. [Guidance (founding brief)](../creating-a-better-mapper-guidance.md): the original intent, kept as a record
 
 ## Architecture & design
 
@@ -49,16 +52,17 @@ Decisions:
 |---|---|---|
 | [Spec loader](components/spec-loader.md) | component | `map_conform/spec/` |
 | [Name conformer](components/name-conformer.md) | component | `map_conform/naming/` |
-| [Type system & builtins](components/type-system-and-builtins.md) | component | `types/`, `transforms/`, `expr/`, `udf/` |
+| [Type system & builtins](components/type-system-and-builtins.md) | component | `types/`, `transforms/`, `expr/`, `udfs.py` |
 | [Execution engines](components/execution-engines.md) | component | `plan/`, `batch/` |
-| [Metadata & errors](components/metadata-and-errors.md) | component | `metadata.py`, `errors.py`, `metrics.py` |
+| [Metadata & errors](components/metadata-and-errors.md) | component | `metadata.py`, `errors.py`, `rejects.py`, `metrics.py` |
+| [CLI and tools](components/cli-and-tools.md) | component | `cli.py`, `doctor.py`, `spec/check.py`, `spec/bridge.py`, `plan/validate.py` |
 
 ## Interfaces
 
 | Page | Type | Covers |
 |---|---|---|
 | [Clean-Landing Contract](concepts/clean-landing-contract.md) | concept | Output guarantees for targets |
-| [Conform spec](schemas/conform-spec.md) | schema | Spec file grammar |
+| [Conform spec](schemas/conform-spec.md) | schema | Spec file grammar; every key is in the [spec reference](../docs/spec-reference.md) |
 | [Plugin settings](schemas/plugin-settings.md) | schema | Meltano settings |
 
 ## Delivery
@@ -74,7 +78,8 @@ Decisions:
 |---|---|---|
 | [Test strategy](qa/test-strategy.md) | playbook | Test layers and gates |
 | [Benchmarks](qa/benchmarks.md) | metric | Throughput baseline and the CI regression gate |
-| [Dev environment](runbooks/dev-environment.md) | runbook | Local setup |
+| [Dev environment](runbooks/dev-environment.md) | runbook | Local setup, checks, generated files, checklists |
+| [Release](runbooks/release.md) | runbook | Cutting a release to PyPI |
 | [Wiki maintenance](runbooks/wiki-maintenance.md) | runbook | Wiki rules |
 
 ## Conventions & reference
@@ -90,3 +95,5 @@ Decisions:
 | Building a target | Contract → Wire encoding ADR → _sdc_ ADR |
 | Writing a spec | Conform spec → Type system & builtins → Name conformer |
 | Implementing BATCH | Execution engines → BATCH ADR → Test strategy (parity) |
+| Adding a step, setting or type | Dev environment (checklists) → Type system & builtins |
+| Releasing | Release runbook |

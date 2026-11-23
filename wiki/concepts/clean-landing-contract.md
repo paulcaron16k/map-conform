@@ -3,10 +3,11 @@ type: concept
 title: Clean-Landing Contract
 description: "What a target may assume about SCHEMA, RECORD and BATCH output from map-conform, and the reviewer instruction for targets."
 resource: map_conform/types/to_jsonschema.py
-tags: [engineering, contract, draft]
-timestamp: 2026-11-23T16:00:00Z
+tags: [engineering, contract, active]
+timestamp: 2026-11-23T18:00:00Z
 sources:
   - path: docs/detailed-design.md
+  - path: tests/test_contract.py
   - path: creating-a-better-mapper-guidance.md
 ---
 
@@ -15,10 +16,24 @@ sources:
 Parent: [Wiki Index](../index.md) · Related: [Wire encoding ADR](../decisions/0007-wire-encoding.md) ·
 [Naming ADR](../decisions/0008-naming-defaults.md) · [_sdc_ ADR](../decisions/0005-sdc-metadata.md)
 
-> Status: **draft**. The RECORD path delivers this contract as of P2 and BATCH as of P4.
-> It becomes active with its publication (WBS 11.1). Changing it needs an ADR.
+> Status: **active** since 0.1.0. RECORD and BATCH output both deliver it. Changing it
+> needs an ADR in [decisions/](../decisions/0001-name-and-licence.md).
 
-Every guarantee below has a contract test in `tests/contract/` (planned: WBS 4.3, 5.8, 8.2).
+Where it is tested:
+
+- the mapper's own SCHEMA and RECORD output on the messy fixtures, with a spec and without:
+  names, one type per property, records valid against their SCHEMA, no stray empty strings,
+  every column present, `_sdc_*` by the flag (path:tests/test_contract.py);
+- the SCHEMA and Arrow form of every type, against a snapshot
+  (path:tests/types/test_type_mappings.py);
+- names: golden, reserved-word and property tests (path:tests/naming/test_conform.py);
+- `_sdc_*` values and schema against the SDK's own functions (path:tests/test_metadata.py);
+- BATCH output equal to RECORD output (path:tests/parity/test_parity.py).
+
+**Compatibility mode.** With SDK `stream_maps` settings and no spec of its own saying
+otherwise, map-conform keeps meltano-map-transformer's output where it can: names follow the
+SDK's `conform_name` (so §1's grammar and reserved words do not apply), stream names are
+kept, nested objects are kept, and strings are not trimmed. The rest of the contract holds.
 
 ## 1. Names
 
@@ -26,7 +41,7 @@ Every guarantee below has a contract test in `tests/contract/` (planned: WBS 4.3
 |---|---|
 | Grammar | Stream, column and struct-member names match `^[a-z_][a-z0-9_]*$` (with the default `case: snake`) |
 | Length | At most `max_length`, default 63 |
-| Reserved | Not a reserved word in ANSI, Postgres or DuckDB |
+| Reserved | Not a reserved word in the `reserved_dialects`: PostgreSQL, DuckDB and Snowflake by default (ANSI is opt-in) |
 | Unique | Unique within a stream (and within a struct) under case folding |
 | References | `key_properties`, `bookmark_properties` and `required` use the conformed names |
 

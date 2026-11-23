@@ -4,7 +4,7 @@ title: "Execution engines and BATCH I/O"
 description: "Plan compiler, row executor, columnar (Arrow/polars) executor, BATCH manifest and file I/O."
 resource: map_conform/plan/
 tags: [engineering, performance, active]
-timestamp: 2026-11-22T21:00:00Z
+timestamp: 2026-11-23T18:00:00Z
 sources:
   - path: docs/detailed-design.md
 ---
@@ -49,13 +49,26 @@ Compiled once per SCHEMA. A `StreamPlan` holds:
   `strip_chars`, `lower`, `upper`, `left`, `right`, `null_tokens`, `set_null`, and `case`
   (or a column's `when`) whose conditions lower to masks. With `engine: polars`, also
   regular expressions and strptime formats.
-- A column is vectorised only if no expression or filter reads it; everything else, plus
-  `_sdc_*`, the filter and the policies, runs per row.
+- A column is vectorised only if no expression or filter reads it. Every row still goes
+  through the row executor for the other columns, expressions, `_sdc_*`, the filter and the
+  policies; it skips the values the kernels claimed.
 - A vector cast hands every value on when an option it does not list as understood differs
   from its default (`claims`), so a new cast option is never ignored in BATCH.
 - **Triage.** INFO says once per stream whether its BATCH files run columnar (naming the
   vectorised columns) or row-wise, and why; DEBUG says it per file. `engine: row` gives the
   row-wise reference for the same input.
+
+## When BATCH and RECORD output differ
+
+1. Check the log: `BATCH files of '<stream>' run columnar: ...` names the vectorised
+   columns, or `run row-wise: ...` gives the reason (DEBUG repeats it per file).
+2. Rerun the same input with `engine: row` on the stream, or on the suspect column. Its
+   output is the RECORD path's by construction. If the difference goes away, a kernel
+   claimed a value it should have handed on.
+3. Reproduce it in `tests/parity/` with `row_path` and `columnar_path`
+   (path:tests/parity/harness.py), which run a spec over an Arrow table both ways and
+   compare tables, rejects, errors and metrics. Fix the kernel so it marks that value todo,
+   and add the case to the parity corpus.
 
 ## BATCH I/O
 
