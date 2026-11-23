@@ -26,6 +26,7 @@ from decimal import Context as DecimalContext
 from typing import TYPE_CHECKING, Any, Literal
 
 from map_conform.errors import StepFailed
+from map_conform.spec._struct import documented
 from map_conform.transforms.casts import Cleanup, clean, cleanup_defaults
 from map_conform.transforms.registry import NUMERIC, RAW, Registry, Transform
 
@@ -56,14 +57,25 @@ _EXACT = DecimalContext(prec=200, traps=[InvalidOperation])
 class NumberCast(Cleanup):
     """Options for casts to integers, floats and decimals."""
 
-    locale: Literal["us", "eu", "ch"] = "us"
-    thousands: str | None = None
-    decimal_point: str | None = None
-    parens_negative: bool = False
-    trailing_minus: bool = False
-    percent: Literal["error", "divide", "strip"] = "error"
-    rounding: Rounding | None = None
-    nan: Literal["null", "error"] = "null"
+    locale: Literal["us", "eu", "ch"] = documented(
+        "Separators: us is 1,234.56; eu is 1.234,56; ch is 1'234.56.", default="us"
+    )
+    thousands: str | None = documented(
+        "Thousands separator, overriding the locale's.", default=None
+    )
+    decimal_point: str | None = documented("Decimal point, overriding the locale's.", default=None)
+    parens_negative: bool = documented("(12.50) is -12.50.", default=False)
+    trailing_minus: bool = documented("12.50- is -12.50.", default=False)
+    percent: Literal["error", "divide", "strip"] = documented(
+        "A trailing %: an error, divide by 100 (15% is 0.15), or drop the sign (15% is 15).",
+        default="error",
+    )
+    rounding: Rounding | None = documented(
+        "Digits beyond the scale: half_up (halves away from zero), half_even, down, or "
+        "error. Unset: half_up for decimals, error for integers ('12.0' is always 12).",
+        default=None,
+    )
+    nan: Literal["null", "error"] = documented("What NaN and infinity become.", default="null")
 
 
 def parse_number(text: str, options: NumberCast) -> Decimal:  # noqa: C901, PLR0912

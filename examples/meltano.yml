@@ -1,4 +1,4 @@
-# A reference Meltano project: tap-csv -> map-conform -> target-ducklake (WBS 10.2).
+# A reference Meltano project: tap-csv -> map-conform -> target-ducklake.
 #   cd examples && meltano install && meltano run load
 # Then query the lake: see README.md.
 version: 1
@@ -20,9 +20,10 @@ plugins:
   mappers:
   - name: map-conform
     namespace: map_conform
-    pip_url: ..                       # this checkout; use `map-conform` once it is on PyPI
+    pip_url: ..                       # this checkout, so CI tests the code under review;
+                                      # your own project uses `pip_url: map-conform`
     executable: map-conform
-    settings:
+    settings:                         # optional: for `meltano config` and env variables
     - name: spec_path
     - name: add_record_metadata
       kind: boolean
@@ -33,6 +34,8 @@ plugins:
   loaders:
   - name: target-ducklake
     namespace: target_ducklake
+    # A fork of target-ducklake, pinned to a commit. Any Singer target works here: swap
+    # this loader for yours and keep add_record_metadata: true if it is an SDK target.
     pip_url: git+https://github.com/paulcaron16k/target-ducklake-definite.git@e9dc3f3b866b2f7bc146759a7d11d2eed6d019bd
     settings:
     - name: catalog_url
@@ -43,7 +46,7 @@ plugins:
     - name: add_record_metadata
       kind: boolean
     config:
-      catalog_type: sqlite           # the target's duckdb catalog ignores catalog_url/data_path
+      catalog_type: sqlite           # its duckdb catalog type ignores catalog_url and data_path
       catalog_url: output/catalog.sqlite
       data_path: output/data/
       storage_type: local

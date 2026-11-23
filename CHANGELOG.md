@@ -9,6 +9,11 @@ each such change is listed.
 
 ### Added
 
+- The spec reference lists every `parse` option for each type, with its default, and the
+  date format keywords, all generated from the code.
+- Cookbook recipes for European and Swiss formats, bad values and the rejects file, hashes
+  and fake names, parquet BATCH files, nested objects, the `_sdc_*` columns, moving from
+  stream maps (with the output differences), and how a spec is applied.
 - `engine: row` (in `defaults`, a stream or a column) runs parquet BATCH files row by row:
   the reference to compare a vectorised result against.
 - The mapper logs whether each stream's BATCH files run columnar or row-wise, and why

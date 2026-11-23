@@ -16,12 +16,30 @@ map-conform doctor         # checks the project, e.g. that the target keeps _sdc
 The lake is in `output/`. Query it with DuckDB:
 
 ```sql
-INSTALL ducklake; INSTALL sqlite; LOAD ducklake;
+INSTALL ducklake; INSTALL sqlite; LOAD ducklake;   -- the extensions download once
 ATTACH 'ducklake:sqlite:output/catalog.sqlite' AS lake (DATA_PATH 'output/data/');
 SELECT order_id, order_date, amount, discount, paid, tracking_uuid FROM lake.raw.orders;
 ```
 
 `order_id` is a BIGINT, `amount` a DECIMAL(12,2) (`$1,234.50` → 1234.50, `(250.00)` →
 -250.00), `discount` a fraction (`10%` → 0.1000), `order_date` a DATE whatever the source
-format, and the column names are snake_case. Rows that cannot be cleaned would be in
-`.map-conform/rejects/` instead of failing the run (`on_error: reject`).
+format, and the column names are snake_case.
+
+Eleven of the twelve rows land. Row 10's amount is `abc`, so under `on_error: reject` it is
+set aside in `.map-conform/rejects/orders/<run id>.jsonl`, with the column, the error and the
+raw record, instead of failing the run.
+
+## What is here
+
+| Path | What |
+| -- | -- |
+| `meltano.yml` | The project: tap-csv, map-conform (installed from this checkout, `pip_url: ..`) and target-ducklake, and the `load` job |
+| `conform.yml` | The conform spec |
+| `data/orders.csv` | The messy input |
+| `check_lake.py` | The check CI runs after `meltano run load`: row count, column types and values in the lake |
+| `plugins/` | Meltano's lock files for the plugins |
+| `output/`, `.map-conform/`, `.meltano/` | Made by a run (the lake, rejects, Meltano's state); not committed |
+
+To adapt it, point `spec_path` at your own spec, replace tap-csv with your tap, and replace
+target-ducklake with your target. Keep `add_record_metadata: true` on an SDK target, and run
+`map-conform doctor` to check.
