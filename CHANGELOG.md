@@ -7,6 +7,12 @@ each such change is listed.
 
 ## [Unreleased]
 
+### Added
+
+- The Clean-Landing Contract has a copy-ready reviewer snippet for target repos, in two
+  variants: for a target always behind map-conform, and for one that keeps its own cleanup
+  options for other pipelines. The README links it.
+
 ## [0.2.0] - 2026-11-23
 
 ### Added
