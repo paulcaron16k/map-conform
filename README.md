@@ -29,7 +29,9 @@ any target and, once, upstream:
 
 Targets can then rely on the [Clean-Landing Contract](https://github.com/paulcaron16k/map-conform/blob/main/wiki/concepts/clean-landing-contract.md):
 what every record, SCHEMA and BATCH file from map-conform guarantees, so a target writes data
-instead of cleaning it.
+instead of cleaning it. Target maintainers can paste its
+[reviewer snippet](https://github.com/paulcaron16k/map-conform/blob/main/wiki/concepts/clean-landing-contract.md#7-reviewer-instruction-for-target-repos)
+into their review rules, so reviewers stop asking for cleanup the mapper already did.
 
 ## Why
 
@@ -124,7 +126,7 @@ and value: nothing lands wrong silently. Check a spec before running it with
 - [Spec reference](https://github.com/paulcaron16k/map-conform/blob/main/docs/spec-reference.md):
   every setting, spec key, `parse` option, step and function, generated from the code.
 - [Detailed design](https://github.com/paulcaron16k/map-conform/blob/main/docs/detailed-design.md): how each feature behaves, and why.
-- [Clean-Landing Contract](https://github.com/paulcaron16k/map-conform/blob/main/wiki/concepts/clean-landing-contract.md): what a target may assume.
+- [Clean-Landing Contract](https://github.com/paulcaron16k/map-conform/blob/main/wiki/concepts/clean-landing-contract.md): what a target may assume, and a reviewer snippet for target repos.
 - The project's knowledge base is in [wiki/](https://github.com/paulcaron16k/map-conform/blob/main/wiki/index.md).
 
 ## Command line

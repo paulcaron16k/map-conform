@@ -4,7 +4,7 @@ title: Clean-Landing Contract
 description: "What a target may assume about SCHEMA, RECORD and BATCH output from map-conform, and the reviewer instruction for targets."
 resource: map_conform/types/to_jsonschema.py
 tags: [engineering, contract, active]
-timestamp: 2026-11-23T18:00:00Z
+timestamp: 2026-11-24T12:00:00Z
 sources:
   - path: docs/detailed-design.md
   - path: tests/test_contract.py
@@ -113,10 +113,41 @@ Table semantics:
 
 ## 7. Reviewer instruction (for target repos)
 
-> This target receives data through map-conform and relies on its Clean-Landing Contract.
-> Assume names are conformed, types are declared and values are already cast. Do **not**
-> suggest or add value cleanup, string parsing, timestamp normalisation, decimal quantisation,
-> name conforming, or `_sdc_*` handling in this target. A target may still validate cheaply
-> (assert, not repair) and must still own table semantics (keys, merge, dedupe, schema
-> evolution, partitioning). If clean data is not being delivered, file the gap against
-> map-conform.
+A target that relies on this contract says so where its reviewers, human or AI, read the
+rules: the repository's `CLAUDE.md` or `AGENTS.md`, `.github/copilot-instructions.md`, a
+review checklist or `CONTRIBUTING.md`. Copy the snippet that fits.
+
+**A target that always runs behind map-conform:**
+
+```markdown
+## Clean landing: trust upstream
+
+This target receives data through map-conform and relies on its Clean-Landing Contract
+(https://github.com/paulcaron16k/map-conform/blob/main/wiki/concepts/clean-landing-contract.md).
+Assume names are conformed, types are declared and values are already cast. Do not suggest
+or add value cleanup, string parsing, timestamp normalisation, decimal quantisation, name
+conforming, or `_sdc_*` handling in this target. The target may still validate cheaply
+(assert, not repair), and it owns table semantics: keys, merge, dedupe, schema evolution
+against existing tables, partitioning and storage type mapping. If clean data is not being
+delivered, file the gap against map-conform, not a workaround here.
+```
+
+**A target that also serves pipelines without map-conform** and keeps its own cleanup
+options for them:
+
+```markdown
+## Clean landing: trust upstream
+
+Pipelines that run map-conform get the Clean-Landing Contract
+(https://github.com/paulcaron16k/map-conform/blob/main/wiki/concepts/clean-landing-contract.md):
+names conformed, types declared, values already cast. The cleanup options this target
+already has (OPTIONS) stay for pipelines without map-conform; with map-conform they are
+left off. Do not suggest or add new value cleanup, string parsing, timestamp normalisation,
+decimal quantisation, name conforming or `_sdc_*` handling here: a pipeline that needs it
+should run map-conform, and a gap in map-conform is filed against map-conform. The target
+may still validate cheaply (assert, not repair), and it owns table semantics: keys, merge,
+dedupe, schema evolution against existing tables, partitioning and storage type mapping.
+```
+
+Replace `OPTIONS` with the target's own settings, e.g. a type dictionary or name
+conforming.
