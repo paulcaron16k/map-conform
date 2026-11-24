@@ -113,3 +113,6 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-23T20:00:00Z | UPDATED | runbooks/release | 0.2.0 released this way |
 | 2026-11-24T12:00:00Z | UPDATED | concepts/clean-landing-contract | Copy-ready reviewer snippet, two variants (MAPC-67) |
 | 2026-11-24T12:00:00Z | UPDATED | plans/roadmap | P6 in progress: 11.1, 11.3 done (MAPC-67, MAPC-69) |
+| 2026-11-24T14:00:00Z | CREATED | qa/target-ducklake-clean-landing | WBS 11.2 report: RECORD lands clean, BATCH blocked by DUCKLKD-152/153, removal candidates (MAPC-68) |
+| 2026-11-24T14:00:00Z | UPDATED | qa/test-strategy | E2E into target-ducklake with its cleanup off |
+| 2026-11-24T14:00:00Z | UPDATED | plans/roadmap | P6 stories done |
