@@ -83,7 +83,7 @@ expression language with conditionals, and registered Python functions for anyth
 | P3 Expressions, UDFs & stream-map parity | Expression language, conditionals, macros, UDF registry; SDK `stream_maps` drop-in; masking parity | Conditional examples and SDK stream-map test cases pass | Done |
 | P4 BATCH engine | Arrow plan, parquet/JSONL I/O, splicing of row-wise columns, polars extra | RECORD and BATCH outputs are identical; benchmarks | Done |
 | P5 Bridges & release | Zamboni/catalog bridge, `doctor`, docs, a reference Meltano project, PyPI 0.1.0, Meltano Hub listing | Published; a reference pipeline runs | Done, except the Hub listing |
-| P6 Adoption | Clean-Landing Contract adopted in targets; duplicate cleanup removed | Targets pass with cleanup disabled | RECORD passes; BATCH waits on two target bugs; no cleanup removed yet |
+| P6 Adoption | Clean-Landing Contract adopted in targets; duplicate cleanup removed | Targets pass with cleanup disabled | RECORD and BATCH pass; no cleanup removed (the target serves other pipelines) |
 
 Details: [plan-wbs.md](plan-wbs.md).
 

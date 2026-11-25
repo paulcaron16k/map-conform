@@ -8,8 +8,8 @@ Tracking uses `gh agile` on `paulcaron16k/map-conform`, with key `MAPC` and 2-we
 Status: P0–P5 are done; 0.1.0 and 0.2.0 are on PyPI (2026-11-23); the Meltano Hub PR (10.4)
 waits for the maintainer's field testing. P6's stories are done (2026-11-24); its
 report, [target-ducklake with its cleanup off](../wiki/qa/target-ducklake-clean-landing.md),
-found no target cleanup to delete (the target serves other pipelines too) and two target
-bugs that keep BATCH from landing. Story rows below are the plan as filed, and
+found no target cleanup to delete (the target serves other pipelines too); RECORD and
+BATCH (parquet, JSONL) land clean once its bug fixes are in (DUCKLKD-152, 153, 160). Story rows below are the plan as filed, and
 their titles are what `bin/create-agile-issues.py` matches on, so they are not edited after
 the fact; notes record where the build differs. Work found later (bugs, follow-ups such as
 MAPC-113 and MAPC-128 to 138) is tracked on the board only.
@@ -42,7 +42,7 @@ referenced by at least one target's review rules.
 | **P3 Expressions, UDFs & stream-map parity** | E6, E12 | Safe expr, `case`, macros, UDF registry; SDK `stream_maps` settings accepted unchanged; SDK stream-map test cases pass in compatibility mode; pipelinewise masking parity | Done |
 | **P4 BATCH engine** | E8 | Columnar executor; parquet/JSONL I/O; splice; polars extra; parity suite green; benchmarks recorded | Done |
 | **P5 Bridges, docs & release** | E9, E10 | Catalog/Zamboni bridge; `doctor`, `explain`; user docs; 0.1.0 on PyPI; Meltano Hub PR | Done, except the Hub PR |
-| **P6 Adoption** | E11 | Contract published; target review rules updated; duplicate cleanup removed from targets with tests | Stories done; nothing removed (see the 11.2 report); BATCH waits on two target bugs |
+| **P6 Adoption** | E11 | Contract published; target review rules updated; duplicate cleanup removed from targets with tests | Stories done; nothing removed (see the 11.2 report); RECORD and BATCH land clean |
 
 Python 3.10 was dropped at its end of life before P0 finished
 ([ADR-0001](../wiki/decisions/0001-name-and-licence.md)); story 1.2's matrix is 3.11–3.14.

@@ -116,3 +116,5 @@ Policy: [Wiki maintenance](runbooks/wiki-maintenance.md). Append-only.
 | 2026-11-24T14:00:00Z | CREATED | qa/target-ducklake-clean-landing | WBS 11.2 report: RECORD lands clean, BATCH blocked by DUCKLKD-152/153, removal candidates (MAPC-68) |
 | 2026-11-24T14:00:00Z | UPDATED | qa/test-strategy | E2E into target-ducklake with its cleanup off |
 | 2026-11-24T14:00:00Z | UPDATED | plans/roadmap | P6 stories done |
+| 2026-11-25T18:00:00Z | UPDATED | qa/target-ducklake-clean-landing | Re-run on the DuckDB staging target; review, DUCKLKD-160 fixes, open items, peer comparison (MAPC-68) |
+| 2026-11-25T18:00:00Z | UPDATED | plans/roadmap | P6: RECORD and BATCH land clean |

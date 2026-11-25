@@ -6,3 +6,8 @@ SCHEMAs = "SCHEMAs"
 [default.extend-words]
 # "Café%" under naming: sdk loses the é and the %, as the SDK's conform_name does.
 caf = "caf"
+
+[default]
+# Git commit hashes, e.g. `ba226b0` (with a digit, so words of a-f are still checked):
+# typos splits them into words such as "ba".
+extend-ignore-re = ["\\b[a-f]*[0-9][0-9a-f]{4,}\\b"]
