@@ -4,7 +4,7 @@ title: "Roadmap and WBS"
 description: "Phases P0-P6, epics E1-E12 and how they map to gh agile issues."
 resource: docs/plan-wbs.md
 tags: [management, planning, active]
-timestamp: 2026-11-24T12:00:00Z
+timestamp: 2026-11-25T18:00:00Z
 sources:
   - path: docs/plan-wbs.md
   - path: bin/create-agile-issues.py
@@ -26,7 +26,7 @@ Issues are filed by [bin/create-agile-issues.py](../../bin/create-agile-issues.p
 | P3 Expressions, UDFs & stream-map parity | E6, E12 | 53 | Done 2026-11-22 (PRs #106–#111) |
 | P4 BATCH engine | E8 | 40 | Done 2026-11-22 (PRs #115–#120) |
 | P5 Bridges, docs & release | E9, E10 | 21 | Done 2026-11-23 except 10.4, the Meltano Hub PR, which waits for field testing (PRs #121–#127; 0.1.0 on PyPI; 0.2.0, with the post-release fixes, on 2026-11-23) |
-| P6 Adoption | E11 | 6 | In progress: 11.1 (reviewer snippet) and 11.3 (target-ducklake's review rules) done 2026-11-24; 11.2 open |
+| P6 Adoption | E11 | 6 | Stories done 2026-11-24: 11.1 reviewer snippet, 11.3 target-ducklake's review rules, 11.2 [target-ducklake with its cleanup off](../qa/target-ducklake-clean-landing.md) (RECORD and BATCH land clean, after target fixes DUCKLKD-152, 153, 160) |
 
 Each phase ends with verification and an explicit approval from the owner.
 

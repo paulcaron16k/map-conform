@@ -4,7 +4,7 @@ title: map-conform wiki
 description: "Catalog of the map-conform knowledge base."
 resource: wiki/
 tags: [docs, active]
-timestamp: 2026-11-23T18:00:00Z
+timestamp: 2026-11-24T14:00:00Z
 sources:
   - path: creating-a-better-mapper-guidance.md
   - path: docs/
@@ -78,6 +78,7 @@ Decisions:
 |---|---|---|
 | [Test strategy](qa/test-strategy.md) | playbook | Test layers and gates |
 | [Benchmarks](qa/benchmarks.md) | metric | Throughput baseline and the CI regression gate |
+| [target-ducklake with its cleanup off](qa/target-ducklake-clean-landing.md) | resource | WBS 11.2: what lands, what fails, what the target could remove |
 | [Dev environment](runbooks/dev-environment.md) | runbook | Local setup, checks, generated files, checklists |
 | [Release](runbooks/release.md) | runbook | Cutting a release to PyPI |
 | [Wiki maintenance](runbooks/wiki-maintenance.md) | runbook | Wiki rules |

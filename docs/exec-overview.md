@@ -1,7 +1,8 @@
 # map-conform — Executive overview
 
-Status: 0.1.0 and 0.2.0 are released (2026-11-23); phases P0–P5 are done and P6 is in
-progress: the contract's reviewer snippet is published and in target-ducklake's review rules.
+Status: 0.1.0 and 0.2.0 are released (2026-11-23); phases P0–P5 are done and P6's stories are
+done (2026-11-24): the contract's reviewer snippet is published and in target-ducklake's review
+rules, and map-conform's RECORD output lands clean in DuckLake with the target's cleanup off.
 
 ## The problem
 
@@ -82,7 +83,7 @@ expression language with conditionals, and registered Python functions for anyth
 | P3 Expressions, UDFs & stream-map parity | Expression language, conditionals, macros, UDF registry; SDK `stream_maps` drop-in; masking parity | Conditional examples and SDK stream-map test cases pass | Done |
 | P4 BATCH engine | Arrow plan, parquet/JSONL I/O, splicing of row-wise columns, polars extra | RECORD and BATCH outputs are identical; benchmarks | Done |
 | P5 Bridges & release | Zamboni/catalog bridge, `doctor`, docs, a reference Meltano project, PyPI 0.1.0, Meltano Hub listing | Published; a reference pipeline runs | Done, except the Hub listing |
-| P6 Adoption | Clean-Landing Contract adopted in targets; duplicate cleanup removed | Targets pass with cleanup disabled | In progress |
+| P6 Adoption | Clean-Landing Contract adopted in targets; duplicate cleanup removed | Targets pass with cleanup disabled | RECORD and BATCH pass; no cleanup removed (the target serves other pipelines) |
 
 Details: [plan-wbs.md](plan-wbs.md).
 
