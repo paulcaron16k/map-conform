@@ -63,7 +63,7 @@ How it got there:
 | -- | -- | -- | -- |
 | 2026-11-24, `ba226b0` | clean | fails: uuid has "no JSON form" (DUCKLKD-152); decimals fail `validate_records` (DUCKLKD-153) | not run |
 | 2026-11-25, `2f2a405` (DuckDB BATCH path) | clean | wide decimal loads 1234.5 as 20711473152; `json` stored as a JSON string of its text | `json` stored as a JSON string |
-| 2026-11-25, DUCKLKD-160 | clean | clean | clean |
+| 2026-11-26, `7029bb9` (DUCKLKD-160) | clean | clean | clean |
 
 The `2f2a405` failures loaded wrong values with no error. Neither the target's equivalence
 tests (whose Parquet files are typed as the Singer SDK infers them) nor the first version of

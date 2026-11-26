@@ -41,7 +41,7 @@ SPEC = (
 """
 )
 """The target-jsonl spec, plus a json column and a decimal wider than DuckDB's 38 digits."""
-TARGET_COMMIT = "cfbd0126ffd5f74b68cab0d9b4fac5d273cb4578"
+TARGET_COMMIT = "7029bb9569cadfad1873623f514e4898351016b6"
 """target-ducklake (the paulcaron16k fork) as tested; move it on deliberately."""
 LOCAL_TARGET = os.environ.get("MAP_CONFORM_TARGET_DUCKLAKE")
 """A target-ducklake checkout to test instead, e.g. a fix before it is pushed."""
