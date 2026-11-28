@@ -699,7 +699,9 @@ dialect accepts, so existing stream-map expressions run unchanged.
   are fine. `"7"`, `" -7 "`, `"0x1F"`, `"0b_101"`, `"1_000"` are integers; `"7.0"`,
   `"1e3"`, `"$5"`, `"1,000"`, `"1__0"`, `"0x"` and non-ASCII digits are errors. An integral
   number is itself (`7.0` is 7, `7.5` an error) and a boolean is 1 or 0, so
-  `to_int(to_bool(x))` serves a target with no boolean type. `round`, `floor` and `ceil`
+  `to_int(to_bool(x))` serves a target with no boolean type. A result outside the 64-bit
+  range (-2**63 to 2**63 - 1), from text or a number, is an error, as PostgreSQL's
+  `bigint` refuses it; `to_decimal` holds wider integers. `round`, `floor` and `ceil`
   convert leniently (`round("7.5")` is 8, `round("1e3")` is 1000). The `int*` cast keeps
   its own, wider grammar (§6.2).
 - `to_bool(v)` follows the boolean cast's rule (§6.4) with the default words

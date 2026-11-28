@@ -21,7 +21,8 @@ each such change is listed.
 - **Breaking:** `to_int()` reads text as PostgreSQL reads a `bigint`: optional whitespace and
   sign, then decimal digits or a `0x`/`0o`/`0b` literal, with single underscores between
   digits. It no longer accepts `"7.0"` or `"1e3"`; use `round()`, `floor()` or `ceil()` for
-  those. `to_int(True)` is 1 and `to_int(False)` is 0 (they were errors), so
+  those. As a `bigint`, it refuses a value outside the 64-bit range (-2**63 to 2**63 - 1),
+  from text or a number; use `to_decimal()` for wider integers. `to_int(True)` is 1 and `to_int(False)` is 0 (they were errors), so
   `to_int(to_bool(x))` lands 1 or 0 in a target with no boolean type. A non-finite float
   is now a step error rather than a crash.
 - Booleans follow one rule in `to_bool()` and the `boolean` cast (row and columnar): the

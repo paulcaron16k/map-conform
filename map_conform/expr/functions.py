@@ -199,30 +199,60 @@ def matches(pattern: str, value: object) -> bool:
 @_function("coercion", "value")
 @_nullable
 def to_int(value: object) -> int:
-    """An integer: text as PostgreSQL reads a bigint ("0x1F", "1_000"; not "7.0"), true is 1.
+    """A 64-bit integer: text as PostgreSQL reads a bigint ("0x1F", "1_000"; not "7.0").
 
     Text is ASCII whitespace, an optional sign, then decimal digits or a ``0x``/``0o``/``0b``
     prefix and its digits, with single underscores between digits. A number must be
     integral (``7.0`` is 7, ``7.5`` is an error); ``round``, ``floor`` and ``ceil`` convert
-    leniently. ``to_int(to_bool(x))`` gives 1 or 0 for a target with no boolean type.
+    leniently. True is 1 and false 0, so ``to_int(to_bool(x))`` gives 1 or 0 for a target
+    with no boolean type. As PostgreSQL's bigint, a value outside -2**63 to 2**63 - 1 is an
+    error; use ``to_decimal`` for wider integers.
     """
     if isinstance(value, bool):
         return int(value)
     if isinstance(value, int):
-        return value
+        return _in_int64(value, value)
     if isinstance(value, str):
         literal = parse_integer_literal(value)
         if literal is None:
             raise StepFailed(f"{value!r} is not an integer (use round() for decimals)")
-        return literal
+        return _in_int64(literal, value)
     if isinstance(value, (float, Decimal)):
         number = _decimal(value)
         if not number.is_finite():
             raise StepFailed(f"{value!r} is not a finite number")
+        if number.adjusted() > _INT64_DIGITS:
+            # Checked before int(), which would build every digit of 1E+999999999.
+            raise StepFailed(f"{value!r} {_OUT_OF_INT64}")
         if number != number.to_integral_value():
             raise StepFailed(f"{value!r} has a fraction")
-        return int(number)
+        return _in_int64(int(number), value)
     raise StepFailed(f"{type(value).__name__} is not an integer")
+
+
+_INT64_MIN, _INT64_MAX = -(2**63), 2**63 - 1
+# The most digits past the first an int64 has (9223372036854775807 has 18).
+_INT64_DIGITS = 18
+# How much of a value an error shows.
+_SHOWN = 40
+_OUT_OF_INT64 = (
+    "is out of range for a 64-bit integer (-9223372036854775808 to 9223372036854775807); "
+    "use to_decimal()"
+)
+
+
+def _in_int64(number: int, value: object) -> int:
+    """``number``, ``to_int``'s result for ``value``, if a 64-bit integer holds it.
+
+    Raises:
+        StepFailed: outside -2**63 to 2**63 - 1, as PostgreSQL's bigint refuses it.
+    """
+    if not _INT64_MIN <= number <= _INT64_MAX:
+        shown = repr(value) if isinstance(value, str) else f"{'-' if number < 0 else ''}a number"
+        if len(shown) > _SHOWN:
+            shown = shown[:_SHOWN] + "..."
+        raise StepFailed(f"{shown} {_OUT_OF_INT64}")
+    return number
 
 
 @_function("coercion", "value")

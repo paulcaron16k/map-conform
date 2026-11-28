@@ -131,7 +131,9 @@ def test_function_errors(text: str, message: str) -> None:
         ("1_000", 1000), ("0_7", 7),
         ("0x10", 16), ("0X1f", 31), ("0x_1F", 31), ("-0x10", -16), ("+0xff", 255),
         ("0b101", 5), ("0B_101", 5), ("0o17", 15), ("0O_17", 15),
-        ("9223372036854775807", 2**63 - 1),
+        ("9223372036854775807", 2**63 - 1), ("-9223372036854775808", -(2**63)),
+        ("-0x8000000000000000", -(2**63)), (2**63 - 1, 2**63 - 1), (-(2**63), -(2**63)),
+        (Decimal("9.2E18"), 9_200_000_000_000_000_000),
         (True, 1), (False, 0), (7, 7), (-7, -7), (7.0, 7), (Decimal("7.00"), 7),
     ],
     ids=repr,
@@ -143,11 +145,20 @@ def test_to_int_accepts(value: object, expected: int) -> None:
     assert type(result) is int
 
 
+@pytest.mark.parametrize("value", ["9223372036854775808", 2**63, Decimal("1E+999999999")], ids=repr)
+def test_to_int_out_of_range_names_to_decimal(value: object) -> None:
+    """Outside a 64-bit integer, as PostgreSQL's bigint refuses it; to_decimal holds it."""
+    with pytest.raises(StepFailed, match=r"out of range for a 64-bit integer .*to_decimal"):
+        to_int(value)
+
+
 @pytest.mark.parametrize(
     "value",
     ["7.0", "7.5", "1e3", "", " ", "- 7", "+-7", "1_", "_10", "1__0", "0x", "0b", "0o",
      "0xG", "0x1F_", "0x__1F", "00x10", "0b2", "0o8", "\u0663", "\uff17", "\u00a07", "$5",
      "1,000", "NaN", "inf",
+     "9223372036854775808", "-9223372036854775809", "0x8000000000000000", "9" * 5000,
+     2**63, -(2**63) - 1, float(2**63), Decimal("1E+999999999"), Decimal("-9.3E18"),
      7.5, Decimal("0.5"), float("nan"), float("inf"), Decimal("Infinity"), [1], {}],
     ids=repr,
 )  # fmt: skip

@@ -320,7 +320,7 @@ too. Names in scope: `value`/`self`, columns by conformed name, `record`/`_`,
 | `to_bool(value)` | coercion | A boolean from true/t/yes/y/on/1 or false/f/no/n/off/0 (any case); a number > 0 is true. |
 | `to_decimal(value, precision=None, scale=None)` | coercion | An exact decimal, rounded half up to ``scale`` digits when given. |
 | `to_float(value)` | coercion | A float. |
-| `to_int(value)` | coercion | An integer: text as PostgreSQL reads a bigint ("0x1F", "1_000"; not "7.0"), true is 1. |
+| `to_int(value)` | coercion | A 64-bit integer: text as PostgreSQL reads a bigint ("0x1F", "1_000"; not "7.0"). |
 | `to_json(value)` | coercion | JSON text (null becomes the text null). |
 | `to_str(value)` | coercion | Text: decimals in plain notation, temporals in ISO 8601, booleans as true/false. |
 | `date_trunc(value, unit="day")` | temporal | The value truncated to year, month, day, hour, minute or second. |
