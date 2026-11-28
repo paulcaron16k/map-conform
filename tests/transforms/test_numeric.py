@@ -34,6 +34,12 @@ from tests.transforms.test_builtins import run
         (float("nan"), "decimal(6,2)", {}, None),
         (float("inf"), "int64", {}, None),
         ("-0.00", "decimal(4,2)", {}, Decimal("-0.00")),
+        ("0x7FFF_FFFF", "int32", {}, 2**31 - 1),
+        ("-0b1", "int16", {}, -1),
+        ("0o_777", "int64", {"rounding": "half_up"}, 511),
+        ("1_000", "int64", {}, 1000),
+        ("12.0", "int64", {}, 12),
+        ("1e3", "int64", {}, 1000),
     ],
 )  # fmt: skip
 def test_grammar_edges(
@@ -57,6 +63,10 @@ def test_grammar_edges(
         ("$", "decimal(5,2)", {}, "not a number"),
         ("€€5", "decimal(5,2)", {}, "at most one currency marker"),
         ({"a": 1}, "int64", {}, "dict is not a number"),
+        ("0x10000", "int16", {}, "outside int16"),
+        ("1__0", "int64", {}, "not a number"),
+        ("0x", "int64", {}, "not a number"),
+        ("0x1F", "decimal(5,0)", {}, "not a number"),
     ],
 )
 def test_grammar_errors(value: object, target: str, kwargs: dict[str, Any], reason: str) -> None:

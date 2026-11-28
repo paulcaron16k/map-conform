@@ -12,11 +12,21 @@ bool_no,boolean,no,,false,
 bool_n,boolean,N,,false,
 bool_zero,boolean,0,,false,
 bool_off,boolean,OFF,,false,
-bool_two,boolean,2,,!error,only 0 and 1 are numbers that mean a boolean
-bool_one_point_zero,boolean,1.0,,!error,not a listed true value
+bool_two,boolean,2,,true,"numeric text is a counter: > 0 is true"
+bool_minus_one,boolean,-1,,false,"numeric text is a counter: <= 0 is false"
+bool_one_point_zero,boolean,1.0,,true,
+bool_zero_point_zero,boolean,0.0,,false,
+bool_half,boolean,0.5,,true,
+bool_minus_half,boolean,-0.5,,false,
+bool_exponent,boolean,1e3,,true,
+bool_mixed_case_padded,boolean, oFf ,,false,
+bool_nan_text,boolean,nan,"{""null_tokens"": []}",!error,NaN is not a boolean (and a default null token)
+bool_inf_text,boolean,inf,,!error,
 bool_maybe,boolean,maybe,,!error,
 bool_empty,boolean,,,!null,
 bool_dash,boolean,-,,!null,
 bool_custom_true,boolean,Sí,"{""true_values"": [""sí""]}",true,
 bool_custom_replaces_defaults,boolean,yes,"{""true_values"": [""sí""]}",!error,a list replaces the default list
+bool_custom_keeps_numbers,boolean,3,"{""true_values"": [""sí""]}",true,numbers apply whatever the words
+bool_custom_word_before_number,boolean,1,"{""true_values"": [""yes""], ""false_values"": [""1""]}",false,a listed word wins over the number
 bool_case_sensitive,boolean,TRUE,"{""case_sensitive"": true}",!error,

@@ -176,7 +176,10 @@ class TimestampDefaults:
 
 @dataclass(frozen=True)
 class BooleanDefaults:
-    """Words that cast to booleans (case-insensitive unless the cast says otherwise)."""
+    """Words that cast to booleans (case-insensitive unless the cast says otherwise).
+
+    A number, or text that is one, is read as a counter: above 0 is true, 0 or less false.
+    """
 
     true_values: tuple[str, ...] = documented(
         "Strings that mean true.", default=("true", "t", "yes", "y", "1", "on")

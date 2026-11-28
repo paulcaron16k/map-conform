@@ -11,6 +11,8 @@ import base64
 import binascii
 import datetime as dt
 import json
+import math
+import re
 import uuid
 from dataclasses import dataclass
 from decimal import Decimal
@@ -21,6 +23,8 @@ from map_conform.spec._struct import documented
 from map_conform.transforms.registry import RAW, TEMPORAL, Registry, Transform
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from map_conform.plan.ops import CastArgs
     from map_conform.spec.model import ColumnSpec, Defaults
     from map_conform.transforms.registry import Context
@@ -138,13 +142,17 @@ def cast_string(value: object, args: CastArgs, _ctx: Context) -> object:
 
 @dataclass(frozen=True)
 class BooleanCast(Cleanup):
-    """Options for casts to boolean."""
+    """Options for casts to boolean: words, then numbers as counters (> 0 is true)."""
 
     true_values: tuple[str, ...] = documented(
-        "Text read as true.", default=("true",), metadata={"from": "boolean.true_values"}
+        "Text read as true. Other numbers and numeric text above 0 are true too.",
+        default=("true",),
+        metadata={"from": "boolean.true_values"},
     )
     false_values: tuple[str, ...] = documented(
-        "Text read as false.", default=("false",), metadata={"from": "boolean.false_values"}
+        "Text read as false. Other numbers and numeric text 0 or below are false too.",
+        default=("false",),
+        metadata={"from": "boolean.false_values"},
     )
     case_sensitive: bool = documented("Compare the tokens case-sensitively.", default=False)
 
@@ -160,30 +168,61 @@ def _boolean_defaults(settings: Defaults, column: ColumnSpec | None) -> dict[str
     return out
 
 
+_NUMBER_TEXT = re.compile(r"[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?")
+"""Decimal text a boolean reads as a number: ASCII digits, no NaN, no infinity."""
+
+
+def parse_boolean(
+    value: object,
+    true_values: Iterable[str],
+    false_values: Iterable[str],
+    *,
+    case_sensitive: bool = False,
+) -> bool:
+    """The one boolean rule, shared by ``cast: boolean`` and ``to_bool``.
+
+    A boolean is itself. Text equal to one of ``true_values`` or ``false_values`` (in any
+    case unless ``case_sensitive``) is that boolean. Otherwise a number, or text that is a
+    decimal number, is a counter cast to a boolean: greater than 0 is true, 0 or less false.
+
+    Raises:
+        StepFailed: for NaN, other text and any other type.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        fold = (lambda t: t) if case_sensitive else str.casefold
+        word = fold(value)
+        if any(word == fold(t) for t in true_values):
+            return True
+        if any(word == fold(f) for f in false_values):
+            return False
+        if _NUMBER_TEXT.fullmatch(value):
+            # The sign and a non-zero mantissa decide; no Decimal, so any exponent is fine.
+            mantissa = value.lower().partition("e")[0]
+            return not value.startswith("-") and any(c in "123456789" for c in mantissa)
+        raise StepFailed(f"{value!r} is not a boolean: not a true or false word, nor a number")
+    if isinstance(value, float) and math.isnan(value):
+        raise StepFailed("NaN is not a boolean")
+    if isinstance(value, Decimal) and value.is_nan():
+        raise StepFailed("NaN is not a boolean")
+    if isinstance(value, (int, float, Decimal)):
+        return value > 0
+    raise StepFailed(f"{type(value).__name__} is not a boolean")
+
+
 def cast_boolean(value: object, args: CastArgs, _ctx: Context) -> object:
-    """Cast to boolean: listed words, real booleans, and the numbers 0 and 1."""
+    """Cast to boolean: listed words, real booleans, and numbers (> 0 is true)."""
     options: BooleanCast = args.options
     cleaned = clean(value, options)
-    if cleaned is None or isinstance(cleaned, bool):
-        return cleaned
-    if isinstance(cleaned, (int, float, Decimal)):
-        if cleaned in (0, 1):
-            return cleaned == 1
-        raise StepFailed("only the numbers 0 and 1 are booleans")
-    if not isinstance(cleaned, str):
-        raise StepFailed(f"{type(cleaned).__name__} is not a boolean")
-    if options.case_sensitive:
-        if cleaned in options.true_values:
-            return True
-        if cleaned in options.false_values:
-            return False
-    else:
-        folded = cleaned.casefold()
-        if any(folded == t.casefold() for t in options.true_values):
-            return True
-        if any(folded == f.casefold() for f in options.false_values):
-            return False
-    raise StepFailed("not one of the true_values or false_values")
+    if cleaned is None:
+        return None
+    return parse_boolean(
+        cleaned,
+        options.true_values,
+        options.false_values,
+        case_sensitive=options.case_sensitive,
+    )
 
 
 # --- uuid -----------------------------------------------------------------------------------

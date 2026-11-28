@@ -140,6 +140,30 @@ def test_binary_cast_is_strict() -> None:
         run({"cast": "binary", "encoding": "hex"}, "zz", target="binary")
 
 
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (True, True), (False, False), (2, True), (1, True), (0, False), (-1, False),
+        (0.5, True), (-0.5, False), (0.0, False), (Decimal("2.5"), True), (Decimal(0), False),
+        (" YES ", True), ("Off", False), ("2", True), ("-1", False), ("0.0", False),
+        ("-0.5", False), ("1e3", True),
+    ],
+    ids=repr,
+)  # fmt: skip
+def test_boolean_cast_reads_numbers_as_counters(value: object, *, expected: bool) -> None:
+    """Words in any case; a number or numeric text: > 0 is true, 0 or less is false."""
+    assert run({"cast": "boolean"}, value, target="boolean") is expected
+
+
+@pytest.mark.parametrize(
+    "value", [float("nan"), Decimal("NaN"), "inf", "maybe", {"a": 1}, [True]], ids=repr
+)
+def test_boolean_cast_refuses(value: object) -> None:
+    """NaN, other text and containers fail loud."""
+    with pytest.raises(StepError, match="boolean"):
+        run({"cast": "boolean"}, value, target="boolean")
+
+
 def test_json_cast() -> None:
     """JSON text is decoded once; decimals stay exact; other text is a JSON string."""
     assert run({"cast": "json"}, '{"a": 1.10, "b": [true]}', target="json") == {

@@ -12,6 +12,7 @@ import pytest
 
 from map_conform.errors import StepFailed
 from map_conform.expr import FUNCTIONS, Names, Row, compile_expr
+from map_conform.expr.functions import to_bool, to_int
 
 UTC = dt.UTC
 
@@ -36,7 +37,8 @@ def call(text: str, **columns: object) -> object:
         ("is_blank(None), is_blank('  '), is_blank(' a ')", (True, True, False)),
         ("matches('^[0-9]{5}$', '12345'), matches('x', None)", (True, False)),
         # coercion
-        ("to_int('12.0'), to_int(d0), to_int(None)", (12, 7, None)),
+        ("to_int(' 12 '), to_int(d0), to_int(None), to_int(True)", (12, 7, None, 1)),
+        ("to_int(to_bool('yes')), to_int(to_bool('off'))", (1, 0)),
         ("to_float('1.5'), to_decimal('1.005', 10, 2)", (1.5, Decimal("1.01"))),
         ("to_bool('Yes'), to_bool('off'), to_bool(1)", (True, False, True)),
         ("to_str(d), to_str(True), to_str(day)", ("2.50", "true", "2026-03-14")),
@@ -68,6 +70,7 @@ def call(text: str, **columns: object) -> object:
         ("pad_left(7, 3, '0'), len('abc')", ("007", 3)),
         # numeric
         ("round(2.5), round(-2.5), round(d, 1), round(1.25, 1)", (3, -3, Decimal("2.5"), 1.3)),
+        ("round('7.5'), round('1e3'), floor('7.9')", (8, 1000, 7)),
         ("floor(-1.5), ceil(1.2), abs(-2), clamp(15, 0, 10)", (-2, 2, 2, 10)),
         # misc
         ("coalesce(None, None, 3), nullif('N/A', 'N/A'), nullif(1, 2)", (3, None, 1)),
@@ -105,8 +108,8 @@ def test_now_utc_is_aware() -> None:
 @pytest.mark.parametrize(
     ("text", "message"),
     [
-        ("to_int('1.5')", "has a fraction"),
-        ("to_int(True)", "a boolean is not a number"),
+        ("to_int('1.5')", "is not an integer"),
+        ("to_int(1.5)", "has a fraction"),
         ("to_bool('maybe')", "is not a boolean"),
         ("to_decimal('123.4', 3, 1)", "more than 3 digits"),
         ("from_json('{')", "not JSON"),
@@ -119,6 +122,84 @@ def test_function_errors(text: str, message: str) -> None:
     """Bad input is a StepFailed with a reason."""
     with pytest.raises(StepFailed, match=message):
         call(text, ts=dt.datetime(2026, 3, 14, tzinfo=UTC))
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("7", 7), (" -7 ", -7), ("+7", 7), ("07", 7), ("-0", 0), ("\t7\n", 7),
+        ("1_000", 1000), ("0_7", 7),
+        ("0x10", 16), ("0X1f", 31), ("0x_1F", 31), ("-0x10", -16), ("+0xff", 255),
+        ("0b101", 5), ("0B_101", 5), ("0o17", 15), ("0O_17", 15),
+        ("9223372036854775807", 2**63 - 1), ("-9223372036854775808", -(2**63)),
+        ("-0x8000000000000000", -(2**63)), (2**63 - 1, 2**63 - 1), (-(2**63), -(2**63)),
+        (Decimal("9.2E18"), 9_200_000_000_000_000_000),
+        (True, 1), (False, 0), (7, 7), (-7, -7), (7.0, 7), (Decimal("7.00"), 7),
+    ],
+    ids=repr,
+)  # fmt: skip
+def test_to_int_accepts(value: object, expected: int) -> None:
+    """to_int reads text as PostgreSQL reads a bigint; integral numbers; booleans as 1/0."""
+    result = to_int(value)
+    assert result == expected
+    assert type(result) is int
+
+
+@pytest.mark.parametrize("value", ["9223372036854775808", 2**63, Decimal("1E+999999999")], ids=repr)
+def test_to_int_out_of_range_names_to_decimal(value: object) -> None:
+    """Outside a 64-bit integer, as PostgreSQL's bigint refuses it; to_decimal holds it."""
+    with pytest.raises(StepFailed, match=r"out of range for a 64-bit integer .*to_decimal"):
+        to_int(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["7.0", "7.5", "1e3", "", " ", "- 7", "+-7", "1_", "_10", "1__0", "0x", "0b", "0o",
+     "0xG", "0x1F_", "0x__1F", "00x10", "0b2", "0o8", "\u0663", "\uff17", "\u00a07", "$5",
+     "1,000", "NaN", "inf",
+     "9223372036854775808", "-9223372036854775809", "0x8000000000000000", "9" * 5000,
+     2**63, -(2**63) - 1, float(2**63), Decimal("1E+999999999"), Decimal("-9.3E18"),
+     7.5, Decimal("0.5"), float("nan"), float("inf"), Decimal("Infinity"), [1], {}],
+    ids=repr,
+)  # fmt: skip
+def test_to_int_refuses(value: object) -> None:
+    """Decimal text, malformed literals, non-ASCII digits, fractions and containers fail."""
+    with pytest.raises(StepFailed):
+        to_int(value)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        *[(word, True) for word in ["true", "TRUE", " True ", "t", "T", "yes", "YeS", "y",
+                                    "on", "ON", "1", "\tyes\n"]],
+        *[(word, False) for word in ["false", "False", "f", "no", " NO ", "n", "off", "Off",
+                                     "0"]],
+        (True, True), (False, False),
+        (2, True), (1, True), (0, False), (-1, False),
+        (0.5, True), (-0.5, False), (0.0, False), (float("inf"), True),
+        (Decimal("0.01"), True), (Decimal(-3), False),
+        ("2", True), ("-1", False), ("0.0", False), ("0.5", True), ("-0.5", False),
+        ("1e3", True), ("+.5", True), (" 2 ", True), ("-0", False), ("0e5", False),
+        ("1e99999999999999999999", True), ("-1e-99999999999999999999", False),
+    ],
+    ids=repr,
+)  # fmt: skip
+def test_to_bool_accepts(value: object, *, expected: bool) -> None:
+    """Words in any case; a number or numeric text is a counter: > 0 true, <= 0 false."""
+    assert to_bool(value) is expected
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["", " ", "maybe", "nan", "NaN", "inf", "-Infinity", "0x1", "1_0", "\u0663", "truthy",
+     float("nan"), Decimal("NaN"), [], {}, [True], dt.date(2026, 1, 1)],
+    ids=repr,
+)  # fmt: skip
+def test_to_bool_refuses(value: object) -> None:
+    """NaN, empty or other text, and containers are errors."""
+    with pytest.raises(StepFailed, match="boolean"):
+        to_bool(value)
 
 
 def test_every_function_is_documented() -> None:

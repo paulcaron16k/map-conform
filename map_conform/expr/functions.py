@@ -26,11 +26,14 @@ from zoneinfo import ZoneInfo
 
 from map_conform.errors import StepFailed
 from map_conform.expr.sandbox import MAX_LENGTH, MODULES, SandboxError, safe_range
+from map_conform.spec.model import BooleanDefaults
+from map_conform.transforms.casts import parse_boolean
+from map_conform.transforms.numeric import parse_integer_literal
 from map_conform.transforms.temporal import TemporalCast, localize, parse_temporal
 from map_conform.types.jsontext import dumps
 
-_TRUE = frozenset({"true", "t", "yes", "y", "1", "on"})
-_FALSE = frozenset({"false", "f", "no", "n", "0", "off"})
+_BOOLEAN_WORDS = BooleanDefaults()
+_ASCII_SPACE = " \t\n\r\v\f"
 _UUID_NAMESPACES = MappingProxyType(
     {
         "dns": uuid.NAMESPACE_DNS,
@@ -196,11 +199,60 @@ def matches(pattern: str, value: object) -> bool:
 @_function("coercion", "value")
 @_nullable
 def to_int(value: object) -> int:
-    """An integer; a fraction is an error ("12.0" is fine)."""
-    number = _decimal(value)
-    if number != number.to_integral_value():
-        raise StepFailed(f"{value!r} has a fraction")
-    return int(number)
+    """A 64-bit integer: text as PostgreSQL reads a bigint ("0x1F", "1_000"; not "7.0").
+
+    Text is ASCII whitespace, an optional sign, then decimal digits or a ``0x``/``0o``/``0b``
+    prefix and its digits, with single underscores between digits. A number must be
+    integral (``7.0`` is 7, ``7.5`` is an error); ``round``, ``floor`` and ``ceil`` convert
+    leniently. True is 1 and false 0, so ``to_int(to_bool(x))`` gives 1 or 0 for a target
+    with no boolean type. As PostgreSQL's bigint, a value outside -2**63 to 2**63 - 1 is an
+    error; use ``to_decimal`` for wider integers.
+    """
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return _in_int64(value, value)
+    if isinstance(value, str):
+        literal = parse_integer_literal(value)
+        if literal is None:
+            raise StepFailed(f"{value!r} is not an integer (use round() for decimals)")
+        return _in_int64(literal, value)
+    if isinstance(value, (float, Decimal)):
+        number = _decimal(value)
+        if not number.is_finite():
+            raise StepFailed(f"{value!r} is not a finite number")
+        if number.adjusted() > _INT64_DIGITS:
+            # Checked before int(), which would build every digit of 1E+999999999.
+            raise StepFailed(f"{value!r} {_OUT_OF_INT64}")
+        if number != number.to_integral_value():
+            raise StepFailed(f"{value!r} has a fraction")
+        return _in_int64(int(number), value)
+    raise StepFailed(f"{type(value).__name__} is not an integer")
+
+
+_INT64_MIN, _INT64_MAX = -(2**63), 2**63 - 1
+# The most digits past the first an int64 has (9223372036854775807 has 18).
+_INT64_DIGITS = 18
+# How much of a value an error shows.
+_SHOWN = 40
+_OUT_OF_INT64 = (
+    "is out of range for a 64-bit integer (-9223372036854775808 to 9223372036854775807); "
+    "use to_decimal()"
+)
+
+
+def _in_int64(number: int, value: object) -> int:
+    """``number``, ``to_int``'s result for ``value``, if a 64-bit integer holds it.
+
+    Raises:
+        StepFailed: outside -2**63 to 2**63 - 1, as PostgreSQL's bigint refuses it.
+    """
+    if not _INT64_MIN <= number <= _INT64_MAX:
+        shown = repr(value) if isinstance(value, str) else f"{'-' if number < 0 else ''}a number"
+        if len(shown) > _SHOWN:
+            shown = shown[:_SHOWN] + "..."
+        raise StepFailed(f"{shown} {_OUT_OF_INT64}")
+    return number
 
 
 @_function("coercion", "value")
@@ -225,17 +277,14 @@ def to_decimal(value: object, precision: int | None = None, scale: int | None = 
 @_function("coercion", "value")
 @_nullable
 def to_bool(value: object) -> bool:
-    """A boolean from true/false, yes/no, y/n, t/f, 1/0 or on/off (any case)."""
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, Decimal)) and value in {0, 1}:
-        return bool(value)
-    text = _text(value).strip().lower()
-    if text in _TRUE:
-        return True
-    if text in _FALSE:
-        return False
-    raise StepFailed(f"{value!r} is not a boolean")
+    """A boolean from true/t/yes/y/on/1 or false/f/no/n/off/0 (any case); a number > 0 is true.
+
+    Text is stripped of ASCII whitespace first. A number, or text that is a decimal number,
+    is a counter cast to a boolean: 0 or less is false, more than 0 true. NaN, other text,
+    and lists or objects are errors.
+    """
+    text = value.strip(_ASCII_SPACE) if isinstance(value, str) else value
+    return parse_boolean(text, _BOOLEAN_WORDS.true_values, _BOOLEAN_WORDS.false_values)
 
 
 @_function("coercion", "value")
