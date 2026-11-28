@@ -174,8 +174,8 @@ is an error at `columns.<name>.parse.<key>`.
 | `trim` | boolean | `defaults.values.trim` | Trim surrounding whitespace before parsing. |
 | `null_tokens` | list of string | `defaults.values.null_tokens` | Text that means null, compared after trimming. |
 | `null_tokens_case_sensitive` | boolean | `defaults.values.null_tokens_case_sensitive` | Compare null tokens case-sensitively. |
-| `true_values` | list of string | `defaults.boolean.true_values` | Text read as true. |
-| `false_values` | list of string | `defaults.boolean.false_values` | Text read as false. |
+| `true_values` | list of string | `defaults.boolean.true_values` | Text read as true. Other numbers and numeric text above 0 are true too. |
+| `false_values` | list of string | `defaults.boolean.false_values` | Text read as false. Other numbers and numeric text 0 or below are false too. |
 | `case_sensitive` | boolean | `false` | Compare the tokens case-sensitively. |
 
 ### `date`, `time`, `timestamp`, `timestamptz`
@@ -317,10 +317,10 @@ too. Names in scope: `value`/`self`, columns by conformed name, `record`/`_`,
 | `is_string(value)` | predicates | True for text. |
 | `matches(pattern, value)` | predicates | True when the regular expression is found in the value's text; false for null. |
 | `from_json(text)` | coercion | The value of JSON text; fractions are exact decimals. |
-| `to_bool(value)` | coercion | A boolean from true/false, yes/no, y/n, t/f, 1/0 or on/off (any case). |
+| `to_bool(value)` | coercion | A boolean from true/t/yes/y/on/1 or false/f/no/n/off/0 (any case); a number > 0 is true. |
 | `to_decimal(value, precision=None, scale=None)` | coercion | An exact decimal, rounded half up to ``scale`` digits when given. |
 | `to_float(value)` | coercion | A float. |
-| `to_int(value)` | coercion | An integer; a fraction is an error ("12.0" is fine). |
+| `to_int(value)` | coercion | An integer: text as PostgreSQL reads a bigint ("0x1F", "1_000"; not "7.0"), true is 1. |
 | `to_json(value)` | coercion | JSON text (null becomes the text null). |
 | `to_str(value)` | coercion | Text: decimals in plain notation, temporals in ISO 8601, booleans as true/false. |
 | `date_trunc(value, unit="day")` | temporal | The value truncated to year, month, day, hour, minute or second. |

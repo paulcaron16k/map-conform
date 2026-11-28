@@ -527,7 +527,7 @@ apart from the builtins, in `transforms/vector.py` (Arrow) and `transforms/polar
 
 | Builtin | Kwargs / grammar | Vec |
 | -- | -- | -- |
-| `cast: int*` / `cast: float*` / `cast: decimal` | The default grammar accepts: surrounding whitespace; a sign; one currency symbol or ISO-4217 code before or after; thousands separators in valid groups (`thousands=","`, `decimal_point="."`, locale presets `us`, `eu`, `ch`); an exponent; `(x)` as negative when `parens_negative`; a trailing `-` when `trailing_minus`; `%` when `percent: divide`. | arrow, for plain numbers under the default grammar (a regex check, then a pyarrow cast); other rows, and every row under another `locale`, `thousands` or `decimal_point`, go row-wise |
+| `cast: int*` / `cast: float*` / `cast: decimal` | The default grammar accepts: surrounding whitespace; a sign; one currency symbol or ISO-4217 code before or after; thousands separators in valid groups (`thousands=","`, `decimal_point="."`, locale presets `us`, `eu`, `ch`); an exponent; `(x)` as negative when `parens_negative`; a trailing `-` when `trailing_minus`; `%` when `percent: divide`. An `int*` cast also reads PostgreSQL integer literals: a `0x`, `0o` or `0b` prefix in any case (`0x1F`, `-0b101`, `0x_1F`) and single underscores between digits (`1_000`). | arrow, for plain numbers under the default grammar (a regex check, then a pyarrow cast); other rows, and every row under another `locale`, `thousands` or `decimal_point`, go row-wise |
 | `rounding` (on cast) | `half_up` (default; halves round away from zero, `-12.5` → `-13`), `half_even`, `down`, `error`. Also controls int-from-fraction: `error` default. `"12.0"` → 12 is always allowed. | arrow for `half_up` on decimals; other modes row |
 | `round` | `ndigits` | row |
 | `clamp` | `min`, `max`, `on_out_of_range` | row |
@@ -588,7 +588,7 @@ Details pinned by the implementation (`map_conform/transforms/temporal.py`):
 
 | Builtin | Kwargs | Vec |
 | -- | -- | -- |
-| `cast: boolean` | `true_values`, `false_values`, `case_sensitive=false`; numbers: only 0 and 1 are allowed (otherwise an error) | arrow (ASCII tokens) |
+| `cast: boolean` | `true_values`, `false_values`, `case_sensitive=false`, compared after the trim. Then a number, or text that is a decimal number (`2`, `-1`, `0.5`, `1e3`), is a counter cast to a boolean: 0 or less is false, more than 0 true. NaN, infinity as text, other text and containers are errors. | arrow (ASCII tokens); numbers row |
 | `cast: json` | `parse_strings` (decode text that is already JSON instead of double-encoding), `sort_keys`; non-ASCII kept as is, decimals kept exact | row |
 | `cast: binary` | `encoding: base64 \| hex \| utf8`, strict | row |
 | `cast: uuid` | `version=None`; accepts braces, no dashes, uppercase; normalises to canonical lowercase | row |
@@ -690,6 +690,21 @@ dialect accepts, so existing stream-map expressions run unchanged.
 | modules | `datetime`, `decimal`, `json`, `math`, `re` (wrapped and read-only) |
 | UDFs | every registered UDF |
 | builtins | every builtin transform, also callable as a function: `money(value)`, `cast(value, "decimal(18,2)")` |
+
+**Coercion rules.**
+
+- `to_int(v)` reads text as PostgreSQL 16 reads a `bigint`: ASCII whitespace around, an
+  optional sign, then decimal digits, or a `0x`/`0o`/`0b` prefix (any case, optionally
+  followed by one `_`) and its digits; single underscores between digits; leading zeros
+  are fine. `"7"`, `" -7 "`, `"0x1F"`, `"0b_101"`, `"1_000"` are integers; `"7.0"`,
+  `"1e3"`, `"$5"`, `"1,000"`, `"1__0"`, `"0x"` and non-ASCII digits are errors. An integral
+  number is itself (`7.0` is 7, `7.5` an error) and a boolean is 1 or 0, so
+  `to_int(to_bool(x))` serves a target with no boolean type. `round`, `floor` and `ceil`
+  convert leniently (`round("7.5")` is 8, `round("1e3")` is 1000). The `int*` cast keeps
+  its own, wider grammar (§6.2).
+- `to_bool(v)` follows the boolean cast's rule (§6.4) with the default words
+  (`true/t/yes/y/on/1`, `false/f/no/n/off/0`, any case, ASCII whitespace stripped): a
+  number or numeric text is a counter cast to a boolean, 0 or less false, more than 0 true.
 
 **Conditionals.** A conditional is either the `case:` step form (§3.4) or a ternary inside an
 `expr`. `case` is preferred: each branch can contain builtins, and in BATCH a `case` whose

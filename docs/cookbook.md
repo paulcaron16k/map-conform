@@ -88,7 +88,9 @@ streams:
 
 `locale` sets the separators: `eu` reads `1.234,56`, `ch` reads `1'234.56`. Dates follow the
 `strptime` patterns you list, tried in order. Boolean words are stream defaults (a column can
-set its own `true_values` and `false_values`); they are compared without case.
+set its own `true_values` and `false_values`); they are compared without case. A number, or
+text that is one, is read as a counter whatever the words: 0 or less is false, more than 0
+true. For a target with no boolean type, `expr: to_int(to_bool(value))` lands 1 or 0.
 
 ```yaml cookbook:spec
 version: 1

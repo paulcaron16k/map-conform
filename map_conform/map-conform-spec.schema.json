@@ -5,7 +5,7 @@
   "$ref": "#/$defs/Spec",
   "$defs": {
     "BooleanDefaults": {
-      "description": "Words that cast to booleans (case-insensitive unless the cast says otherwise).",
+      "description": "Words that cast to booleans (case-insensitive unless the cast says otherwise). A number, or text that is one, is read as a counter: above 0 is true, 0 or less false.",
       "type": "object",
       "additionalProperties": false,
       "properties": {

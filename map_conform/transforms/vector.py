@@ -12,8 +12,9 @@ The common case is claimed, the rest is spliced:
   Arrow's string kernels and Python's ``str`` methods agree; other rows go row-wise.
 - **Numeric casts** claim plain numbers (``-12``, ``3.50``) under the default grammar
   (``us`` locale, no separators set) and integer, float or decimal input; currency,
-  separators, parentheses, percent and locales go row-wise.
-- **Boolean casts** claim the configured true/false tokens and boolean input.
+  separators, parentheses, percent, locales and ``0x``/underscored integers go row-wise.
+- **Boolean casts** claim the configured true/false tokens and boolean input; numbers and
+  numeric text go row-wise.
 - **Temporal casts** to timestamptz, timestamp and date whose first format is ``iso`` and
   whose zone is UTC claim strict ISO 8601 text (date, or date and time to the second) and
   Arrow timestamps.

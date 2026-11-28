@@ -24,6 +24,23 @@ int_space_thousands,int64,1 234,,!error,space grouping is not in the default gra
 int_empty,int64,,,!null,""""" is a default null token"
 int_na,int64,N/A,,!null,default null token
 int_dash,int64,-,,!null,default null token
+int_hex,int64,0x1F,,31,PostgreSQL integer literal
+int_hex_upper_prefix,int64,0X1f,,31,
+int_hex_underscore,int64,0x_1F,,31,one underscore may follow the prefix
+int_hex_negative,int64,-0x10,,-16,
+int_hex_padded,int64, +0xff ,,255,
+int_octal,int64,0o17,,15,
+int_binary,int64,0b_101,,5,
+int_underscores,int64,1_000_000,,1000000,single underscores between digits
+int_underscore_leading_zero,int64,0_7,,7,
+int_double_underscore,int64,1__0,,!error,
+int_trailing_underscore,int64,1_,,!error,
+int_hex_no_digits,int64,0x,,!error,
+int_hex_bad_digit,int64,0xG,,!error,
+int_hex_trailing_underscore,int64,0x1F_,,!error,
+int_hex_double_zero,int64,00x10,,!error,
+int_hex_overflow,int16,0x8000,,!error,
+int_hex_int16_max,int16,0x7fff,,32767,
 float_plain,float64,1234.5,,1234.5,
 float_thousands,float64,"1,234.5",,1234.5,
 float_exponent,float64,1.5e3,,1500.0,

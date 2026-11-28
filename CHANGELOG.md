@@ -12,6 +12,22 @@ each such change is listed.
 - The Clean-Landing Contract has a copy-ready reviewer snippet for target repos, in two
   variants: for a target always behind map-conform, and for one that keeps its own cleanup
   options for other pipelines. The README links it.
+- The `int16`/`int32`/`int64` casts also read PostgreSQL integer literals: `0x`, `0o` and
+  `0b` prefixes in any case (`0x1F`, `-0b101`, `0x_1F`) and single underscores between
+  digits (`1_000`). The rest of the numeric grammar is unchanged.
+
+### Changed
+
+- **Breaking:** `to_int()` reads text as PostgreSQL reads a `bigint`: optional whitespace and
+  sign, then decimal digits or a `0x`/`0o`/`0b` literal, with single underscores between
+  digits. It no longer accepts `"7.0"` or `"1e3"`; use `round()`, `floor()` or `ceil()` for
+  those. `to_int(True)` is 1 and `to_int(False)` is 0 (they were errors), so
+  `to_int(to_bool(x))` lands 1 or 0 in a target with no boolean type. A non-finite float
+  is now a step error rather than a crash.
+- Booleans follow one rule in `to_bool()` and the `boolean` cast (row and columnar): the
+  words, in any case, and then a number or numeric text as a counter: 0 or less is false,
+  more than 0 true. So `2`, `"2"` and `"1.0"` are true and `-1`, `"-0.5"` and `"0.0"` false,
+  where only 0 and 1 were accepted before. NaN is still an error.
 
 ## [0.2.0] - 2026-11-23
 

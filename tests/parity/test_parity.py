@@ -49,7 +49,9 @@ TEXT = st.one_of(
     st.text(max_size=8),
     st.sampled_from(["", " ", "NULL", "n/a", "true", "FALSE", "Yes", "0", "1",
                      "2026-03-14", "2026-03-14T09:26:53Z", "2026-03-14 09:26:53.123+02:00",
-                     "2026-02-30", "99999999999999999999", "1e400", "-0", "0042"]),
+                     "2026-02-30", "99999999999999999999", "1e400", "-0", "0042",
+                     "0x1F", "-0b101", "0o_17", "1_000", "1__0", "0x", "2", "-1", "0.5",
+                     " oFF ", "inf"]),
 )  # fmt: skip
 
 
@@ -68,6 +70,21 @@ def test_generated_text_parity(values: list[str | None], type_: str, on_error: s
         on_error = "null"
     table = pa.table({"c": pa.array(values, pa.string())})
     assert_parity(one_column(type_, {}, on_error), {"c": STRING}, table)
+
+
+@settings(max_examples=40, deadline=None)
+@given(st.lists(st.one_of(st.none(), st.integers(-3, 3)), min_size=1, max_size=10),
+       st.lists(st.one_of(st.none(), st.floats(allow_nan=True, allow_infinity=True)),
+                min_size=1, max_size=10),
+       st.sampled_from(["null", "reject", "raise"]))  # fmt: skip
+def test_typed_number_into_boolean_parity(
+    ints: list[int | None], floats: list[float | None], on_error: str
+) -> None:
+    """Integer and float parquet columns into boolean: > 0 true, <= 0 false, NaN fails."""
+    spec = one_column("boolean", {}, on_error)
+    assert_parity(spec, {"c": {"type": ["null", "integer"]}}, pa.table({"c": pa.array(ints)}))
+    floats_table = pa.table({"c": pa.array(floats, pa.float64())})
+    assert_parity(spec, {"c": {"type": ["null", "number"]}}, floats_table)
 
 
 @settings(max_examples=40, deadline=None)
@@ -146,3 +163,13 @@ def test_mixed_plan_parity() -> None:
     assert "column 'id', row 4: nullable: false" in (
         assert_parity(spec, properties, table).error or ""
     )
+
+
+def test_int_from_bool_pattern_parity() -> None:
+    """``to_int(to_bool(value))`` lands 1 or 0 for a target with no boolean type."""
+    spec = {"streams": {"s": {"columns": {"c": {"type": "int16",
+                                                 "expr": "to_int(to_bool(value))"}}}}}  # fmt: skip
+    table = pa.table({"c": pa.array(["yes", " Off ", "2", "-1", "0.0", None], pa.string())})
+    outcome = assert_parity(spec, {"c": STRING}, table)
+    assert outcome.table is not None
+    assert outcome.table.column("c").to_pylist() == [1, 0, 1, 0, 0, None]

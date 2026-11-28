@@ -10,6 +10,9 @@ One grammar serves int16/32/64, float32/64 and decimal(p,s) targets. After the v
 - a sign, then digits with thousands separators in valid groups of three, a decimal point,
   and an exponent.
 
+An integer cast also reads PostgreSQL's integer literals (:func:`parse_integer_literal`):
+``0x``/``0o``/``0b`` prefixes and single underscores between digits (``0x1F``, ``1_000``).
+
 Separators come from ``locale`` (us ``1,234.5``, eu ``1.234,5``, ch ``1'234.5``) unless
 ``thousands`` / ``decimal_point`` are given. Arithmetic is exact (``Decimal``), so ``1.005``
 rounds to ``1.01``. ``rounding`` defaults to ``half_up`` (away from zero) for decimals and to
@@ -49,6 +52,15 @@ _LEADING_CURRENCY = re.compile(rf"^([+-]?)\s*{_CURRENCY}\s*")
 _TRAILING_CURRENCY = re.compile(rf"\s*{_CURRENCY}$")
 _ANY_CURRENCY = re.compile(_CURRENCY)
 _EXPONENT = r"(?:[eE][+-]?\d+)?"
+_PG_SPACE = "[ \t\n\r\v\f]*"
+_INTEGER_LITERAL = re.compile(
+    rf"{_PG_SPACE}(?P<sign>[+-]?)(?:"
+    r"0[xX](?P<hex>_?[0-9a-fA-F]+(?:_[0-9a-fA-F]+)*)"
+    r"|0[oO](?P<oct>_?[0-7]+(?:_[0-7]+)*)"
+    r"|0[bB](?P<bin>_?[01]+(?:_[01]+)*)"
+    rf"|(?P<dec>[0-9]+(?:_[0-9]+)*)){_PG_SPACE}"
+)
+_BASES = {"hex": 16, "oct": 8, "bin": 2, "dec": 10}
 _MODES = {"half_up": ROUND_HALF_UP, "half_even": ROUND_HALF_EVEN, "down": ROUND_DOWN}
 _EXACT = DecimalContext(prec=200, traps=[InvalidOperation])
 
@@ -76,6 +88,24 @@ class NumberCast(Cleanup):
         default=None,
     )
     nan: Literal["null", "error"] = documented("What NaN and infinity become.", default="null")
+
+
+def parse_integer_literal(text: str) -> int | None:
+    """An integer written as PostgreSQL 16 reads one (bigint input), or None.
+
+    ASCII whitespace around; an optional sign; then decimal digits, or a ``0x``, ``0o`` or
+    ``0b`` prefix in any case (with an optional underscore after it) and its digits. Single
+    underscores may separate digits; leading zeros are fine. ``"7.0"``, ``"1e3"``, ``"1_"``,
+    ``"0x"`` and non-ASCII digits are not integer literals.
+    """
+    match = _INTEGER_LITERAL.fullmatch(text)
+    if match is None:
+        return None
+    base = next(name for name in _BASES if match[name] is not None)
+    digits = match[base].replace("_", "")
+    # Decimal, because int() refuses decimal text over 4300 digits; prefixed bases are exempt.
+    number = int(Decimal(digits)) if base == "dec" else int(digits, _BASES[base])
+    return -number if match["sign"] == "-" else number
 
 
 def parse_number(text: str, options: NumberCast) -> Decimal:  # noqa: C901, PLR0912
@@ -137,8 +167,13 @@ def _normalise_body(s: str, thousands: str, point: str) -> str:
     return s.replace(thousands, "").replace(point, ".")
 
 
-def _from_value(value: object, options: NumberCast) -> Decimal | None:
-    """Any raw value as an exact Decimal; None for null or a NaN treated as null."""
+def _from_value(
+    value: object, options: NumberCast, *, integer_literals: bool = False
+) -> Decimal | None:
+    """Any raw value as an exact Decimal; None for null or a NaN treated as null.
+
+    ``integer_literals`` also reads text as :func:`parse_integer_literal` does, first.
+    """
     cleaned = clean(value, options)
     if isinstance(cleaned, bool):
         raise StepFailed("a boolean is not a number")
@@ -153,7 +188,8 @@ def _from_value(value: object, options: NumberCast) -> Decimal | None:
     if isinstance(cleaned, int):
         return Decimal(cleaned)
     if isinstance(cleaned, str):
-        return parse_number(cleaned, options)
+        literal = parse_integer_literal(cleaned) if integer_literals else None
+        return parse_number(cleaned, options) if literal is None else Decimal(literal)
     raise StepFailed(f"{type(cleaned).__name__} is not a number")
 
 
@@ -177,9 +213,13 @@ def _round(number: Decimal, exponent: Decimal, mode: Rounding) -> Decimal:
 
 
 def cast_int(value: object, args: CastArgs, _ctx: Context) -> object:
-    """Cast to int16/32/64; a fraction is an error unless a rounding mode is set."""
+    """Cast to int16/32/64; a fraction is an error unless a rounding mode is set.
+
+    Text follows the numeric grammar, and may also be ``0x``/``0o``/``0b``-prefixed or have
+    underscores between digits.
+    """
     options: NumberCast = args.options
-    number = _from_value(value, options)
+    number = _from_value(value, options, integer_literals=True)
     if number is None:
         return None
     integral = _round(number, Decimal(1), options.rounding or "error")
